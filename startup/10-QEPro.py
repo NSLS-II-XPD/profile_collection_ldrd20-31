@@ -2,6 +2,8 @@ from gc import collect
 import logging
 import time
 
+import epics
+
 from ophyd import (Device, Component as Cpt, FormattedComponent as FC,
                    Signal)
 from ophyd import (EpicsSignal, EpicsSignalRO, DeviceStatus, DerivedSignal)
@@ -182,6 +184,42 @@ class QEPro(Device):
 
     def trigger(self):
         self.grab_frame().wait()
+
+    def write_as_csv(self, write_path):
+    
+        print(f'Writing out CSV file to {write_path}...')
+
+        with open(write_path, 'w') as fp:
+            x_axis_data = self.x_axis.get()
+            output_data = self.output.get()
+            sample_data = self.sample.get()
+            dark_data = self.dark.get()
+            reference_data = self.reference.get()
+            if self.spectrum_type.get(as_string=True) == 'Absorbtion':
+                fp.write('Energy,Dark,Reference,Sample,Absorbtion\n')
+            else:
+                fp.write('Energy,Dark,Raw Sample,Corrected Sample\n')
+
+            for i in range(len(output_data)):
+                if self.spectrum_type.get(as_string=True) == 'Absorbtion':
+                    fp.write(f'{x_axis_data[i]},{dark_data[i]},{reference_data[i]},{sample_data[i]},{output_data[i]}\n')
+                else:
+                    fp.write(f'{x_axis_data[i]},{dark_data[i]},{sample_data[i]},{output_data[i]}\n')
+
+            print('Done.')
+
+    def plot_spectra(self):
+        x_axis_data = self.x_axis.get()
+        output_data = self.output.get()
+
+        x_axis_label = self.x_axis_format.get(as_string=True)
+        y_axis_label = self.spectrum_type.get(as_string=True)
+
+
+        plt.plot(x_axis_data, output_data)
+        plt.xlabel(x_axis_label)
+        plt.ylabel(y_axis_label)
+        plt.show()
 
 
 qepro = QEPro('XF:28ID2-ES{QEPro:Spec-1}:', name='QEPro')

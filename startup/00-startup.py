@@ -2,6 +2,8 @@
 import nslsii
 import ophyd.signal
 
+import matplotlib.pyplot as plt
+
 ophyd.signal.EpicsSignal.set_defaults(connection_timeout=5)
 # See docstring for nslsii.configure_base() for more details
 # this command takes away much of the boilerplate for settting up a profile
