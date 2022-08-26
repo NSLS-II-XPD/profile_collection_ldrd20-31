@@ -1,5 +1,6 @@
 from gc import collect
 import logging
+import time
 
 from ophyd import (Device, Component as Cpt, FormattedComponent as FC,
                    Signal)
@@ -11,7 +12,7 @@ class QEProTEC(Device):
 
     # Thermal electric cooler settings
     tec = Cpt(SignalWithRBV, 'TEC')
-    tec_temp = Cpt(SignalWithRBV, 'TEC_TEMP')
+    tec_temp = Cpt(SignalWithRBV, 'TEC_TEMP', kind='config')
     curr_tec_temp = Cpt(EpicsSignalRO, 'CURR_TEC_TEMP_RBV')
 
     def __init__(self, *args, tolerance=1, **kwargs):
@@ -52,8 +53,8 @@ class QEPro(Device):
     
     # Togglable features (if supported)
     strobe = Cpt(SignalWithRBV, 'STROBE')
-    electric_dark_correction = Cpt(SignalWithRBV, 'EDC')
-    non_linearity_correction = Cpt(SignalWithRBV, 'NLC')
+    electric_dark_correction = Cpt(SignalWithRBV, 'EDC', kind='config')
+    non_linearity_correction = Cpt(SignalWithRBV, 'NLC', kind='config')
     shutter = Cpt(SignalWithRBV, 'SHUTTER')
     
     # Thermal electric cooler
@@ -66,13 +67,13 @@ class QEPro(Device):
 
     # Signals for specifying the number of spectra to average and counter for spectra
     # collected in current scan
-    num_spectra = Cpt(SignalWithRBV, 'NUM_SPECTRA')
+    num_spectra = Cpt(SignalWithRBV, 'NUM_SPECTRA', kind='hinted')
     spectra_collected = Cpt(EpicsSignalRO, 'SPECTRA_COLLECTED_RBV')
 
     # Integration time settings (in ms)
     int_min_time = Cpt(EpicsSignalRO, 'INT_MIN_TIME_RBV')
     int_max_time = Cpt(EpicsSignalRO, 'INT_MAX_TIME_RBV')
-    integration_time = Cpt(SignalWithRBV, 'INTEGRATION_TIME', kind='normal')
+    integration_time = Cpt(SignalWithRBV, 'INTEGRATION_TIME', kind='hinted')
     
     # Internal buffer feature settings
     buff_min_capacity = Cpt(EpicsSignalRO, 'BUFF_MIN_CAPACITY_RBV')
@@ -81,15 +82,16 @@ class QEPro(Device):
     buff_element_count = Cpt(EpicsSignalRO, 'BUFF_ELEMENT_COUNT_RBV')
 
     # Formatted Spectra
-    spectrum = Cpt(EpicsSignal, 'SAMPLE', kind='normal')
-    dark = Cpt(EpicsSignal, 'DARK', kind='normal')
-    reference = Cpt(EpicsSignal, 'REFERENCE', kind='normal')
+    output = Cpt(EpicsSignal, 'OUTPUT', kind='hinted')
+    sample = Cpt(EpicsSignal, 'SAMPLE', kind='hinted')
+    dark = Cpt(EpicsSignal, 'DARK', kind='hinted')
+    reference = Cpt(EpicsSignal, 'REFERENCE', kind='hinted')
     
     # Length of spectrum (in pixels)
     formatted_spectrum_len = Cpt(EpicsSignalRO, 'FORMATTED_SPECTRUM_LEN_RBV')
 
     # X-axis format and array
-    x_axis = Cpt(EpicsSignal, 'X_AXIS')
+    x_axis = Cpt(EpicsSignal, 'X_AXIS', kind='hinted')
     x_axis_format = Cpt(SignalWithRBV, 'X_AXIS_FORMAT')
 
     # Dark/Ref available signals
@@ -98,9 +100,9 @@ class QEPro(Device):
 
     # Collection settings and start signals.
     acquire = Cpt(SignalWithRBV, 'COLLECT')
-    collect_mode = Cpt(SignalWithRBV, 'COLLECT_MODE')
-    spectrum_type = Cpt(SignalWithRBV, 'SPECTRUM_TYPE')
-    correction = Cpt(SignalWithRBV, 'CORRECTION')
+    collect_mode = Cpt(SignalWithRBV, 'COLLECT_MODE', kind='hinted')
+    spectrum_type = Cpt(SignalWithRBV, 'SPECTRUM_TYPE', kind='hinted')
+    correction = Cpt(SignalWithRBV, 'CORRECTION', kind='hinted')
     trigger_mode = Cpt(SignalWithRBV, 'TRIGGER_MODE')
 
 
@@ -135,18 +137,22 @@ class QEPro(Device):
 
     def get_dark_frame(self):
 
-        self.spectrum_type.put(1)
+        current_spectrum = self.spectrum_type.get()
+        self.spectrum_type.put('Dark')
         self.acquire.put(1, wait=True)
+        time.sleep(1)
+        self.spectrum_type.put(current_spectrum)
     
     def get_reference_frame(self):
 
-        if self.dark_available.get() == 0:
-            return
-        self.spectrum_type.put(2)
+        current_spectrum = self.spectrum_type.get()
+        self.spectrum_type.put('Reference')
         self.acquire.put(1, wait=True)
+        time.sleep(1)
+        self.spectrum_type.put(current_spectrum)
 
 
-    def setup_collection(self, integration_time, num_spectra_to_average, correction_type='reference', electric_dark_correction=True):
+    def setup_collection(self, integration_time=100, num_spectra_to_average=10, spectrum_type='Absorbtion', correction_type='Reference', electric_dark_correction=True):
         self.integration_time.put(integration_time)
         self.num_spectra.put(num_spectra_to_average)
         if num_spectra_to_average > 1:
@@ -157,18 +163,12 @@ class QEPro(Device):
         if electric_dark_correction:
             self.electric_dark_correction.put(1)
 
-        if correction_type == 'dark':
-            self.correction.put('Dark')
-        elif correction_type == 'reference':
-            self.correction.put('Reference')
-        else:
-            self.correction.put('None')
+        self.correction.put(correction_type)
 
-        self.get_dark_frame()
-        self.get_reference_frame()
+        self.spectrum_type.put(spectrum_type)
 
 
-    def trigger(self):
+    def grab_frame(self):
 
         def is_done(value, old_value, **kwargs):
             if old_value == 1 and value ==0:
@@ -179,6 +179,9 @@ class QEPro(Device):
 
         self.acquire.put(1)
         return status
+
+    def trigger(self):
+        self.grab_frame().wait()
 
 
 qepro = QEPro('XF:28ID2-ES{QEPro:Spec-1}:', name='QEPro')

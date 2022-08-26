@@ -6,8 +6,9 @@ ophyd.signal.EpicsSignal.set_defaults(connection_timeout=5)
 # See docstring for nslsii.configure_base() for more details
 # this command takes away much of the boilerplate for settting up a profile
 # (such as setting up best effort callbacks etc)
-nslsii.configure_base(get_ipython().user_ns, 'xpd', pbar=True, bec=True,
-                      magics=True, mpl=True, epics_context=False)
+#nslsii.configure_base(get_ipython().user_ns, 'xpd', pbar=True, bec=True,
+#                      magics=True, mpl=True, epics_context=False)
+
 
 # At the end of every run, verify that files were saved and
 # print a confirmation message.
@@ -22,7 +23,7 @@ from bluesky.plans import count
 # ophyd.logger.setLevel(logging.DEBUG)
 # logging.basicConfig(level=logging.DEBUG)
 
-#RE = RunEngine({})
+RE = RunEngine({})
 
 
 RE.md['facility'] = 'NSLS-II'
