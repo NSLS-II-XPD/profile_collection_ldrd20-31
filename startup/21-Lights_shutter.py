@@ -19,17 +19,58 @@ UV_shutter = EpicsSignal('XF:28IDC-ES:1{Light:Abs-Sht:1}Cmd', name='UV_shutter',
 
 
 def LED_on():
+    yield from bps.abs_set(LED, 'High', wait=True)
+    print(f'LED light is {LED.get()}.')
+    #st=DeviceStatus()
+    #LED.put('High', wait=True)
+    #return (yield from bps.rd(LED))
+    
+def LED_on_2():
+    #yield from bps.abs_set(LED, 'High', wait=True)
     LED.put('High', wait=True)
     return LED.get()
+
+def LED_on_3():
+    #yield from bps.abs_set(LED, 'High', wait=True)
+    #LED.put('High', wait=True)
+    return (yield from bps.trigger_and_read(LED))
     
 def LED_off():
+    yield from bps.abs_set(LED, 'Low', wait=True)
+    print(f'LED light is {LED.get()}')
+    #LED.put('Low', wait=True)
+    return LED.get()
+    
+def LED_off_2():
+    #yield from bps.abs_set(LED, 'Low', wait=True)
     LED.put('Low', wait=True)
     return LED.get()
     
 def shutter_open():
-    UV_shutter.put('High', wait=True)
-    return UV_shutter.get()
+    yield from bps.abs_set(UV_shutter, 'High', wait=True)
+    print(f'UV shutter is {UV_shutter.get()}')
+    #UV_shutter.put('High', wait=True)
+    #return UV_shutter.get()
+    #return (yield from bps.rd(UV_shutter))
     
 def shutter_close():
-    UV_shutter.put('Low', wait=True)
-    return UV_shutter.get()
+    yield from bps.abs_set(UV_shutter, 'Low', wait=True)
+    print(f'UV shutter is {UV_shutter.get()}')
+    #UV_shutter.put('Low', wait=True)
+    #return UV_shutter.get()
+    
+def deuterium_on():
+    yield from bps.abs_set(deuterium, 'High', wait=True)
+    print(f'Deuterium light is {deuterium.get()}')
+    
+def deuterium_off():
+    yield from bps.abs_set(deuterium, 'Low', wait=True)
+    print(f'Deuterium light is {deuterium.get()}')
+    
+def halogen_on():
+    yield from bps.abs_set(halogen, 'High', wait=True)
+    print(f'Halogen light is {halogen.get()}')
+    
+def halogen_off():
+    yield from bps.abs_set(halogen, 'Low', wait=True)
+    print(f'Halogen light is {halogen.get()}')
