@@ -230,62 +230,76 @@ class QEPro(Device):
         
 
 
-#     def take_uvvis_save_csv(self, sample_type='test', plot=False, csv_path=None, 
-#                             spectrum_type='Absorbtion', correction_type='Reference', 
-#                             pump_list=None, precursor_list=None):
+    def take_uvvis_save_csv(self, sample_type='test', plot=False, csv_path=None, 
+                            spectrum_type='Absorbtion', correction_type='Reference', 
+                            pump_list=None, precursor_list=None):
         
-#         # For absorbance: spectrum_type='Absorbtion', correction_type='Reference'
-#         # For fluorescence: spectrum_type='Corrected Sample', correction_type='Dark'
+        # For absorbance: spectrum_type='Absorbtion', correction_type='Reference'
+        # For fluorescence: spectrum_type='Corrected Sample', correction_type='Dark'
         
-#         if spectrum_type == 'Absorbtion':
-#             yield from LED_off()
-#             yield from shutter_open()       
-#             uid = (yield from count([self]))
+        # self.correction.put(correction_type)
+        # self.spectrum_type.put(spectrum_type)
+        
+        if spectrum_type == 'Absorbtion':
+            if LED.get()=='Low' and UV_shutter.get()=='High' and self.correction.get()==correction_type and self.spectrum_type.get()==spectrum_type:
+                uid = (yield from count([self]))
+            else:
+                self.correction.put(correction_type)
+                self.spectrum_type.put(spectrum_type)
+                yield from LED_off()
+                yield from shutter_open()
+                uid = (yield from count([self]))
             
-#         else:
-#             yield from shutter_close()
-#             yield from LED_on()       
-#             uid = (yield from count([self]))
             
-#         unix_time = db[uid].start['time']     
-#         date, time = _readable_time(unix_time)
-#         x_axis_data = db[uid].table().QEPro_x_axis[1]
-#         output_data = db[uid].table().QEPro_output[1]
+        else:
+            if LED.get()=='High' and UV_shutter.get()=='Low' and self.correction.get()==correction_type and self.spectrum_type.get()==spectrum_type:
+                uid = (yield from count([self]))
+            else:
+                self.correction.put(correction_type)
+                self.spectrum_type.put(spectrum_type)
+                yield from shutter_close()
+                yield from LED_on()       
+                uid = (yield from count([self]))
+            
+        unix_time = db[uid].start['time']     
+        date, time = _readable_time(unix_time)
+        x_axis_data = db[uid].table().QEPro_x_axis[1]
+        output_data = db[uid].table().QEPro_output[1]
         
-#         if plot == True:
-#             x_axis_label = self.x_axis_format.get(as_string=True)
-#             y_axis_label = spectrum_type
+        if plot == True:
+            x_axis_label = self.x_axis_format.get(as_string=True)
+            y_axis_label = spectrum_type
 
-#             plt.plot(x_axis_data, output_data)
-#             plt.xlabel(x_axis_label)
-#             plt.ylabel(y_axis_label)
-#             plt.show()
+            plt.plot(x_axis_data, output_data)
+            plt.xlabel(x_axis_label)
+            plt.ylabel(y_axis_label)
+            plt.show()
           
-#         if csv_path != None:
+        if csv_path != None:
 
-#             fout = f'{csv_path}/{sample_type}_{spectrum_type[0:3]}_{date}-{time}_{uid[0:8]}.csv'
+            fout = f'{csv_path}/{sample_type}_{spectrum_type[0:3]}_{date}-{time}_{uid[0:8]}.csv'
             
-#             with open(fout, 'w') as fp:
-#                 if pump_list != None:
-#                     for pump, precursor in zip(pump_list, precursor_list):
-#                         fp.write(f'{pump.name},{precursor},{pump.read_infuse_rate.get()},{pump.read_infuse_rate_unit.get()},{pump.status.get()}\n')
+            with open(fout, 'w') as fp:
+                if pump_list != None:
+                    for pump, precursor in zip(pump_list, precursor_list):
+                        fp.write(f'{pump.name},{precursor},{pump.read_infuse_rate.get()},{pump.read_infuse_rate_unit.get()},{pump.status.get()}\n')
                 
-#                 fp.write(f'Time_QEPro,{date},{time}\n')
+                fp.write(f'Time_QEPro,{date},{time}\n')
 
-#                 sample_data = db[uid].table().QEPro_sample[1]
-#                 dark_data = db[uid].table().QEPro_dark[1]
-#                 reference_data = db[uid].table().QEPro_reference[1]
+                sample_data = db[uid].table().QEPro_sample[1]
+                dark_data = db[uid].table().QEPro_dark[1]
+                reference_data = db[uid].table().QEPro_reference[1]
 
-#                 if spectrum_type == 'Absorbtion':
-#                     fp.write('Energy,Dark,Reference,Sample,Absorbance\n')
-#                 else:
-#                     fp.write('Energy,Dark,Raw Sample,Fluorescence\n')
+                if spectrum_type == 'Absorbtion':
+                    fp.write('Energy,Dark,Reference,Sample,Absorbance\n')
+                else:
+                    fp.write('Energy,Dark,Raw Sample,Fluorescence\n')
 
-#                 for i in range(len(output_data)):
-#                     if spectrum_type == 'Absorbtion':
-#                         fp.write(f'{x_axis_data[i]},{dark_data[i]},{reference_data[i]},{sample_data[i]},{output_data[i]}\n')
-#                     else:
-#                         fp.write(f'{x_axis_data[i]},{dark_data[i]},{sample_data[i]},{output_data[i]}\n')
+                for i in range(len(output_data)):
+                    if spectrum_type == 'Absorbtion':
+                        fp.write(f'{x_axis_data[i]},{dark_data[i]},{reference_data[i]},{sample_data[i]},{output_data[i]}\n')
+                    else:
+                        fp.write(f'{x_axis_data[i]},{dark_data[i]},{sample_data[i]},{output_data[i]}\n')
         
         
 
@@ -363,7 +377,7 @@ class QEPro(Device):
                         fp.write(f'{x_axis_data[i]},{dark_data[i]},{sample_data[i]},{output_data[i]}\n')
             
 
-from tiled.client import from_profile
-tiled_client = from_profile("xpd")
+# from tiled.client import from_profile
+# tiled_client = from_profile("xpd")
 qepro = QEPro('XF:28ID2-ES{QEPro:Spec-1}:', name='QEPro', )
 
