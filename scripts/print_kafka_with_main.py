@@ -2,22 +2,28 @@ import datetime
 import pprint
 import uuid
 from bluesky_kafka import RemoteDispatcher
-import nslsii
+
+try:
+    from nslsii import _read_bluesky_kafka_config_file  # nslsii <0.7.0
+except (ImportError, AttributeError):
+    from nslsii.kafka_utils import _read_bluesky_kafka_config_file  # nslsii >=0.7.0
+
 
 def print_kafka_messages(beamline_acronym):
     print(f"Listening for Kafka messages for {beamline_acronym}")
+
     from databroker import Broker
-    db = Broker.named("xpd")
+    db = Broker.named(beamline_acronym)
 
     def print_message(name, doc):
+        print(
+            f"{datetime.datetime.now().isoformat()} document: {name}\n"
+            f"contents: {pprint.pformat(doc)}\n"
+        )
         if name == 'stop':
-            print(
-                f"{datetime.datetime.now().isoformat()} document: {name}\n"
-                f"contents: {pprint.pformat(doc)}\n"
-            )
             print(db[doc['run_start']].table())
 
-    kafka_config = nslsii._read_bluesky_kafka_config_file(config_file_path="/etc/bluesky/kafka.yml")
+    kafka_config = _read_bluesky_kafka_config_file(config_file_path="/etc/bluesky/kafka.yml")
 
     # this consumer should not be in a group with other consumers
     #   so generate a unique consumer group id for it

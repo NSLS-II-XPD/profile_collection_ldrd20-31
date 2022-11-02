@@ -6,10 +6,10 @@ import matplotlib.pyplot as plt
 
 ophyd.signal.EpicsSignal.set_defaults(connection_timeout=5)
 # See docstring for nslsii.configure_base() for more details
-# this command takes away much of the boilerplate for settting up a profile
+# this command takes away much of the boilerplate for setting up a profile
 # (such as setting up best effort callbacks etc)
-#nslsii.configure_base(get_ipython().user_ns, 'xpd', pbar=True, bec=True,
-#                      magics=True, mpl=True, epics_context=False)
+# nslsii.configure_base(get_ipython().user_ns, 'xpd', pbar=True, bec=True,
+#                       magics=True, mpl=True, epics_context=False)
 
 
 # At the end of every run, verify that files were saved and
@@ -29,7 +29,7 @@ from bluesky.plans import count
 #                       publish_documents_with_kafka=True)
 
 nslsii.configure_base(get_ipython().user_ns, "xpd-ldrd20-31",
-                      publish_documents_with_kafka=False)
+                      publish_documents_with_kafka=True)
 
 RE.md['facility'] = 'NSLS-II'
 RE.md['group'] = 'XPD'
