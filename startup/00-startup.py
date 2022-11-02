@@ -25,8 +25,11 @@ from bluesky.plans import count
 # ophyd.logger.setLevel(logging.DEBUG)
 # logging.basicConfig(level=logging.DEBUG)
 
-RE = RunEngine({})
+# nslsii.configure_base(get_ipython().user_ns, "xpd",
+#                       publish_documents_with_kafka=True)
 
+nslsii.configure_base(get_ipython().user_ns, "xpd-ldrd20-31",
+                      publish_documents_with_kafka=False)
 
 RE.md['facility'] = 'NSLS-II'
 RE.md['group'] = 'XPD'
@@ -34,6 +37,45 @@ RE.md['beamline_id'] = '28-ID-2'
 
 import subprocess
 
+
+from ophyd import Device, EpicsMotor, EpicsSignal, EpicsSignalRO
+from ophyd import Component as Cpt
+import time
+import pandas as pd
+import numpy as np
+from ophyd.sim import det4, noisy_det, motor  # simulated detector, motor
+import h5py
+from datetime import datetime
+
+import bluesky.plan_stubs as bps
+from bluesky.plans import count
+
+import matplotlib.pyplot as plt
+import glob
+
+import bluesky.plan_stubs as bps
+from bluesky.plans import count, scan
+
+
+# Make plots update live while scans run.
+# from bluesky.utils import install_kicker
+# install_kicker()
+#%matplotlib notebook
+#from bluesky.utils import install_nb_kicker
+#install_nb_kicker()
+
+
+# ## Prepare Data Storage
+# from databroker import Broker
+# db = Broker.named('xpd-ldrd20-31')
+
+# from databroker import catalog
+# db = catalog['xpd']
+
+
+# ## Add a Progress Bar
+# from bluesky.utils import ProgressBarManager
+# RE.waiting_hook = ProgressBarManager()
 
 def show_env():
     # this is not guaranteed to work as you can start IPython without hacking
