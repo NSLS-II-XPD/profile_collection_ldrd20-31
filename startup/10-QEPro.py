@@ -145,6 +145,15 @@ class QEPro(Device):
         time.sleep(1)
         self.spectrum_type.put(current_spectrum)
     
+    def get_dark_frame2(self):
+
+        current_spectrum = self.spectrum_type.get()
+        yield from bps.abs_set(self.spectrum_type, 'Dark', wait=True)
+        yield from bps.abs_set(self.acquire, 1, wait=True)
+        yield from bps.sleep(1)
+        yield from bps.abs_set(self.spectrum_type, current_spectrum, wait=True)
+        
+    
     def get_reference_frame(self):
 
         current_spectrum = self.spectrum_type.get()
@@ -152,6 +161,43 @@ class QEPro(Device):
         self.acquire.put(1, wait=True)
         time.sleep(1)
         self.spectrum_type.put(current_spectrum)
+        
+        
+    def get_reference_frame2(self):
+
+        current_spectrum = self.spectrum_type.get()
+        yield from bps.abs_set(self.spectrum_type, 'Reference', wait=True)
+        yield from bps.abs_set(self.acquire, 1, wait=True)
+        yield from bps.sleep(1)
+        yield from bps.abs_set(self.spectrum_type, current_spectrum, wait=True)
+        
+    
+    def take_ref_bkg(self, integration_time=15, num_spectra_to_average=16, electric_dark_correction=True):
+        yield from self.setup_collection2(integration_time=integration_time, num_spectra_to_average=num_spectra_to_average, 
+                                         spectrum_type='Absorbtion', correction_type='Reference', 
+                                         electric_dark_correction=True)
+        # yield from LED_off()
+        # yield from shutter_close()
+        yield from bps.mv(LED, 'Low', UV_shutter, 'Low')
+        yield from self.get_dark_frame2()
+        yield from bps.mv(UV_shutter, 'High')
+        yield from self.get_reference_frame2()
+        
+        
+    def take_ref_bkg2(self, integration_time=15, num_spectra_to_average=16, electric_dark_correction=True):
+        yield from self.setup_collection2(integration_time=integration_time, num_spectra_to_average=num_spectra_to_average, 
+                                         spectrum_type='Absorbtion', correction_type='Reference', 
+                                         electric_dark_correction=True)
+        # yield from LED_off()
+        # yield from shutter_close()
+        yield from bps.mv(LED, 'Low', UV_shutter, 'Low')
+        yield from bps.sleep(2)
+        yield from self.get_dark_frame2()
+        yield from count([self])
+        yield from bps.mv(UV_shutter, 'High')
+        yield from bps.sleep(2)
+        yield from self.get_reference_frame2()
+        yield from count([self])
 
 
     def setup_collection(self, integration_time=100, num_spectra_to_average=10, 
@@ -174,6 +220,27 @@ class QEPro(Device):
         self.correction.put(correction_type)
 
         self.spectrum_type.put(spectrum_type)
+        
+        
+    def setup_collection2(self, integration_time=100, num_spectra_to_average=10, 
+                         spectrum_type='Absorbtion', correction_type='Reference', 
+                         electric_dark_correction=True):
+        
+        # For absorbance: spectrum_type='Absorbtion', correction_type='Reference'
+        # For fluorescence: spectrum_type='Corrected Sample', correction_type='Dark'
+        
+        yield from bps.abs_set(self.integration_time, integration_time, wait=True)
+        yield from bps.abs_set(self.num_spectra, num_spectra_to_average, wait=True)
+        if num_spectra_to_average > 1:
+            yield from bps.abs_set(self.collect_mode, 'Average', wait=True)
+        else:
+            yield from bps.abs_set(self.collect_mode, 'Single', wait=True)
+
+        if electric_dark_correction:
+            yield from bps.abs_set(self.electric_dark_correction, 1, wait=True)
+
+        yield from bps.abs_set(self.correction, correction_type, wait=True)
+        yield from bps.abs_set(self.spectrum_type, spectrum_type, wait=True)
 
 
     def grab_frame(self):
@@ -188,8 +255,24 @@ class QEPro(Device):
         self.acquire.put(1)
         return status
 
+    
+    def grab_frame2(self):
+
+        def is_done(value, old_value, **kwargs):
+            if old_value == 1 and value ==0:
+                return True
+            return False
+
+        status = SubscriptionStatus(self.acquire, run=False, callback=is_done)
+
+        yield from bps.abs_set(self.acquire, 1, wait=True)
+        return status
+    
+    
     def trigger(self):
         #self.grab_frame().wait()
+        # return self.grab_frame()
+        # return (yield from self.grab_frame2())
         return self.grab_frame()
 
     def write_as_csv(self, write_path):
@@ -230,9 +313,19 @@ class QEPro(Device):
         
 
 
-    def take_uvvis_save_csv(self, sample_type='test', plot=False, csv_path=None, 
+    def take_uvvis_save_csv(self, sample_type='test', plot=False, csv_path=None, data_agent='tiled', 
                             spectrum_type='Absorbtion', correction_type='Reference', 
-                            pump_list=None, precursor_list=None):
+                            pump_list=None, precursor_list=None, mixer=None, note=None, md=None):
+        
+        _md = {"pumps" : [pump.name for pump in pump_list], 
+               "precursors" : precursor_list, 
+               "infuse_rate" : [pump.read_infuse_rate.get() for pump in pump_list], 
+               "infuse_rate_unit" : [pump.read_infuse_rate_unit.get() for pump in pump_list],
+               "pump_status" : [pump.status.get() for pump in pump_list], 
+               "uvvis" :[spectrum_type, correction_type, self.integration_time.get(), self.num_spectra.get()], 
+               "mixer": mixer, 
+               "note" : note if note else "None"}
+        _md.update(md or {})
         
         # For absorbance: spectrum_type='Absorbtion', correction_type='Reference'
         # For fluorescence: spectrum_type='Corrected Sample', correction_type='Dark'
@@ -244,27 +337,71 @@ class QEPro(Device):
             if LED.get()=='Low' and UV_shutter.get()=='High' and self.correction.get()==correction_type and self.spectrum_type.get()==spectrum_type:
                 uid = (yield from count([self]))
             else:
-                self.correction.put(correction_type)
-                self.spectrum_type.put(spectrum_type)
-                yield from LED_off()
-                yield from shutter_open()
-                uid = (yield from count([self]))
+                yield from bps.abs_set(self.correction, correction_type, wait=True)
+                yield from bps.abs_set(self.spectrum_type, spectrum_type, wait=True)
+                # yield from LED_off()
+                # yield from shutter_open()
+                yield from bps.mv(LED, 'Low', UV_shutter, 'High')
+                uid = (yield from count([self], md=_md))
             
             
         else:
             if LED.get()=='High' and UV_shutter.get()=='Low' and self.correction.get()==correction_type and self.spectrum_type.get()==spectrum_type:
                 uid = (yield from count([self]))
             else:
-                self.correction.put(correction_type)
-                self.spectrum_type.put(spectrum_type)
-                yield from shutter_close()
-                yield from LED_on()       
-                uid = (yield from count([self]))
+                yield from bps.abs_set(self.correction, correction_type, wait=True)
+                yield from bps.abs_set(self.spectrum_type, spectrum_type, wait=True)
+                # yield from shutter_close()
+                # yield from LED_on()
+                yield from bps.mv(LED, 'High', UV_shutter, 'Low')
+                uid = (yield from count([self], md=_md))
+                
+        if csv_path!=None or plot==True:
+            self.save_plot_from_scan(uid, csv_path, sample_type, plot=plot, data_agent=data_agent)
+        
+        
+    def save_plot_from_scan(self, uid, csv_path, sample_type, plot=False, data_agent='db'):
+        if data_agent == 'db':      
+            unix_time = db[uid].start['time']     
+            date, time = _readable_time(unix_time)
             
-        unix_time = db[uid].start['time']     
-        date, time = _readable_time(unix_time)
-        x_axis_data = db[uid].table().QEPro_x_axis[1]
-        output_data = db[uid].table().QEPro_output[1]
+            x_axis_data = db[uid].table().QEPro_x_axis[1]
+            output_data = db[uid].table().QEPro_output[1]
+            sample_data = db[uid].table().QEPro_sample[1]
+            dark_data = db[uid].table().QEPro_dark[1]
+            reference_data = db[uid].table().QEPro_reference[1]
+            spectrum_type = db[uid].table().QEPro_spectrum_type[1]
+            
+            full_uid = db[uid].start['uid']
+            pump_names = db[uid].start['pumps']
+            precursor = db[uid].start['precursors']
+            infuse_rate = db[uid].start['infuse_rate']
+            infuse_rate_unit = db[uid].start['infuse_rate_unit']
+            pump_status = db[uid].start['pump_status']
+            mixer = db[uid].start['mixer']
+            
+
+        if data_agent == 'tiled':    
+            run = tiled_client[uid]
+            ds = run.primary.read()
+            meta = run.metadata
+            
+            date, time = _readable_time(ds['time'][0])
+            x_axis_data = ds['QEPro_x_axis'].values[0]
+            output_data = ds['QEPro_output'].values[0]
+            sample_data = ds['QEPro_sample'].values[0]
+            dark_data = ds['QEPro_dark'].values[0]
+            reference_data = ds['QEPro_reference'].values[0]
+            spectrum_type = ds['QEPro_spectrum_type'].values[0]
+            
+            full_uid = meta['start']['uid']
+            pump_names = meta['start']['pumps']
+            precursor = meta['start']['precursors']
+            infuse_rate = meta['start']['infuse_rate']
+            infuse_rate_unit = meta['start']['infuse_rate_unit']
+            pump_status = meta['start']['pump_status']
+            mixer = meta['start']['mixer']
+             
         
         if plot == True:
             x_axis_label = self.x_axis_format.get(as_string=True)
@@ -274,110 +411,40 @@ class QEPro(Device):
             plt.xlabel(x_axis_label)
             plt.ylabel(y_axis_label)
             plt.show()
-          
+
         if csv_path != None:
-
-            fout = f'{csv_path}/{sample_type}_{spectrum_type[0:3]}_{date}-{time}_{uid[0:8]}.csv'
             
-            with open(fout, 'w') as fp:
-                if pump_list != None:
-                    for pump, precursor in zip(pump_list, precursor_list):
-                        fp.write(f'{pump.name},{precursor},{pump.read_infuse_rate.get()},{pump.read_infuse_rate_unit.get()},{pump.status.get()}\n')
+            if spectrum_type == 3:
+                spec = 'Abs'
+                fout = f'{csv_path}/{sample_type}_{spec}_{date}-{time}_{uid[0:8]}.csv'
                 
+            if spectrum_type == 2:
+                spec = 'PL'
+                fout = f'{csv_path}/{sample_type}_{spec}_{date}-{time}_{uid[0:8]}.csv'
+
+            with open(fout, 'w') as fp:
+                fp.write(f'uid,{full_uid}\n')
                 fp.write(f'Time_QEPro,{date},{time}\n')
+                if pump_list != None:
+                    for i in range(len(pump_list)):
+                        fp.write(f'{pump_names[i]},{precursor[i]},{infuse_rate[i]},{infuse_rate_unit[i]},{pump_status[i]}\n')
+                
+                if mixer != None:
+                    for i in range(len(mixer)):
+                        fp.write(f'Mixer no. {i+1},{mixer[i]}\n')
 
-                sample_data = db[uid].table().QEPro_sample[1]
-                dark_data = db[uid].table().QEPro_dark[1]
-                reference_data = db[uid].table().QEPro_reference[1]
-
-                if spectrum_type == 'Absorbtion':
+                if spectrum_type == 3:
                     fp.write('Energy,Dark,Reference,Sample,Absorbance\n')
                 else:
                     fp.write('Energy,Dark,Raw Sample,Fluorescence\n')
 
                 for i in range(len(output_data)):
-                    if spectrum_type == 'Absorbtion':
+                    if spectrum_type == 3:
                         fp.write(f'{x_axis_data[i]},{dark_data[i]},{reference_data[i]},{sample_data[i]},{output_data[i]}\n')
                     else:
                         fp.write(f'{x_axis_data[i]},{dark_data[i]},{sample_data[i]},{output_data[i]}\n')
         
-        
-
-    def take_uvvis_save_csv2(self, sample_type='test', plot=False, csv_path=None, 
-                            spectrum_type='Absorbtion', correction_type='Reference', 
-                            pump_list=None, precursor_list=None):
-        
-        # For absorbance: spectrum_type='Absorbtion', correction_type='Reference'
-        # For fluorescence: spectrum_type='Corrected Sample', correction_type='Dark'
-        
-        # self.correction.put(correction_type)
-        # self.spectrum_type.put(spectrum_type)
-        
-        if spectrum_type == 'Absorbtion':
-            if LED.get()=='Low' and UV_shutter.get()=='High' and self.correction.get()==correction_type and self.spectrum_type.get()==spectrum_type:
-                uid = (yield from count([self]))
-            else:
-                self.correction.put(correction_type)
-                self.spectrum_type.put(spectrum_type)
-                yield from LED_off()
-                yield from shutter_open()
-                uid = (yield from count([self]))
-            
-            
-        else:
-            if LED.get()=='High' and UV_shutter.get()=='Low' and self.correction.get()==correction_type and self.spectrum_type.get()==spectrum_type:
-                uid = (yield from count([self]))
-            else:
-                self.correction.put(correction_type)
-                self.spectrum_type.put(spectrum_type)
-                yield from shutter_close()
-                yield from LED_on()       
-                uid = (yield from count([self]))
-            
-        
-        run = tiled_client[uid]
-        ds = run.primary.read()          
-        date, time = _readable_time(ds['time'][0])
-        x_axis_data = ds['QEPro_x_axis'].values[0]
-        output_data = ds['QEPro_output'].values[0]
-        
-        if plot == True:
-            x_axis_label = self.x_axis_format.get(as_string=True)
-            y_axis_label = spectrum_type
-
-            plt.plot(x_axis_data, output_data)
-            plt.xlabel(x_axis_label)
-            plt.ylabel(y_axis_label)
-            plt.show()
-          
-        if csv_path != None:
-
-            fout = f'{csv_path}/{sample_type}_{spectrum_type[0:3]}_{date}-{time}_{uid[0:8]}.csv'
-            
-            with open(fout, 'w') as fp:
-                if pump_list != None:
-                    for pump, precursor in zip(pump_list, precursor_list):
-                        fp.write(f'{pump.name},{precursor},{pump.read_infuse_rate.get()},{pump.read_infuse_rate_unit.get()},{pump.status.get()}\n')
-                
-                fp.write(f'Time_QEPro,{date},{time}\n')
-
-                sample_data = ds['QEPro_sample'].values[0]
-                dark_data = ds['QEPro_dark'].values[0]
-                reference_data = ds['QEPro_reference'].values[0]
-
-                if spectrum_type == 'Absorbtion':
-                    fp.write('Energy,Dark,Reference,Sample,Absorbance\n')
-                else:
-                    fp.write('Energy,Dark,Raw Sample,Fluorescence\n')
-
-                for i in range(len(output_data)):
-                    if spectrum_type == 'Absorbtion':
-                        fp.write(f'{x_axis_data[i]},{dark_data[i]},{reference_data[i]},{sample_data[i]},{output_data[i]}\n')
-                    else:
-                        fp.write(f'{x_axis_data[i]},{dark_data[i]},{sample_data[i]},{output_data[i]}\n')
-            
 
 # from tiled.client import from_profile
 # tiled_client = from_profile("xpd")
 qepro = QEPro('XF:28ID2-ES{QEPro:Spec-1}:', name='QEPro', )
-
