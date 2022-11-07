@@ -1,7 +1,3 @@
-
-
-
-
 def reset_pumps(pump_list, clear=True, update = '.2 second'):
     for pump in pump_list:
         pump.initialize_pump(clear=clear, update = update)
@@ -11,6 +7,17 @@ def reset_pumps(pump_list, clear=True, update = '.2 second'):
         pump.withdraw_rate.put(100, wait=True)
         pump.target_vol_unit.put('ml', wait=True)
         pump.target_vol.put(20, wait=True)
+
+
+def reset_pumps2(pump_list, clear=True, update = '.2 second'):
+    for pump in pump_list:
+        pump.initialize_pump(clear=clear, update = update)
+        yield from bps.mv(pump.infuse_rate_unit, 'ul/min', 
+                          pump.infuse_rate, 100, 
+                          pump.withdraw_rate_unit, 'ul/min', 
+                          pump.withdraw_rate, 100, 
+                          pump.target_vol_unit, 'ml', 
+                          pump.target_vol, 20)
 
 
 def show_pump_status(syringe_list, pump_list, precursor_list, wait=False):
