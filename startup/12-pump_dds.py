@@ -190,8 +190,9 @@ class syrng_DDS_ax(Device):
                    target_vol = 20, target_unit = 'ml', 
                    infuse_rate = 100, infuse_unit = 'ul/min'):
         if clear == True:
-            yield from bps.abs_set(self.clear_infused, 1, wait=True)
-            yield from bps.abs_set(self.clear_withdrawn, 1, wait=True)
+            yield from bps.mv(self.clear_infused, 1, self.clear_withdrawn, 1)
+            # yield from bps.abs_set(self.clear_infused, 1, wait=True)
+            # yield from bps.abs_set(self.clear_withdrawn, 1, wait=True)
         
         if self.reading_syringe_size(input_size)[0]:
             size = self.reading_syringe_size(input_size)[1]
@@ -201,8 +202,9 @@ class syrng_DDS_ax(Device):
         c = vol_unit_converter(v0=target_unit, v1='ml')
         if target_vol*c > size:
             raise ValueError (f'Input target volume {target_vol*c} mL larger than syringe size.')        
-        yield from bps.abs_set(self.target_vol_unit, target_unit, wait=True)
-        yield from bps.abs_set(self.target_vol, target_vol, wait=True)
+        yield from bps.mv(self.target_vol_unit, target_unit, self.target_vol, target_vol)
+        # yield from bps.abs_set(self.target_vol_unit, target_unit, wait=True)
+        # yield from bps.abs_set(self.target_vol, target_vol, wait=True)
         
         min_unit = self.show_steel_max_min_rate(input_size)[1]
         max_unit = self.show_steel_max_min_rate(input_size)[3]
@@ -215,16 +217,18 @@ class syrng_DDS_ax(Device):
         elif infuse_rate*const1_min < self.show_steel_max_min_rate(input_size)[0]:
             raise ValueError(f'Input infuse rate {infuse_rate*const1_min:.3f} {min_unit} smaller than allowed value.')
         else:
-            yield from bps.abs_set(self.infuse_rate_unit, infuse_unit, wait=True)
-            yield from bps.abs_set(self.infuse_rate, infuse_rate, wait=True)
+            yield from bps.mv(self.infuse_rate_unit, infuse_unit, self.infuse_rate, infuse_rate)
+            # yield from bps.abs_set(self.infuse_rate_unit, infuse_unit, wait=True)
+            # yield from bps.abs_set(self.infuse_rate, infuse_rate, wait=True)
     
 
     def set_withdraw(self, input_size, clear = False, 
                      target_vol = 20, target_unit = 'ml', 
                      withdraw_rate = 100, withdraw_unit = 'ul/min'):
         if clear == True:
-            yield from bps.abs_set(self.clear_infused, 1, wait=True)
-            yield from bps.abs_set(self.clear_withdrawn, 1, wait=True)
+            yield from bps.mav(self.clear_infused, 1, self.clear_withdrawn, 1)
+            # yield from bps.abs_set(self.clear_infused, 1, wait=True)
+            # yield from bps.abs_set(self.clear_withdrawn, 1, wait=True)
         
         if self.reading_syringe_size(input_size)[0]:
             size = self.reading_syringe_size(input_size)[1]
@@ -234,8 +238,9 @@ class syrng_DDS_ax(Device):
         c = vol_unit_converter(v0=target_unit, v1='ml')
         if target_vol*c > size:
             raise ValueError (f'Input target volume {target_vol*c} mL larger than syringe size.')        
-        yield from bps.abs_set(self.target_vol_unit, target_unit, wait=True)
-        yield from bps.abs_set(self.target_vol, target_vol, wait=True)
+        yield from bps.mv(self.target_vol_unit, target_unit, self.target_vol, target_vol)
+        # yield from bps.abs_set(self.target_vol_unit, target_unit, wait=True)
+        # yield from bps.abs_set(self.target_vol, target_vol, wait=True)
         
         min_unit = self.show_steel_max_min_rate(input_size)[1]
         max_unit = self.show_steel_max_min_rate(input_size)[3]
@@ -248,8 +253,9 @@ class syrng_DDS_ax(Device):
         elif withdraw_rate*const2_min < self.show_steel_max_min_rate(input_size)[0]:
             raise ValueError(f'Input withdraw rate {withdraw_rate*const2_min:.3f} {min_unit} smaller than allowed value.')
         else:
-            yield from bps.abs_set(self.withdraw_rate_unit, withdraw_unit, wait=True)
-            yield from bps.abs_set(self.withdraw_rate, withdraw_rate, wait=True)   
+            yield from bps.mv(self.withdraw_rate_unit, withdraw_unit, self.withdraw_rate, withdraw_rate)
+            # yield from bps.abs_set(self.withdraw_rate_unit, withdraw_unit, wait=True)
+            # yield from bps.abs_set(self.withdraw_rate, withdraw_rate, wait=True)   
 
     
     def infuse_pump(self, clear = False):
@@ -262,8 +268,9 @@ class syrng_DDS_ax(Device):
     
     def infuse_pump2(self, clear = False):
         if clear == True:
-            yield from bps.abs_set(self.clear_infused, 1, wait=True)
-            yield from bps.abs_set(self.clear_withdrawn, 1, wait=True)
+            yield from bps.mv(self.clear_infused, 1, self.clear_withdrawn, 1)
+            # yield from bps.abs_set(self.clear_infused, 1, wait=True)
+            # yield from bps.abs_set(self.clear_withdrawn, 1, wait=True)
         yield from bps.abs_set(self.pump_infuse, 1, wait=True)
         yield from bps.sleep(1)
         
@@ -282,8 +289,9 @@ class syrng_DDS_ax(Device):
 
     def withdraw_pump2(self, clear = False):
         if clear == True:
-            yield from bps.abs_set(self.clear_infused, 1, wait=True)
-            yield from bps.abs_set(self.clear_withdrawn, 1, wait=True)
+            yield from bps.mv(self.clear_infused, 1, self.clear_withdrawn, 1)
+            # yield from bps.abs_set(self.clear_infused, 1, wait=True)
+            # yield from bps.abs_set(self.clear_withdrawn, 1, wait=True)
         yield from bps.abs_set(self.pump_withdraw, 1, wait=True)
         yield from bps.sleep(1)
     
@@ -300,8 +308,9 @@ class syrng_DDS_ax(Device):
     def stop_pump2(self, clear = False):
         yield from bps.abs_set(self.pump_stop, 1, wait=True)
         if clear == True:
-            yield from bps.abs_set(self.clear_infused, 1, wait=True)
-            yield from bps.abs_set(self.clear_withdrawn, 1, wait=True)
+            yield from bps.mv(self.clear_infused, 1, self.clear_withdrawn, 1)
+            # yield from bps.abs_set(self.clear_infused, 1, wait=True)
+            # yield from bps.abs_set(self.clear_withdrawn, 1, wait=True)
         yield from bps.sleep(1)
 
     
