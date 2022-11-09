@@ -343,7 +343,7 @@ class QEPro(Device):
                 # yield from LED_off()
                 # yield from shutter_open()
                 yield from bps.mv(LED, 'Low', UV_shutter, 'High')
-                yield from bps.sleep(2)
+                yield from bps.sleep(2*self.integration_time.get()*self.num_spectra.get()*0.001)
                 uid = (yield from count([self], md=_md))
             
             
@@ -356,7 +356,7 @@ class QEPro(Device):
                 # yield from shutter_close()
                 # yield from LED_on()
                 yield from bps.mv(LED, 'High', UV_shutter, 'Low')
-                yield from bps.sleep(2)
+                yield from bps.sleep(2*self.integration_time.get()*self.num_spectra.get()*0.001)
                 uid = (yield from count([self], md=_md))
                 
         if csv_path!=None or plot==True:
