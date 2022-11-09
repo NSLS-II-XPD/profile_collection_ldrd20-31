@@ -323,7 +323,8 @@ class QEPro(Device):
                "infuse_rate_unit" : [pump.read_infuse_rate_unit.get() for pump in pump_list],
                "pump_status" : [pump.status.get() for pump in pump_list], 
                "uvvis" :[spectrum_type, correction_type, self.integration_time.get(), self.num_spectra.get()], 
-               "mixer": mixer, 
+               "mixer": mixer,
+               "sample_type": sample_type,
                "note" : note if note else "None"}
         _md.update(md or {})
         
@@ -359,10 +360,10 @@ class QEPro(Device):
                 uid = (yield from count([self], md=_md))
                 
         if csv_path!=None or plot==True:
-            self.save_plot_from_scan(uid, csv_path, sample_type, plot=plot, data_agent=data_agent)
+            self.save_plot_from_scan(uid, csv_path, sample_type, plot=plot, data_agent=data_agent, metadata=True)
         
         
-    def save_plot_from_scan(self, uid, csv_path, sample_type, plot=False, data_agent='db'):
+    def save_plot_from_scan(self, uid, csv_path, sample_type, plot=False, data_agent='db', metadata=False):
         if data_agent == 'db':      
             unix_time = db[uid].start['time']     
             date, time = _readable_time(unix_time)
@@ -375,12 +376,15 @@ class QEPro(Device):
             spectrum_type = db[uid].table().QEPro_spectrum_type[1]
             
             full_uid = db[uid].start['uid']
-            pump_names = db[uid].start['pumps']
-            precursor = db[uid].start['precursors']
-            infuse_rate = db[uid].start['infuse_rate']
-            infuse_rate_unit = db[uid].start['infuse_rate_unit']
-            pump_status = db[uid].start['pump_status']
-            mixer = db[uid].start['mixer']
+
+            if metadata == True:
+                pump_names = db[uid].start['pumps']
+                precursor = db[uid].start['precursors']
+                infuse_rate = db[uid].start['infuse_rate']
+                infuse_rate_unit = db[uid].start['infuse_rate_unit']
+                pump_status = db[uid].start['pump_status']
+                mixer = db[uid].start['mixer']
+                # sample_type = db[uid].start['sample_type']
             
 
         if data_agent == 'tiled':    
@@ -394,15 +398,18 @@ class QEPro(Device):
             sample_data = ds['QEPro_sample'].values[0]
             dark_data = ds['QEPro_dark'].values[0]
             reference_data = ds['QEPro_reference'].values[0]
-            spectrum_type = ds['QEPro_spectrum_type'].values[0]
+            # spectrum_type = ds['QEPro_spectrum_type'].values[0]
             
             full_uid = meta['start']['uid']
-            pump_names = meta['start']['pumps']
-            precursor = meta['start']['precursors']
-            infuse_rate = meta['start']['infuse_rate']
-            infuse_rate_unit = meta['start']['infuse_rate_unit']
-            pump_status = meta['start']['pump_status']
-            mixer = meta['start']['mixer']
+
+            if metadata == True:
+                pump_names = meta['start']['pumps']
+                precursor = meta['start']['precursors']
+                infuse_rate = meta['start']['infuse_rate']
+                infuse_rate_unit = meta['start']['infuse_rate_unit']
+                pump_status = meta['start']['pump_status']
+                mixer = meta['start']['mixer']
+                sample_type = db[uid].start['sample_type']
              
         
         if plot == True:
@@ -427,18 +434,18 @@ class QEPro(Device):
             with open(fout, 'w') as fp:
                 fp.write(f'uid,{full_uid}\n')
                 fp.write(f'Time_QEPro,{date},{time}\n')
-                if pump_list != None:
-                    for i in range(len(pump_list)):
+                if metadata == True:
+                    for i in range(len(pump_names)):
                         fp.write(f'{pump_names[i]},{precursor[i]},{infuse_rate[i]},{infuse_rate_unit[i]},{pump_status[i]}\n')
                 
-                if mixer != None:
-                    for i in range(len(mixer)):
-                        fp.write(f'Mixer no. {i+1},{mixer[i]}\n')
+                    if mixer != None:
+                        for i in range(len(mixer)):
+                            fp.write(f'Mixer no. {i+1},{mixer[i]}\n')
 
                 if spectrum_type == 3:
                     fp.write('Energy,Dark,Reference,Sample,Absorbance\n')
                 else:
-                    fp.write('Energy,Dark,Raw Sample,Fluorescence\n')
+                    fp.write('Energy,Dark,Sample,Fluorescence\n')
 
                 for i in range(len(output_data)):
                     if spectrum_type == 3:
