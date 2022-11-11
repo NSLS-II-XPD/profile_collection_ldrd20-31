@@ -29,7 +29,7 @@ def show_pump_status(syringe_list, pump_list, precursor_list, wait=False):
         
 
 def set_group_infuse(syringe_list, pump_list, target_vol_list=['50 ml', '50 ml'], rate_list = ['100 ul/min', '100 ul/min']):
-    for i, j, k, l in zip(pump_list, target_vol_list, infuse_rate_list, syringe_list):
+    for i, j, k, l in zip(pump_list, target_vol_list, rate_list, syringe_list):
         vol = float(j.split(' ')[0])
         vol_unit = j.split(' ')[1]
         rate = float(k.split(' ')[0])
@@ -68,17 +68,17 @@ def _readable_time(unix_time):
     return (f'{dt.year}{dt.month:02d}{dt.day:02d}'), (f'{dt.hour:02d}{dt.minute:02d}{dt.second:02d}')
 
 
-def insitu_test(abs_repeat, cor_repeat, csv_path=None, sample='rhodamine', pump_list=None, precursor_list=None, mixer=None):
+def insitu_test(abs_repeat, cor_repeat, csv_path=None, sample='rhodamine', pump_list=None, precursor_list=None, mixer=None, note=None):
     # yield from bps.sleep(2)
     for i in range(abs_repeat):
         yield from qepro.take_uvvis_save_csv(sample_type=sample, csv_path=csv_path, 
                                               spectrum_type='Absorbtion', correction_type='Reference', 
-                                              pump_list=pump_list, precursor_list=precursor_list, mixer=mixer)
+                                              pump_list=pump_list, precursor_list=precursor_list, mixer=mixer, note=note)
     # yield from bps.sleep(2)    
     for j in range(cor_repeat):
         yield from qepro.take_uvvis_save_csv(sample_type=sample, csv_path=csv_path, 
                                               spectrum_type='Corrected Sample', correction_type='Dark', 
-                                              pump_list=pump_list, precursor_list=precursor_list, mixer=mixer)
+                                              pump_list=pump_list, precursor_list=precursor_list, mixer=mixer, note=note)
 
 
 # def insitu_test2(abs_repeat, cor_repeat, csv_path=None, sample='rhodamine', pump_list=None, precursor_list=None):
