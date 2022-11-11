@@ -191,11 +191,11 @@ class QEPro(Device):
         # yield from LED_off()
         # yield from shutter_close()
         yield from bps.mv(LED, 'Low', UV_shutter, 'Low')
-        yield from bps.sleep(2)
+        yield from bps.sleep(5)
         yield from self.get_dark_frame2()
         yield from count([self])
         yield from bps.mv(UV_shutter, 'High')
-        yield from bps.sleep(2)
+        yield from bps.sleep(5)
         yield from self.get_reference_frame2()
         yield from count([self])
 
@@ -336,34 +336,34 @@ class QEPro(Device):
         
         if spectrum_type == 'Absorbtion':
             if LED.get()=='Low' and UV_shutter.get()=='High' and self.correction.get()==correction_type and self.spectrum_type.get()==spectrum_type:
-                uid = (yield from count([self]))
+                uid = (yield from count([self], md=_md))
             else:
                 yield from bps.abs_set(self.correction, correction_type, wait=True)
                 yield from bps.abs_set(self.spectrum_type, spectrum_type, wait=True)
                 # yield from LED_off()
                 # yield from shutter_open()
                 yield from bps.mv(LED, 'Low', UV_shutter, 'High')
-                yield from bps.sleep(2*self.integration_time.get()*self.num_spectra.get()*0.001)
+                yield from bps.sleep(2)
                 uid = (yield from count([self], md=_md))
             
             
         else:
             if LED.get()=='High' and UV_shutter.get()=='Low' and self.correction.get()==correction_type and self.spectrum_type.get()==spectrum_type:
-                uid = (yield from count([self]))
+                uid = (yield from count([self], md=_md))
             else:
                 yield from bps.abs_set(self.correction, correction_type, wait=True)
                 yield from bps.abs_set(self.spectrum_type, spectrum_type, wait=True)
                 # yield from shutter_close()
                 # yield from LED_on()
                 yield from bps.mv(LED, 'High', UV_shutter, 'Low')
-                yield from bps.sleep(2*self.integration_time.get()*self.num_spectra.get()*0.001)
+                yield from bps.sleep(2)
                 uid = (yield from count([self], md=_md))
                 
         if csv_path!=None or plot==True:
             self.save_plot_from_scan(uid, csv_path, sample_type, plot=plot, data_agent=data_agent, metadata=True)
         
         
-    def save_plot_from_scan(self, uid, csv_path, sample_type, plot=False, data_agent='db', metadata=False):
+    def save_plot_from_scan(self, uid, csv_path, sample_type=None, plot=False, data_agent='db', metadata=False):
         if data_agent == 'db':      
             unix_time = db[uid].start['time']     
             date, time = _readable_time(unix_time)
@@ -384,7 +384,7 @@ class QEPro(Device):
                 infuse_rate_unit = db[uid].start['infuse_rate_unit']
                 pump_status = db[uid].start['pump_status']
                 mixer = db[uid].start['mixer']
-                # sample_type = db[uid].start['sample_type']
+                sample_type = db[uid].start['sample_type']
             
 
         if data_agent == 'tiled':    
@@ -398,7 +398,7 @@ class QEPro(Device):
             sample_data = ds['QEPro_sample'].values[0]
             dark_data = ds['QEPro_dark'].values[0]
             reference_data = ds['QEPro_reference'].values[0]
-            # spectrum_type = ds['QEPro_spectrum_type'].values[0]
+            spectrum_type = ds['QEPro_spectrum_type'].values[0]
             
             full_uid = meta['start']['uid']
 
@@ -409,7 +409,7 @@ class QEPro(Device):
                 infuse_rate_unit = meta['start']['infuse_rate_unit']
                 pump_status = meta['start']['pump_status']
                 mixer = meta['start']['mixer']
-                sample_type = db[uid].start['sample_type']
+                sample_type = meta['start']['sample_type']
              
         
         if plot == True:
