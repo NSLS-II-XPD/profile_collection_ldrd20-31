@@ -200,11 +200,6 @@ class syrng_DDS_ax(Device):
             size = input_size
         
         c = vol_unit_converter(v0=target_unit, v1='ml')
-        if target_vol*c > size:
-            raise ValueError (f'Input target volume {target_vol*c} mL larger than syringe size.')        
-        yield from bps.mv(self.target_vol_unit, target_unit, self.target_vol, target_vol)
-        # yield from bps.abs_set(self.target_vol_unit, target_unit, wait=True)
-        # yield from bps.abs_set(self.target_vol, target_vol, wait=True)
         
         min_unit = self.show_steel_max_min_rate(input_size)[1]
         max_unit = self.show_steel_max_min_rate(input_size)[3]
@@ -212,12 +207,17 @@ class syrng_DDS_ax(Device):
         const1_max = vol_unit_converter(v0=infuse_unit[:2], v1=max_unit[:2])/t_unit_converter(t0=infuse_unit[3:], t1=max_unit[3:])
         const1_min = vol_unit_converter(v0=infuse_unit[:2], v1=min_unit[:2])/t_unit_converter(t0=infuse_unit[3:], t1=min_unit[3:])
         
-        if infuse_rate*const1_max > self.show_steel_max_min_rate(input_size)[2]:
+        if target_vol*c > size:
+            raise ValueError (f'Input target volume {target_vol*c} mL larger than syringe size.')        
+        elif infuse_rate*const1_max > self.show_steel_max_min_rate(input_size)[2]:
             raise ValueError(f'Input infuse rate {infuse_rate*const1_max:.3f} {max_unit} larger than allowed value.')
         elif infuse_rate*const1_min < self.show_steel_max_min_rate(input_size)[0]:
             raise ValueError(f'Input infuse rate {infuse_rate*const1_min:.3f} {min_unit} smaller than allowed value.')
         else:
-            yield from bps.mv(self.infuse_rate_unit, infuse_unit, self.infuse_rate, infuse_rate)
+            yield from bps.mv(self.target_vol_unit, target_unit, 
+                              self.target_vol, target_vol, 
+                              self.infuse_rate_unit, infuse_unit, 
+                              self.infuse_rate, infuse_rate)
             # yield from bps.abs_set(self.infuse_rate_unit, infuse_unit, wait=True)
             # yield from bps.abs_set(self.infuse_rate, infuse_rate, wait=True)
     
@@ -236,11 +236,6 @@ class syrng_DDS_ax(Device):
             size = input_size
         
         c = vol_unit_converter(v0=target_unit, v1='ml')
-        if target_vol*c > size:
-            raise ValueError (f'Input target volume {target_vol*c} mL larger than syringe size.')        
-        yield from bps.mv(self.target_vol_unit, target_unit, self.target_vol, target_vol)
-        # yield from bps.abs_set(self.target_vol_unit, target_unit, wait=True)
-        # yield from bps.abs_set(self.target_vol, target_vol, wait=True)
         
         min_unit = self.show_steel_max_min_rate(input_size)[1]
         max_unit = self.show_steel_max_min_rate(input_size)[3]
@@ -248,12 +243,19 @@ class syrng_DDS_ax(Device):
         const2_max = vol_unit_converter(v0=withdraw_unit[:2], v1=max_unit[:2])/t_unit_converter(t0=withdraw_unit[3:], t1=max_unit[3:])
         const2_min = vol_unit_converter(v0=withdraw_unit[:2], v1=min_unit[:2])/t_unit_converter(t0=withdraw_unit[3:], t1=min_unit[3:])
         
-        if withdraw_rate*const2_max > self.show_steel_max_min_rate(input_size)[2]:
+        
+        if target_vol*c > size:
+            raise ValueError (f'Input target volume {target_vol*c} mL larger than syringe size.')        
+        # yield from bps.mv(self.target_vol_unit, target_unit, self.target_vol, target_vol)
+        elif withdraw_rate*const2_max > self.show_steel_max_min_rate(input_size)[2]:
             raise ValueError(f'Input withdraw rate {withdraw_rate*const2_max:.3f} {max_unit} larger than allowed value.')
         elif withdraw_rate*const2_min < self.show_steel_max_min_rate(input_size)[0]:
             raise ValueError(f'Input withdraw rate {withdraw_rate*const2_min:.3f} {min_unit} smaller than allowed value.')
         else:
-            yield from bps.mv(self.withdraw_rate_unit, withdraw_unit, self.withdraw_rate, withdraw_rate)
+            yield from bps.mv(self.target_vol_unit, target_unit, 
+                              self.target_vol, target_vol, 
+                              self.withdraw_rate_unit, withdraw_unit, 
+                              self.withdraw_rate, withdraw_rate)
             # yield from bps.abs_set(self.withdraw_rate_unit, withdraw_unit, wait=True)
             # yield from bps.abs_set(self.withdraw_rate, withdraw_rate, wait=True)   
 
