@@ -363,7 +363,7 @@ class QEPro(Device):
             self.save_plot_from_scan(uid, csv_path, sample_type, plot=plot, data_agent=data_agent, metadata=True)
         
         
-    def save_plot_from_scan(self, uid, csv_path, sample_type=None, plot=False, data_agent='db', metadata=False):
+    def export_from_scan(self, uid, csv_path, sample_type=None, plot=False, data_agent='db', metadata=False):
         if data_agent == 'db':      
             unix_time = db[uid].start['time']     
             date, time = _readable_time(unix_time)
@@ -374,6 +374,9 @@ class QEPro(Device):
             dark_data = db[uid].table().QEPro_dark[1]
             reference_data = db[uid].table().QEPro_reference[1]
             spectrum_type = db[uid].table().QEPro_spectrum_type[1]
+            int_time = db[uid].table().QEPro_integration_time[1]
+            num_average = db[uid].table().QEPro_num_spectra[1]
+            boxcar_width = db[uid].table().QEPro_buff_capacity[1]
             
             full_uid = db[uid].start['uid']
 
@@ -399,6 +402,9 @@ class QEPro(Device):
             dark_data = ds['QEPro_dark'].values[0]
             reference_data = ds['QEPro_reference'].values[0]
             spectrum_type = ds['QEPro_spectrum_type'].values[0]
+            int_time = ds['QEPro_integration_time'].values[0]
+            num_average = ds['QEPro_num_spectra'].values[0]
+            boxcar_width = ds['QEPro_buff_capacity'].values[0]
             
             full_uid = meta['start']['uid']
 
@@ -434,6 +440,9 @@ class QEPro(Device):
             with open(fout, 'w') as fp:
                 fp.write(f'uid,{full_uid}\n')
                 fp.write(f'Time_QEPro,{date},{time}\n')
+                fp.write(f'Integration time (ms),{int_time}\n')
+                fp.write(f'Number of averaged spectra,{num_average}\n')
+                fp.write(f'Boxcar width,{boxcar_width}\n')
                 if metadata == True:
                     for i in range(len(pump_names)):
                         fp.write(f'{pump_names[i]},{precursor[i]},{infuse_rate[i]},{infuse_rate_unit[i]},{pump_status[i]}\n')
