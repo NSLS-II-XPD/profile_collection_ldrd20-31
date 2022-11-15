@@ -313,20 +313,28 @@ class QEPro(Device):
         
 
 
-    def take_uvvis_save_csv(self, sample_type='test', plot=False, csv_path=None, data_agent='tiled', 
+    def take_uvvis_save_csv(self, sample_type='test', plot=False, csv_path=None, data_agent='db', 
                             spectrum_type='Absorbtion', correction_type='Reference', 
                             pump_list=None, precursor_list=None, mixer=None, note=None, md=None):
         
-        _md = {"pumps" : [pump.name for pump in pump_list], 
-               "precursors" : precursor_list, 
-               "infuse_rate" : [pump.read_infuse_rate.get() for pump in pump_list], 
-               "infuse_rate_unit" : [pump.read_infuse_rate_unit.get() for pump in pump_list],
-               "pump_status" : [pump.status.get() for pump in pump_list], 
-               "uvvis" :[spectrum_type, correction_type, self.integration_time.get(), self.num_spectra.get()], 
-               "mixer": mixer,
-               "sample_type": sample_type,
-               "note" : note if note else "None"}
-        _md.update(md or {})
+        if (pump_list != None and precursor_list != None):
+            _md = {"pumps" : [pump.name for pump in pump_list], 
+                    "precursors" : precursor_list, 
+                    "infuse_rate" : [pump.read_infuse_rate.get() for pump in pump_list], 
+                    "infuse_rate_unit" : [pump.read_infuse_rate_unit.get() for pump in pump_list],
+                    "pump_status" : [pump.status.get() for pump in pump_list], 
+                    "uvvis" :[spectrum_type, correction_type, self.integration_time.get(), self.num_spectra.get()], 
+                    "mixer": mixer,
+                    "sample_type": sample_type,
+                    "note" : note if note else "None"}
+            _md.update(md or {})
+        
+        if (pump_list == None and precursor_list == None):
+            _md = { "uvvis" :[spectrum_type, correction_type, self.integration_time.get(), self.num_spectra.get()], 
+                    "mixer": 'exsitu measurement',
+                    "sample_type": sample_type,
+                    "note" : note if note else "None"}
+            _md.update(md or {})
         
         # For absorbance: spectrum_type='Absorbtion', correction_type='Reference'
         # For fluorescence: spectrum_type='Corrected Sample', correction_type='Dark'
@@ -360,8 +368,10 @@ class QEPro(Device):
                 uid = (yield from count([self], md=_md))
                 
         if csv_path!=None or plot==True:
-            self.save_plot_from_scan(uid, csv_path, sample_type, plot=plot, data_agent=data_agent, metadata=True)
-        
+            if (pump_list != None and precursor_list != None):
+                self.export_from_scan(uid, csv_path, sample_type, plot=plot, data_agent=data_agent, metadata=True)
+            if (pump_list == None and precursor_list == None):
+                self.export_from_scan(uid, csv_path, sample_type, plot=plot, data_agent=data_agent, metadata=False)
         
     def export_from_scan(self, uid, csv_path, sample_type=None, plot=False, data_agent='db', metadata=False):
         if data_agent == 'db':      
