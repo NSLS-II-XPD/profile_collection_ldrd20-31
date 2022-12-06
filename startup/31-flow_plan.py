@@ -20,11 +20,11 @@ def reset_pumps2(pump_list, clear=True, update = '.2 second'):
                           pump.target_vol, 20)
 
 
-def show_pump_status(syringe_list, pump_list, precursor_list, wait=False):
-    for input_size, pump, precursor in zip(syringe_list, pump_list, precursor_list):
+def show_pump_status(syringe_list, pump_list, precursor_list, syringe_mater_list, wait=False):
+    for input_size, pump, precursor, material in zip(syringe_list, pump_list, precursor_list, syringe_mater_list):
         print('Name: ' + f'{pump.name}')
         print('Precursor: ' + f'{precursor}')
-        pump.check_pump_condition(input_size, wait=wait)
+        pump.check_pump_condition(input_size, material, wait=wait)
         print('\n')
         
 
