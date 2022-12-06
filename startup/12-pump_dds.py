@@ -95,24 +95,26 @@ class syrng_DDS_ax(Device):
             print('You want to use a non-steel syringe. Please check the pump manually.')
             
     
-    def reading_syringe_size(self, input_size):
+    def reading_syringe_size(self, input_size, syringe_material):
         #dia_vol = {'4.851mm': 2.5, '9.525mm': 8, '19.13mm': 20, '28.6mm': 50, '34.9mm':100}
         self.set_infuse_range.put(1, wait=True)
         self.set_withdraw_range.put(1, wait=True)
-        min_vol= {'2.264nl/min': 2.5, '8.728nl/min': 8, '35.21nl/min': 20, '78.69nl/min': 50}
+        #min_vol= {'2.264nl/min': 2.5, '8.728nl/min': 8, '35.21nl/min': 20, '78.69nl/min': 50}
+        min_vol = _vol_rate_table(syringe_material=syringe_material)[0]
         #return dia_vol[f'{self.diameter.get()}mm']
         a = (min_vol[f'{self.read_min_infuse.get()}nl/min'] == input_size)
         return a, min_vol[f'{self.read_min_infuse.get()}nl/min']
 
 
      
-    def check_pump_condition(self, input_size, wait=False, syringe_material='steel'):
+    def check_pump_condition(self, input_size, syringe_material, wait=False):
         if wait == True:
             self.set_infuse_range.put(1, wait=True)
             self.set_withdraw_range.put(1, wait=True)
 
-        if self.reading_syringe_size(input_size)[0]:
-            print('Syringe Volume: ' + f'{self.reading_syringe_size(input_size)[1]} mL {syringe_material} syringe')
+        kk = self.reading_syringe_size(input_size, syringe_material)
+        if kk[0]:
+            print('Syringe Volume: ' + f'{kk[1]} mL {syringe_material} syringe')
         else:
             print("(Input size doens't match the reading diameter. Use the input size.)")
             print('Syringe Volume: ' + f'{input_size} mL {syringe_material} syringe')            
@@ -186,7 +188,7 @@ class syrng_DDS_ax(Device):
         
         
     
-    def set_infuse(self, input_size, clear = False, 
+    def set_infuse(self, input_size, syringe_material='steel', clear = False, 
                    target_vol = 20, target_unit = 'ml', 
                    infuse_rate = 100, infuse_unit = 'ul/min'):
         if clear == True:
@@ -194,24 +196,35 @@ class syrng_DDS_ax(Device):
             # yield from bps.abs_set(self.clear_infused, 1, wait=True)
             # yield from bps.abs_set(self.clear_withdrawn, 1, wait=True)
         
-        if self.reading_syringe_size(input_size)[0]:
-            size = self.reading_syringe_size(input_size)[1]
+        yield from bps.mv(self.set_infuse_range, 1, self.set_withdraw_range, 1)
+
+        def _syringe_size(input_size, syringe_material):
+            #yield from bps.mv(self.set_infuse_range, 1, self.set_withdraw_range, 1)
+            min_vol = _vol_rate_table(syringe_material=syringe_material)[0]
+            a = (min_vol[f'{self.read_min_infuse.get()}nl/min'] == input_size)
+            return a, min_vol[f'{self.read_min_infuse.get()}nl/min']
+        
+        if _syringe_size(input_size, syringe_material)[0]:
+            size = _syringe_size(input_size, syringe_material)[1]
         else:
-            size = input_size
+            #size = input_size
+            raise ValueError('Input size could not been found. Check selected syringe type & size.')
         
         c = vol_unit_converter(v0=target_unit, v1='ml')
         
-        min_unit = self.show_steel_max_min_rate(input_size)[1]
-        max_unit = self.show_steel_max_min_rate(input_size)[3]
+        min_unit = 'nl/min'
+        max_unit = 'ml/min'
+        min_in_theory = _vol_rate_table(syringe_material=syringe_material)[1][size][0]
+        max_in_theory = _vol_rate_table(syringe_material=syringe_material)[1][size][1]
 
         const1_max = vol_unit_converter(v0=infuse_unit[:2], v1=max_unit[:2])/t_unit_converter(t0=infuse_unit[3:], t1=max_unit[3:])
         const1_min = vol_unit_converter(v0=infuse_unit[:2], v1=min_unit[:2])/t_unit_converter(t0=infuse_unit[3:], t1=min_unit[3:])
         
         if target_vol*c > size:
             raise ValueError (f'Input target volume {target_vol*c} mL larger than syringe size.')        
-        elif infuse_rate*const1_max > self.show_steel_max_min_rate(input_size)[2]:
+        elif infuse_rate*const1_max > max_in_theory:
             raise ValueError(f'Input infuse rate {infuse_rate*const1_max:.3f} {max_unit} larger than allowed value.')
-        elif infuse_rate*const1_min < self.show_steel_max_min_rate(input_size)[0]:
+        elif infuse_rate*const1_min < min_in_theory:
             raise ValueError(f'Input infuse rate {infuse_rate*const1_min:.3f} {min_unit} smaller than allowed value.')
         else:
             yield from bps.mv(self.target_vol_unit, target_unit, 
@@ -222,42 +235,54 @@ class syrng_DDS_ax(Device):
             # yield from bps.abs_set(self.infuse_rate, infuse_rate, wait=True)
     
 
-    def set_withdraw(self, input_size, clear = False, 
+
+    def set_withdraw(self, input_size, syringe_material='steel', clear = False, 
                      target_vol = 20, target_unit = 'ml', 
                      withdraw_rate = 100, withdraw_unit = 'ul/min'):
         if clear == True:
-            yield from bps.mav(self.clear_infused, 1, self.clear_withdrawn, 1)
+            yield from bps.mv(self.clear_infused, 1, self.clear_withdrawn, 1)
             # yield from bps.abs_set(self.clear_infused, 1, wait=True)
             # yield from bps.abs_set(self.clear_withdrawn, 1, wait=True)
         
-        if self.reading_syringe_size(input_size)[0]:
-            size = self.reading_syringe_size(input_size)[1]
+        yield from bps.mv(self.set_infuse_range, 1, self.set_withdraw_range, 1)
+
+        def _syringe_size(input_size, syringe_material):
+            #yield from bps.mv(self.set_infuse_range, 1, self.set_withdraw_range, 1)
+            min_vol = _vol_rate_table(syringe_material=syringe_material)[0]
+            a = (min_vol[f'{self.read_min_infuse.get()}nl/min'] == input_size)
+            return a, min_vol[f'{self.read_min_infuse.get()}nl/min']
+        
+        if _syringe_size(input_size, syringe_material)[0]:
+            size = _syringe_size(input_size, syringe_material)[1]
         else:
-            size = input_size
+            #size = input_size
+            raise ValueError('Input size could not been found. Check selected syringe type & size.')
         
         c = vol_unit_converter(v0=target_unit, v1='ml')
         
-        min_unit = self.show_steel_max_min_rate(input_size)[1]
-        max_unit = self.show_steel_max_min_rate(input_size)[3]
+        min_unit = 'nl/min'
+        max_unit = 'ml/min'
+        min_in_theory = _vol_rate_table(syringe_material=syringe_material)[1][size][0]
+        max_in_theory = _vol_rate_table(syringe_material=syringe_material)[1][size][1]
 
-        const2_max = vol_unit_converter(v0=withdraw_unit[:2], v1=max_unit[:2])/t_unit_converter(t0=withdraw_unit[3:], t1=max_unit[3:])
-        const2_min = vol_unit_converter(v0=withdraw_unit[:2], v1=min_unit[:2])/t_unit_converter(t0=withdraw_unit[3:], t1=min_unit[3:])
-        
+        const1_max = vol_unit_converter(v0=infuse_unit[:2], v1=max_unit[:2])/t_unit_converter(t0=infuse_unit[3:], t1=max_unit[3:])
+        const1_min = vol_unit_converter(v0=infuse_unit[:2], v1=min_unit[:2])/t_unit_converter(t0=infuse_unit[3:], t1=min_unit[3:])
         
         if target_vol*c > size:
             raise ValueError (f'Input target volume {target_vol*c} mL larger than syringe size.')        
-        # yield from bps.mv(self.target_vol_unit, target_unit, self.target_vol, target_vol)
-        elif withdraw_rate*const2_max > self.show_steel_max_min_rate(input_size)[2]:
-            raise ValueError(f'Input withdraw rate {withdraw_rate*const2_max:.3f} {max_unit} larger than allowed value.')
-        elif withdraw_rate*const2_min < self.show_steel_max_min_rate(input_size)[0]:
-            raise ValueError(f'Input withdraw rate {withdraw_rate*const2_min:.3f} {min_unit} smaller than allowed value.')
+        elif infuse_rate*const1_max > max_in_theory:
+            raise ValueError(f'Input withdraw rate {withdraw_rate*const1_max:.3f} {max_unit} larger than allowed value.')
+        elif infuse_rate*const1_min < min_in_theory:
+            raise ValueError(f'Input withdraw rate {withdraw_rate*const1_min:.3f} {min_unit} smaller than allowed value.')
         else:
             yield from bps.mv(self.target_vol_unit, target_unit, 
                               self.target_vol, target_vol, 
                               self.withdraw_rate_unit, withdraw_unit, 
                               self.withdraw_rate, withdraw_rate)
-            # yield from bps.abs_set(self.withdraw_rate_unit, withdraw_unit, wait=True)
-            # yield from bps.abs_set(self.withdraw_rate, withdraw_rate, wait=True)   
+            # yield from bps.abs_set(self.infuse_rate_unit, infuse_unit, wait=True)
+            # yield from bps.abs_set(self.infuse_rate, infuse_rate, wait=True)
+
+
 
     
     def infuse_pump(self, clear = False):
@@ -315,7 +340,7 @@ class syrng_DDS_ax(Device):
             # yield from bps.abs_set(self.clear_withdrawn, 1, wait=True)
         yield from bps.sleep(1)
 
-    
+
     def show_steel_max_min_rate(self, input_size):
         min_unit = 'nl/min'
         max_unit = 'ml/min'
@@ -346,6 +371,33 @@ class syrng_DDS_ax(Device):
         return min_rate, min_unit, max_rate, max_unit
     
     
+
+def _vol_rate_table(syringe_material='steel'):
+    min_unit = 'nl/min'
+    max_unit = 'ml/min'
+    
+    if syringe_material == 'steel':
+        min_vol= {'2.264nl/min': 2.5, '8.728nl/min': 8, '35.21nl/min': 20, '78.69nl/min': 50}
+        _range = {2.5: [2.264, 2.351], 8: [8.728, 9.064], 20: [35.21, 36.56], 50: [78.69, 81.72]}
+   
+    elif syringe_material == 'glass_H1000': # Hamilton 1000 Series
+        min_vol= {'2.043nl/min': 1, '2.553nl/min': 1.25, '5.106nl/min': 2.5, 
+                  '10.21nl/min': 5, '20.41nl/min': 10, '51.04nl/min': 25, 
+                  '102.1nl/min': 50}
+        _range = {1: [2.043, 2.121], 1.25: [2.553, 2.651], 2.5: [5.106, 5.302], 5: [10.21, 10.6], 
+                  10: [20.41, 21.2], 25: [51.04, 53], 50: [102.1, 106]}
+    
+    elif syringe_material == 'plastic_BD': # Becton Dickinson
+        min_vol= {'2.124nl/min': 1, '7.09nl/min': 3, '13.83nl/min': 5, 
+                  '20.02nl/min': 10, '34.91nl/min': 20, '44.84nl/min': 30, 
+                  '68.04nl/min': 50}
+        _range = {1: [2.124, 2.206], 3: [7.09, 7.363], 5: [13.83, 14.36], 10: [20.02, 20.79], 
+                  20: [34.91, 36.26], 30: [44.84, 46.57], 50: [68.04, 70.66]}
+    
+    else:
+        raise ValueError(f'Size of {syringe_material} syringe could nor been found.')
+    return min_vol, _range
+
 
     
 def vol_unit_converter(v0 = 'ul', v1 = 'ml'):
