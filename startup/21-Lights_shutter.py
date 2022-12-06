@@ -21,6 +21,7 @@ UV_shutter = EpicsSignal('XF:28IDC-ES:1{Light:Abs-Sht:1}Cmd', name='UV_shutter',
 def LED_on():
     yield from bps.abs_set(LED, 'High', wait=True)
     print(f'LED light is {LED.get()}.')
+    return 'test'
     #st=DeviceStatus()
     #LED.put('High', wait=True)
     #return (yield from bps.rd(LED))
