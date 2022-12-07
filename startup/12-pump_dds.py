@@ -265,14 +265,14 @@ class syrng_DDS_ax(Device):
         min_in_theory = _vol_rate_table(syringe_material=syringe_material)[1][size][0]
         max_in_theory = _vol_rate_table(syringe_material=syringe_material)[1][size][1]
 
-        const1_max = vol_unit_converter(v0=infuse_unit[:2], v1=max_unit[:2])/t_unit_converter(t0=infuse_unit[3:], t1=max_unit[3:])
-        const1_min = vol_unit_converter(v0=infuse_unit[:2], v1=min_unit[:2])/t_unit_converter(t0=infuse_unit[3:], t1=min_unit[3:])
+        const1_max = vol_unit_converter(v0=withdraw_unit[:2], v1=max_unit[:2])/t_unit_converter(t0=withdraw_unit[3:], t1=max_unit[3:])
+        const1_min = vol_unit_converter(v0=withdraw_unit[:2], v1=min_unit[:2])/t_unit_converter(t0=withdraw_unit[3:], t1=min_unit[3:])
         
         if target_vol*c > size:
             raise ValueError (f'Input target volume {target_vol*c} mL larger than syringe size.')        
-        elif infuse_rate*const1_max > max_in_theory:
+        elif withdraw_rate*const1_max > max_in_theory:
             raise ValueError(f'Input withdraw rate {withdraw_rate*const1_max:.3f} {max_unit} larger than allowed value.')
-        elif infuse_rate*const1_min < min_in_theory:
+        elif withdraw_rate*const1_min < min_in_theory:
             raise ValueError(f'Input withdraw rate {withdraw_rate*const1_min:.3f} {min_unit} smaller than allowed value.')
         else:
             yield from bps.mv(self.target_vol_unit, target_unit, 
