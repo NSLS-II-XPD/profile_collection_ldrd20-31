@@ -31,7 +31,7 @@ def outer_plan(det1, det2, *args, md=None, num_fast=10, sample_type = 'test',
         for i in range(num_fast):
             yield from bps.trigger(det2)
 
-            yield from bps.create(name="xray")
+            yield from bps.create(name="absorbance")
             reading = (yield from bps.read(det2))
             print(f"reading = {reading}")
             ret.update(reading)
@@ -40,7 +40,7 @@ def outer_plan(det1, det2, *args, md=None, num_fast=10, sample_type = 'test',
         for i in range(num_fast * 2):  # TODO: fix the number of triggers
             yield from bps.trigger(det2)
 
-            yield from bps.create(name="uvvis")
+            yield from bps.create(name="fluorescence")
             reading = (yield from bps.read(det2))
             print(f"reading = {reading}")
             ret.update(reading)
