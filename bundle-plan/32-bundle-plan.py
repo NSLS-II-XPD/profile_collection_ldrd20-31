@@ -51,7 +51,7 @@ def outer_plan(det1, det2, *args, md=None, num_fast=10, sample_type = 'test',
         ...
         ###
 
-        yield from bps.create(name="slow")
+        yield from bps.create(name="scattering")
         reading = (yield from bps.read(det1))
         print(f"reading = {reading}")
         ret.update(reading)
