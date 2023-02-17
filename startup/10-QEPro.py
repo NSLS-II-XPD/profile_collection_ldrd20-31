@@ -172,8 +172,8 @@ class QEPro(Device):
         yield from bps.abs_set(self.spectrum_type, current_spectrum, wait=True)
         
     
-    def take_ref_bkg(self, integration_time=15, num_spectra_to_average=16, electric_dark_correction=True):
-        yield from self.setup_collection2(integration_time=integration_time, num_spectra_to_average=num_spectra_to_average, 
+    def take_ref_bkg(self, integration_time=15, num_spectra_to_average=16, buffer=3, electric_dark_correction=True):
+        yield from self.setup_collection2(integration_time=integration_time, num_spectra_to_average=num_spectra_to_average, buffer=buffer, 
                                          spectrum_type='Absorbtion', correction_type='Reference', 
                                          electric_dark_correction=True)
         # yield from LED_off()
@@ -184,8 +184,8 @@ class QEPro(Device):
         yield from self.get_reference_frame2()
         
         
-    def take_ref_bkg2(self, integration_time=15, num_spectra_to_average=16, electric_dark_correction=True):
-        yield from self.setup_collection2(integration_time=integration_time, num_spectra_to_average=num_spectra_to_average, 
+    def take_ref_bkg2(self, integration_time=15, num_spectra_to_average=16, buffer=3, electric_dark_correction=True):
+        yield from self.setup_collection2(integration_time=integration_time, num_spectra_to_average=num_spectra_to_average, buffer=buffer, 
                                          spectrum_type='Absorbtion', correction_type='Reference', 
                                          electric_dark_correction=True)
         # yield from LED_off()
@@ -199,8 +199,30 @@ class QEPro(Device):
         yield from self.get_reference_frame2()
         yield from count([self])
 
+    
+    def take_ref_bkg3(self, integration_time=15, num_spectra_to_average=16, 
+                      buffer=3, electric_dark_correction=True, ref_name='test', csv_path=None):
+        yield from self.setup_collection2(integration_time=integration_time, num_spectra_to_average=num_spectra_to_average, buffer=buffer, 
+                                         spectrum_type='Absorbtion', correction_type='Reference', 
+                                         electric_dark_correction=True)
+        # yield from LED_off()
+        # yield from shutter_close()
+        yield from bps.mv(LED, 'Low', UV_shutter, 'Low')
+        yield from bps.sleep(5)
+        yield from self.get_dark_frame2()
+        uid = (yield from count([self], md = {'note':'Dark'}))
+        if csv_path != None:
+            self.export_from_scan(uid, csv_path, sample_type=f'Dark_{integration_time}ms')
 
-    def setup_collection(self, integration_time=100, num_spectra_to_average=10, 
+        yield from bps.mv(UV_shutter, 'High')
+        yield from bps.sleep(5)
+        yield from self.get_reference_frame2()
+        uid = (yield from count([self], md = {'note':ref_name}))
+        if csv_path != None:
+            self.export_from_scan(uid, csv_path, sample_type=f'{ref_name}_{integration_time}ms')
+
+
+    def setup_collection(self, integration_time=100, num_spectra_to_average=10, buffer=3,
                          spectrum_type='Absorbtion', correction_type='Reference', 
                          electric_dark_correction=True):
         
@@ -209,6 +231,7 @@ class QEPro(Device):
         
         self.integration_time.put(integration_time)
         self.num_spectra.put(num_spectra_to_average)
+        self.buff_capacity.put(buffer)
         if num_spectra_to_average > 1:
             self.collect_mode.put('Average')
         else:
@@ -222,7 +245,7 @@ class QEPro(Device):
         self.spectrum_type.put(spectrum_type)
         
         
-    def setup_collection2(self, integration_time=100, num_spectra_to_average=10, 
+    def setup_collection2(self, integration_time=100, num_spectra_to_average=10, buffer=3,
                          spectrum_type='Absorbtion', correction_type='Reference', 
                          electric_dark_correction=True):
         
@@ -231,6 +254,7 @@ class QEPro(Device):
         
         yield from bps.abs_set(self.integration_time, integration_time, wait=True)
         yield from bps.abs_set(self.num_spectra, num_spectra_to_average, wait=True)
+        yield from bps.abs_set(self.buff_capacity, buffer, wait=True)
         if num_spectra_to_average > 1:
             yield from bps.abs_set(self.collect_mode, 'Average', wait=True)
         else:
