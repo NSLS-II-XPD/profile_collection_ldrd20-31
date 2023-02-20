@@ -212,6 +212,7 @@ class QEPro(Device):
         yield from self.get_dark_frame2()
         uid = (yield from count([self], md = {'note':'Dark'}))
         if csv_path != None:
+            print(f'Export dark file to {csv_path}...')
             self.export_from_scan(uid, csv_path, sample_type=f'Dark_{integration_time}ms')
 
         yield from bps.mv(UV_shutter, 'High')
@@ -219,6 +220,7 @@ class QEPro(Device):
         yield from self.get_reference_frame2()
         uid = (yield from count([self], md = {'note':ref_name}))
         if csv_path != None:
+            print(f'Export reference file to {csv_path}...')
             self.export_from_scan(uid, csv_path, sample_type=f'{ref_name}_{integration_time}ms')
 
 
