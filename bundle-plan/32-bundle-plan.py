@@ -3,7 +3,7 @@ from bluesky.utils import ts_msg_hook
 RE.msg_hook = ts_msg_hook
 
 
-def xray_uvvis_plan(det1, det2, *args, md=None, num_fast=10, sample_type = 'test', 
+def xray_uvvis_plan(det1, det2, *args, md=None, num_abs=10, num_flu=10, sample_type = 'test', 
                spectrum_type='Absorbtion', correction_type='Reference', 
                pump_list=None, precursor_list=None, mixer=None, note=None, **kwargs):
     
@@ -54,7 +54,7 @@ def xray_uvvis_plan(det1, det2, *args, md=None, num_fast=10, sample_type = 'test
             yield from bps.mv(LED, 'Low', UV_shutter, 'High')
             yield from bps.sleep(1)
 
-        for i in range(num_fast):
+        for i in range(num_abs):
             yield from bps.trigger(det2, wait=True)
 
             yield from bps.create(name="absorbance")
@@ -76,7 +76,7 @@ def xray_uvvis_plan(det1, det2, *args, md=None, num_fast=10, sample_type = 'test
             yield from bps.mv(LED, 'High', UV_shutter, 'Low')
             yield from bps.sleep(1)
 
-        for i in range(num_fast * 2):  # TODO: fix the number of triggers
+        for i in range(num_flu):  # TODO: fix the number of triggers
             yield from bps.trigger(det2, wait=True)
 
             yield from bps.create(name="fluorescence")
