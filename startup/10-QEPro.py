@@ -357,7 +357,7 @@ class QEPro(Device):
         
         if (pump_list == None and precursor_list == None):
             _md = { "uvvis" :[spectrum_type, correction_type, self.integration_time.get(), self.num_spectra.get()], 
-                    "mixer": 'exsitu measurement',
+                    "mixer": ['exsitu measurement'],
                     "sample_type": sample_type,
                     "note" : note if note else "None"}
             _md.update(md or {})
@@ -392,14 +392,15 @@ class QEPro(Device):
                 yield from bps.mv(LED, 'High', UV_shutter, 'Low')
                 yield from bps.sleep(2)
                 uid = (yield from count([self], md=_md))
-                
-        if csv_path!=None or plot==True:
-            if (pump_list != None and precursor_list != None):
-                self.export_from_scan(uid, csv_path, sample_type, plot=plot, data_agent=data_agent, metadata=True)
-            if (pump_list == None and precursor_list == None):
-                self.export_from_scan(uid, csv_path, sample_type, plot=plot, data_agent=data_agent, metadata=False)
         
-    def export_from_scan(self, uid, csv_path, sample_type=None, plot=False, data_agent='db', metadata=False):
+        if csv_path!=None or plot==True:
+            yield from bps.sleep(2)
+            self.export_from_scan(uid, csv_path, sample_type, plot=plot, data_agent=data_agent)
+        
+    def export_from_scan(self, uid, csv_path, sample_name=None, plot=False, data_agent='db', wait=False):
+        if wait==True:
+            time.sleep(2)
+        
         if data_agent == 'db':      
             unix_time = db[uid].start['time']     
             date, time = _readable_time(unix_time)
@@ -416,14 +417,29 @@ class QEPro(Device):
             
             full_uid = db[uid].start['uid']
 
-            if metadata == True:
+            metadata_list=['pumps','precursors','infuse_rate','infuse_rate_unit','pump_status',
+                           'mixer','sample_type']
+            if 'pumps' in db[uid].start.keys():
                 pump_names = db[uid].start['pumps']
+            else: pump_names = ['None']
+            if 'precursors' in db[uid].start.keys():
                 precursor = db[uid].start['precursors']
+            else: precursor = ['None']
+            if 'infuse_rate' in db[uid].start.keys():
                 infuse_rate = db[uid].start['infuse_rate']
+            else: infuse_rate = ['None']
+            if 'infuse_rate_unit' in db[uid].start.keys():
                 infuse_rate_unit = db[uid].start['infuse_rate_unit']
+            else: infuse_rate_unit = ['None']
+            if 'pump_status' in db[uid].start.keys():
                 pump_status = db[uid].start['pump_status']
+            else: pump_status = ['None']
+            if 'mixer' in db[uid].start.keys():
                 mixer = db[uid].start['mixer']
+            else: mixer = ['None']
+            if 'sample_type' in db[uid].start.keys():
                 sample_type = db[uid].start['sample_type']
+            else: sample_type = None
             
 
         if data_agent == 'tiled':    
@@ -444,20 +460,36 @@ class QEPro(Device):
             
             full_uid = meta['start']['uid']
 
-            if metadata == True:
+            if 'pumps' in meta['start'].keys():
                 pump_names = meta['start']['pumps']
+            else: pump_names = ['None']
+            if 'precursors' in meta['start'].keys():
                 precursor = meta['start']['precursors']
+            else: precursor = ['None']
+            if 'infuse_rate' in meta['start'].keys():
                 infuse_rate = meta['start']['infuse_rate']
+            else: infuse_rate = ['None']
+            if 'infuse_rate_unit' in meta['start'].keys():
                 infuse_rate_unit = meta['start']['infuse_rate_unit']
+            else: infuse_rate_unit = ['None']
+            if 'pump_status' in meta['start'].keys():
                 pump_status = meta['start']['pump_status']
+            else: pump_status = ['None']
+            if 'mixer' in meta['start'].keys():
                 mixer = meta['start']['mixer']
+            else: mixer = ['None']
+            if 'sample_type' in meta['start'].keys():
                 sample_type = meta['start']['sample_type']
+            else: sample_type = None
              
         
         if plot == True:
             x_axis_label = self.x_axis_format.get(as_string=True)
-            y_axis_label = spectrum_type
-
+            if spectrum_type == 3:
+                y_axis_label = 'Absorbance'
+            elif spectrum_type == 2:
+                y_axis_label = 'Fluorescence'
+            plt.figure()
             plt.plot(x_axis_data, output_data)
             plt.xlabel(x_axis_label)
             plt.ylabel(y_axis_label)
@@ -479,18 +511,18 @@ class QEPro(Device):
                 fp.write(f'Integration time (ms),{int_time}\n')
                 fp.write(f'Number of averaged spectra,{num_average}\n')
                 fp.write(f'Boxcar width,{boxcar_width}\n')
-                if metadata == True:
-                    for i in range(len(pump_names)):
-                        fp.write(f'{pump_names[i]},{precursor[i]},{infuse_rate[i]},{infuse_rate_unit[i]},{pump_status[i]}\n')
-                
-                    if mixer != None:
-                        for i in range(len(mixer)):
-                            fp.write(f'Mixer no. {i+1},{mixer[i]}\n')
+
+                for i in range(len(pump_names)):
+                    fp.write(f'{pump_names[i]},{precursor[i]},{infuse_rate[i]},{infuse_rate_unit[i]},{pump_status[i]}\n')
+            
+                if mixer != None:
+                    for i in range(len(mixer)):
+                        fp.write(f'Mixer no. {i+1},{mixer[i]}\n')
 
                 if spectrum_type == 3:
-                    fp.write('Energy,Dark,Reference,Sample,Absorbance\n')
+                    fp.write('Wavelength,Dark,Reference,Sample,Absorbance\n')
                 else:
-                    fp.write('Energy,Dark,Sample,Fluorescence\n')
+                    fp.write('Wavelength,Dark,Sample,Fluorescence\n')
 
                 for i in range(len(output_data)):
                     if spectrum_type == 3:
