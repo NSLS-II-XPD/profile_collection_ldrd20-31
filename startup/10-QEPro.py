@@ -349,14 +349,14 @@ class QEPro(Device):
                     "infuse_rate" : [pump.read_infuse_rate.get() for pump in pump_list], 
                     "infuse_rate_unit" : [pump.read_infuse_rate_unit.get() for pump in pump_list],
                     "pump_status" : [pump.status.get() for pump in pump_list], 
-                    "uvvis" :[spectrum_type, correction_type, self.integration_time.get(), self.num_spectra.get()], 
+                    "uvvis" :[spectrum_type, correction_type, self.integration_time.get(), self.num_spectra.get(), self.buff_capacity.get()], 
                     "mixer": mixer,
                     "sample_type": sample_type,
                     "note" : note if note else "None"}
             _md.update(md or {})
         
         if (pump_list == None and precursor_list == None):
-            _md = { "uvvis" :[spectrum_type, correction_type, self.integration_time.get(), self.num_spectra.get()], 
+            _md = { "uvvis" :[spectrum_type, correction_type, self.integration_time.get(), self.num_spectra.get(), self.buff_capacity.get()], 
                     "mixer": ['exsitu measurement'],
                     "sample_type": sample_type,
                     "note" : note if note else "None"}
@@ -397,7 +397,7 @@ class QEPro(Device):
             yield from bps.sleep(2)
             self.export_from_scan(uid, csv_path, sample_type, plot=plot, data_agent=data_agent)
         
-    def export_from_scan(self, uid, csv_path, sample_name=None, plot=False, data_agent='db', wait=False):
+    def export_from_scan(self, uid, csv_path, sample_type=None, plot=False, data_agent='db', wait=False):
         if wait==True:
             time.sleep(2)
         
@@ -439,7 +439,7 @@ class QEPro(Device):
             else: mixer = ['None']
             if 'sample_type' in db[uid].start.keys():
                 sample_type = db[uid].start['sample_type']
-            else: sample_type = None
+            # else: sample_type = None
             
 
         if data_agent == 'tiled':    
@@ -480,7 +480,7 @@ class QEPro(Device):
             else: mixer = ['None']
             if 'sample_type' in meta['start'].keys():
                 sample_type = meta['start']['sample_type']
-            else: sample_type = None
+            # else: sample_type = None
              
         
         if plot == True:
