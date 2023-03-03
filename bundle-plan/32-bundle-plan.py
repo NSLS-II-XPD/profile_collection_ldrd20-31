@@ -3,8 +3,7 @@ from bluesky.utils import ts_msg_hook
 RE.msg_hook = ts_msg_hook
 
 
-def xray_uvvis_plan(det1, det2, *args, md=None, num_abs=10, num_flu=10, sample_type = 'test', 
-               spectrum_type='Absorbtion', correction_type='Reference', 
+def xray_uvvis_plan(det1, det2, *args, md=None, num_abs=10, num_flu=10, sample_type = 'test',  
                pump_list=None, precursor_list=None, mixer=None, note=None, **kwargs):
     
     if (pump_list != None and precursor_list != None):
@@ -13,15 +12,15 @@ def xray_uvvis_plan(det1, det2, *args, md=None, num_abs=10, num_flu=10, sample_t
                "infuse_rate" : [pump.read_infuse_rate.get() for pump in pump_list], 
                "infuse_rate_unit" : [pump.read_infuse_rate_unit.get() for pump in pump_list],
                "pump_status" : [pump.status.get() for pump in pump_list], 
-               "uvvis" :[spectrum_type, correction_type, qepro.integration_time.get(), qepro.num_spectra.get()], 
+               "uvvis" :[qepro.integration_time.get(), qepro.num_spectra.get(), qepro.buff_capacity.get()], 
                "mixer": mixer,
                "sample_type": sample_type,
                "note" : note if note else "None"}
         _md.update(md or {})    
         
     if (pump_list == None and precursor_list == None):
-        _md = { "uvvis" :[spectrum_type, correction_type, qepro.integration_time.get(), qepro.num_spectra.get()], 
-                "mixer": 'exsitu measurement',
+        _md = { "uvvis" :[qepro.integration_time.get(), qepro.num_spectra.get(), qepro.buff_capacity.get()], 
+                "mixer": ['exsitu measurement'],
                 "sample_type": sample_type,
                 "note" : note if note else "None"}
         _md.update(md or {})
