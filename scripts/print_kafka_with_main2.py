@@ -52,12 +52,12 @@ def print_kafka_messages(beamline_acronym, csv_path):
             # print(x_axis_data[:5])
             # print(output_data[:5])
             # plt.figure()
-            plt.plot(x_axis_data, output_data)
+            # plt.plot(x_axis_data, output_data)
             # plt.show()
             time.sleep(2)
             qepro.export_from_scan(uid, csv_path, plot=True, data_agent='db', wait=False)
             print('Kafka printing finished!')
-            
+
     plt.show()
     kafka_config = _read_bluesky_kafka_config_file(config_file_path="/etc/bluesky/kafka.yml")
 
