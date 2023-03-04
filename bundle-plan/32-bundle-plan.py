@@ -1,6 +1,6 @@
 from ophyd.sim import det, noisy_det
 from bluesky.utils import ts_msg_hook
-RE.msg_hook = ts_msg_hook
+# RE.msg_hook = ts_msg_hook
 
 
 def xray_uvvis_plan(det1, det2, *args, md=None, num_abs=10, num_flu=10, sample_type = 'test',  
