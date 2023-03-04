@@ -3,20 +3,24 @@ import pprint
 import uuid
 from bluesky_kafka import RemoteDispatcher
 import matplotlib.pyplot as plt
+import time
+import databroker
+from side_functions import export_qepro_from_uid
+# db = databroker.Broker.named('xpd-ldrd20-31')
+# catalog = databroker.catalog['xpd-ldrd20-31']
 
 try:
     from nslsii import _read_bluesky_kafka_config_file  # nslsii <0.7.0
 except (ImportError, AttributeError):
     from nslsii.kafka_utils import _read_bluesky_kafka_config_file  # nslsii >=0.7.0
 
-
 def print_kafka_messages(beamline_acronym, csv_path):
     print(f"Listening for Kafka messages for {beamline_acronym}")
 
-    # from databroker import Broker
-    import databroker
+    global db, catalog
     db = databroker.Broker.named(beamline_acronym)
     catalog = databroker.catalog[f'{beamline_acronym}']
+
     # plt.figure()
     def print_message(name, doc):
         # print(
@@ -35,6 +39,10 @@ def print_kafka_messages(beamline_acronym, csv_path):
                 print(f"plan name: {doc['plan_name']}")
             if 'detectors' in doc.keys(): 
                 print(f"detectors: {doc['detectors']}")
+            if 'pumps' in doc.keys(): 
+                print(f"pumps: {doc['pumps']}")
+            # if 'detectors' in doc.keys(): 
+            #     print(f"detectors: {doc['detectors']}")
             if 'uvvis' in doc.keys() and doc['plan_name']!='count':
                 print(f"uvvis mode:\n"
                       f"           integration time: {doc['uvvis'][0]} ms\n"
@@ -74,7 +82,8 @@ def print_kafka_messages(beamline_acronym, csv_path):
 
             if num_events == 1:
                 time.sleep(2)
-                qepro.export_from_scan(uid, csv_path, plot=False, data_agent='db', wait=False)
+                # export_from_scan(uid, csv_path, plot=True, data_agent='db', wait=False)
+                export_qepro_from_uid(uid, csv_path, plot=False, data_agent='db', wait=False)
                 print('export successfully\n')
             else:
                 print('Not yet ready...\n')
