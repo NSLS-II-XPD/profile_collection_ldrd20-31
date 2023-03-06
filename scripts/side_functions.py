@@ -3,6 +3,8 @@ import matplotlib.pyplot as plt
 import time
 import numpy as np
 import pandas as pd
+import os
+
 
 def _readable_time(unix_time):
     from datetime import datetime
@@ -11,19 +13,207 @@ def _readable_time(unix_time):
     return (f'{dt.year}{dt.month:02d}{dt.day:02d}'), (f'{dt.hour:02d}{dt.minute:02d}{dt.second:02d}')
 
 
+def _data_keys():
+    qepro_list=['QEPro_x_axis', 'QEPro_output', 'QEPro_sample', 'QEPro_dark', 'QEPro_reference', 
+                'QEPro_spectrum_type', 'QEPro_integration_time', 'QEPro_num_spectra', 'QEPro_buff_capacity']
+    qepro_dic = {}
+
+    metadata_list=['uid', 'time', 'pumps','precursors','infuse_rate','infuse_rate_unit',
+                   'pump_status', 'mixer','sample_type', 'note']
+    metadata_dic = {}
+
+    return qepro_list, qepro_dic, metadata_list, metadata_dic
+
+
 ### the export funs below are revised from self.export_from_scan in 10-QEPro.py
+def export_qepro_by_stream(uid, csv_path, stream_name='primary', data_agent='catalog', plot=False, wait=False):
+    if wait==True:
+        time.sleep(2)
+    
+    qepro_dic, metadata_dic = read_qepro_by_stream(uid, stream_name=stream_name, data_agent=data_agent)
+    dic_to_csv_for_stream(csv_path, qepro_dic, metadata_dic, stream_name=stream_name)
+    print(f'Export {stream_name} in uid: {uid[0:8]} to ../{os.path.basename(csv_path)} done!')
+    
+
+def read_qepro_by_stream(uid, stream_name='primary', data_agent='catalog'):
+    
+    if data_agent == 'catalog':
+        try:
+            catalog
+        except NameError:
+            import databroker
+            catalog = databroker.catalog['xpd-ldrd20-31']
+    
+    if data_agent == 'tiled':
+        try:
+            from_profile
+        except NameError:
+            from tiled.client import from_profile
+            tiled_client = from_profile("xpd-ldrd20-31") 
+    
+    run = catalog[uid]
+    meta = run.metadata
+    
+    try:
+        data = run[stream_name].read()
+        qepro_list, qepro_dic, metadata_list, metadata_dic = _data_keys()
+
+        for i in qepro_list:
+            qepro_dic[i] = data[i]
+
+        for i in metadata_list:
+            if i in meta['start'].keys():
+                metadata_dic[i] = meta['start'][i]
+            else:
+                metadata_dic[i] = [None]
+
+    except (KeyError, AttributeError):
+        qepro_dic, metadata_dic = {}, {}
+        print(f"Stream name: {stream_name} doesn't exist.")
+    
+    return qepro_dic, metadata_dic
+
+
+
+def dic_to_csv_for_stream(csv_path, qepro_dic, metadata_dic, stream_name='primary'):
+        
+    spectrum_type = qepro_dic['QEPro_spectrum_type'].values
+    sample_type = metadata_dic['sample_type']
+    date, time = _readable_time(metadata_dic['time'])
+    full_uid = metadata_dic['uid']
+    int_time = qepro_dic['QEPro_integration_time'].values
+    num_average = qepro_dic['QEPro_num_spectra'].values
+    boxcar_width = qepro_dic['QEPro_buff_capacity'].values
+    pump_names = metadata_dic['pumps']
+    precursor = metadata_dic['precursors']
+    infuse_rate = metadata_dic['infuse_rate']
+    infuse_rate_unit = metadata_dic['infuse_rate_unit']
+    pump_status = metadata_dic['pump_status']
+    mixer = metadata_dic['mixer']
+    note = metadata_dic['note']
+
+    x_axis_data = qepro_dic['QEPro_x_axis'].values
+    dark_data = qepro_dic['QEPro_dark'].values
+    reference_data = qepro_dic['QEPro_reference'].values
+    sample_data = qepro_dic['QEPro_sample'].values
+    output_data = qepro_dic['QEPro_output'].values
+
+    if stream_name is 'primary':
+        if spectrum_type == 3:
+            spec = 'Abs'
+            fout = f'{csv_path}/{sample_type}_{spec}_{date}-{time}_{uid[0:8]}.csv'
+            
+        elif spectrum_type == 2:
+            spec = 'PL'
+            fout = f'{csv_path}/{sample_type}_{spec}_{date}-{time}_{uid[0:8]}.csv'
+
+        with open(fout, 'w') as fp:
+            fp.write(f'uid,{full_uid}\n')
+            fp.write(f'Time_QEPro,{date},{time}\n')
+            fp.write(f'Integration time (ms),{int_time[0]}\n')
+            fp.write(f'Number of averaged spectra,{num_average[0]}\n')
+            fp.write(f'Boxcar width,{boxcar_width[0]}\n')
+
+            for i in range(len(pump_names)):
+                fp.write(f'{pump_names[i]},{precursor[i]},{infuse_rate[i]},{infuse_rate_unit[i]},{pump_status[i]}\n')
+        
+            if mixer != None:
+                for i in range(len(mixer)):
+                    fp.write(f'Mixer no. {i+1},{mixer[i]}\n')
+
+            if type(note) is str:
+                fp.write(f'Note,{note}\n')
+
+            if spectrum_type == 3:
+                fp.write('Wavelength,Dark,Reference,Sample,Absorbance\n')
+            else:
+                fp.write('Wavelength,Dark,Sample,Fluorescence\n')
+
+            for i in range(x_axis_data.shape[1]):
+                if spectrum_type == 3:
+                    fp.write(f'{x_axis_data[0,i]},{dark_data[0,i]},{reference_data[0,i]},{sample_data[0,i]},{output_data[0,i]}\n')
+                else:
+                    fp.write(f'{x_axis_data[0,i]},{dark_data[0,i]},{sample_data[0,i]},{output_data[0,i]}\n')
+    
+    else:
+        new_dir = f'{csv_path}/{date}{time}_{uid[0:8]}_{stream_name}'
+        os.makedirs(new_dir, exist_ok=True)
+        for j in range(x_axis_data.shape[0]):
+            fout = f'{new_dir}/{sample_type}_{date}-{time}_{uid[0:8]}_{j:03d}.csv'
+            
+            with open(fout, 'w') as fp:
+                fp.write(f'uid,{full_uid}\n')
+                fp.write(f'Time_QEPro,{date},{time}\n')
+                fp.write(f'Integration time (ms),{int_time[j]}\n')
+                fp.write(f'Number of averaged spectra,{num_average[j]}\n')
+                fp.write(f'Boxcar width,{boxcar_width[j]}\n')
+
+                for i in range(len(pump_names)):
+                    fp.write(f'{pump_names[i]},{precursor[i]},{infuse_rate[i]},{infuse_rate_unit[i]},{pump_status[i]}\n')
+            
+                if mixer != None:
+                    for i in range(len(mixer)):
+                        fp.write(f'Mixer no. {i+1},{mixer[i]}\n')
+
+                if type(note) is str:
+                    fp.write(f'Note,{note}\n')
+
+                if spectrum_type[0] == 3:
+                    fp.write('Wavelength,Dark,Reference,Sample,Absorbance\n')
+                else:
+                    fp.write('Wavelength,Dark,Sample,Fluorescence\n')
+
+                for i in range(x_axis_data.shape[1]):
+                    if spectrum_type[0] == 3:
+                        fp.write(f'{x_axis_data[j,i]},{dark_data[j,i]},{reference_data[j,i]},{sample_data[j,i]},{output_data[j,i]}\n')
+                    else:
+                        fp.write(f'{x_axis_data[j,i]},{dark_data[j,i]},{sample_data[j,i]},{output_data[j,i]}\n')
+
+
+
+
 def export_qepro_from_uid(uid, csv_path, sample_type=None, plot=False, data_agent='db', wait=False):
     if wait==True:
         time.sleep(2)
     
     if data_agent == 'db':
         qepro_dic, metadata_dic = read_qepro_from_db(uid)
-        dic_to_csv(csv_path, qepro_dic, metadata_dic)
     elif data_agent == 'tiled':
         qepro_dic, metadata_dic = read_qepro_from_tiled(uid)
-        dic_to_csv(csv_path, qepro_dic, metadata_dic)
 
+    dic_to_csv(csv_path, qepro_dic, metadata_dic)
+    print(f'Export uid: {uid[0:8]} to ../{os.path.basename(csv_path)} done!')
+
+
+
+def read_qepro_from_tiled(uid):
+    try:
+       from_profile
+    except NameError:
+        from tiled.client import from_profile
+        tiled_client = from_profile("xpd-ldrd20-31")  
     
+    run = tiled_client[uid]
+    ds = run.primary.read()
+    meta = run.metadata
+    
+    # date, time = _readable_time(ds['time'][0])
+    # full_uid = meta['start']['uid']
+    
+    qepro_list, qepro_dic, metadata_list, metadata_dic = _data_keys()
+
+    for i in qepro_list:
+        qepro_dic[i] = ds[i].values[0]
+
+    for i in metadata_list:
+        if i in meta['start'].keys():
+            metadata_dic[i] = meta['start'][i]
+        else:
+            metadata_dic[i] = [None]
+    
+    return qepro_dic, metadata_dic
+
+
 
 def read_qepro_from_db(uid):
     try:
@@ -36,15 +226,11 @@ def read_qepro_from_db(uid):
     # unix_time = db[uid].start['time']     
     # date, time = _readable_time(unix_time)
 
-    qepro_list=['QEPro_x_axis', 'QEPro_output', 'QEPro_sample', 'QEPro_dark', 'QEPro_reference', 
-                'QEPro_spectrum_type', 'QEPro_integration_time', 'QEPro_num_spectra', 'QEPro_buff_capacity']
-    qepro_dic = {}
+    qepro_list, qepro_dic, metadata_list, metadata_dic = _data_keys()
+
     for i in qepro_list:
         qepro_dic[i] = db[uid].table()[i][1]
 
-    metadata_list=['uid', 'time', 'pumps','precursors','infuse_rate','infuse_rate_unit',
-                   'pump_status', 'mixer','sample_type']
-    metadata_dic = {}
     for i in metadata_list:
         if i in db[uid].start.keys():
             metadata_dic[i] = db[uid].start[i]
@@ -54,36 +240,6 @@ def read_qepro_from_db(uid):
     return qepro_dic, metadata_dic
 
 
-def read_qepro_from_tiled(uid):
-    try:
-        tiled.client
-    except NameError:
-        from tiled.client import from_profile
-        tiled_client = from_profile("xpd-ldrd20-31")  
-    
-    run = tiled_client[uid]
-    ds = run.primary.read()
-    meta = run.metadata
-    
-    # date, time = _readable_time(ds['time'][0])
-    # full_uid = meta['start']['uid']
-    
-    qepro_list=['QEPro_x_axis', 'QEPro_output', 'QEPro_sample', 'QEPro_dark', 'QEPro_reference', 
-                'QEPro_spectrum_type', 'QEPro_integration_time', 'QEPro_num_spectra', 'QEPro_buff_capacity']
-    qepro_dic = {}
-    for i in qepro_list:
-        qepro_dic[i] = ds[i].values[0]
-
-    metadata_list=['uid', 'time', 'pumps','precursors','infuse_rate','infuse_rate_unit',
-                   'pump_status', 'mixer','sample_type']
-    metadata_dic = {}
-    for i in metadata_list:
-        if i in meta['start'].keys():
-            metadata_dic[i] = meta['start'][i]
-        # else:
-        #     metadata_dic[i] = [None]
-    
-    return qepro_dic, metadata_dic
 
 
 def dic_to_csv(csv_path, qepro_dic, metadata_dic):
@@ -96,18 +252,19 @@ def dic_to_csv(csv_path, qepro_dic, metadata_dic):
     num_average = qepro_dic['QEPro_num_spectra']
     boxcar_width = qepro_dic['QEPro_buff_capacity']
     pump_names = metadata_dic['pumps']
-    precursor_list = metadata_dic['precursors']
+    precursor = metadata_dic['precursors']
     infuse_rate = metadata_dic['infuse_rate']
     infuse_rate_unit = metadata_dic['infuse_rate_unit']
     pump_status = metadata_dic['pump_status']
     mixer = metadata_dic['mixer']
+    note = metadata_dic['note']
 
     x_axis_data = qepro_dic['QEPro_x_axis']
     dark_data = qepro_dic['QEPro_dark']
     reference_data = qepro_dic['QEPro_reference']
     sample_data = qepro_dic['QEPro_sample']
     output_data = qepro_dic['QEPro_output']
-
+    
     if spectrum_type == 3:
         spec = 'Abs'
         fout = f'{csv_path}/{sample_type}_{spec}_{date}-{time}_{uid[0:8]}.csv'
@@ -130,6 +287,9 @@ def dic_to_csv(csv_path, qepro_dic, metadata_dic):
             for i in range(len(mixer)):
                 fp.write(f'Mixer no. {i+1},{mixer[i]}\n')
 
+        if type(note) is str:
+            fp.write(f'Note,{note}\n')
+
         if spectrum_type == 3:
             fp.write('Wavelength,Dark,Reference,Sample,Absorbance\n')
         else:
@@ -141,139 +301,3 @@ def dic_to_csv(csv_path, qepro_dic, metadata_dic):
             else:
                 fp.write(f'{x_axis_data[i]},{dark_data[i]},{sample_data[i]},{output_data[i]}\n')
 
-
-
-
-def export_from_scan(uid, csv_path, sample_type=None, plot=False, data_agent='db', wait=False):
-    if wait==True:
-        time.sleep(2)
-    
-    if data_agent == 'db':      
-        unix_time = db[uid].start['time']     
-        date, time = _readable_time(unix_time)
-        
-        x_axis_data = db[uid].table().QEPro_x_axis[1]
-        output_data = db[uid].table().QEPro_output[1]
-        sample_data = db[uid].table().QEPro_sample[1]
-        dark_data = db[uid].table().QEPro_dark[1]
-        reference_data = db[uid].table().QEPro_reference[1]
-        spectrum_type = db[uid].table().QEPro_spectrum_type[1]
-        int_time = db[uid].table().QEPro_integration_time[1]
-        num_average = db[uid].table().QEPro_num_spectra[1]
-        boxcar_width = db[uid].table().QEPro_buff_capacity[1]
-        
-        full_uid = db[uid].start['uid']
-
-        metadata_list=['pumps','precursors','infuse_rate','infuse_rate_unit','pump_status',
-                        'mixer','sample_type']
-        if 'pumps' in db[uid].start.keys():
-            pump_names = db[uid].start['pumps']
-        else: pump_names = ['None']
-        if 'precursors' in db[uid].start.keys():
-            precursor = db[uid].start['precursors']
-        else: precursor = ['None']
-        if 'infuse_rate' in db[uid].start.keys():
-            infuse_rate = db[uid].start['infuse_rate']
-        else: infuse_rate = ['None']
-        if 'infuse_rate_unit' in db[uid].start.keys():
-            infuse_rate_unit = db[uid].start['infuse_rate_unit']
-        else: infuse_rate_unit = ['None']
-        if 'pump_status' in db[uid].start.keys():
-            pump_status = db[uid].start['pump_status']
-        else: pump_status = ['None']
-        if 'mixer' in db[uid].start.keys():
-            mixer = db[uid].start['mixer']
-        else: mixer = ['None']
-        if 'sample_type' in db[uid].start.keys():
-            sample_type = db[uid].start['sample_type']
-        # else: sample_type = None
-        
-
-    if data_agent == 'tiled':    
-        run = tiled_client[uid]
-        ds = run.primary.read()
-        meta = run.metadata
-        
-        date, time = _readable_time(ds['time'][0])
-        x_axis_data = ds['QEPro_x_axis'].values[0]
-        output_data = ds['QEPro_output'].values[0]
-        sample_data = ds['QEPro_sample'].values[0]
-        dark_data = ds['QEPro_dark'].values[0]
-        reference_data = ds['QEPro_reference'].values[0]
-        spectrum_type = ds['QEPro_spectrum_type'].values[0]
-        int_time = ds['QEPro_integration_time'].values[0]
-        num_average = ds['QEPro_num_spectra'].values[0]
-        boxcar_width = ds['QEPro_buff_capacity'].values[0]
-        
-        full_uid = meta['start']['uid']
-
-        if 'pumps' in meta['start'].keys():
-            pump_names = meta['start']['pumps']
-        else: pump_names = ['None']
-        if 'precursors' in meta['start'].keys():
-            precursor = meta['start']['precursors']
-        else: precursor = ['None']
-        if 'infuse_rate' in meta['start'].keys():
-            infuse_rate = meta['start']['infuse_rate']
-        else: infuse_rate = ['None']
-        if 'infuse_rate_unit' in meta['start'].keys():
-            infuse_rate_unit = meta['start']['infuse_rate_unit']
-        else: infuse_rate_unit = ['None']
-        if 'pump_status' in meta['start'].keys():
-            pump_status = meta['start']['pump_status']
-        else: pump_status = ['None']
-        if 'mixer' in meta['start'].keys():
-            mixer = meta['start']['mixer']
-        else: mixer = ['None']
-        if 'sample_type' in meta['start'].keys():
-            sample_type = meta['start']['sample_type']
-        # else: sample_type = None
-            
-    
-    if plot == True:
-        # x_axis_label = self.x_axis_format.get(as_string=True)
-        x_axis_label = 'Wavelength (nm)'
-        if spectrum_type == 3:
-            y_axis_label = 'Absorbance'
-        elif spectrum_type == 2:
-            y_axis_label = 'Fluorescence'
-        plt.figure()
-        plt.plot(x_axis_data, output_data)
-        plt.xlabel(x_axis_label)
-        plt.ylabel(y_axis_label)
-        plt.show()
-
-    if csv_path != None:
-        
-        if spectrum_type == 3:
-            spec = 'Abs'
-            fout = f'{csv_path}/{sample_type}_{spec}_{date}-{time}_{uid[0:8]}.csv'
-            
-        if spectrum_type == 2:
-            spec = 'PL'
-            fout = f'{csv_path}/{sample_type}_{spec}_{date}-{time}_{uid[0:8]}.csv'
-
-        with open(fout, 'w') as fp:
-            fp.write(f'uid,{full_uid}\n')
-            fp.write(f'Time_QEPro,{date},{time}\n')
-            fp.write(f'Integration time (ms),{int_time}\n')
-            fp.write(f'Number of averaged spectra,{num_average}\n')
-            fp.write(f'Boxcar width,{boxcar_width}\n')
-
-            for i in range(len(pump_names)):
-                fp.write(f'{pump_names[i]},{precursor[i]},{infuse_rate[i]},{infuse_rate_unit[i]},{pump_status[i]}\n')
-        
-            if mixer != None:
-                for i in range(len(mixer)):
-                    fp.write(f'Mixer no. {i+1},{mixer[i]}\n')
-
-            if spectrum_type == 3:
-                fp.write('Wavelength,Dark,Reference,Sample,Absorbance\n')
-            else:
-                fp.write('Wavelength,Dark,Sample,Fluorescence\n')
-
-            for i in range(len(output_data)):
-                if spectrum_type == 3:
-                    fp.write(f'{x_axis_data[i]},{dark_data[i]},{reference_data[i]},{sample_data[i]},{output_data[i]}\n')
-                else:
-                    fp.write(f'{x_axis_data[i]},{dark_data[i]},{sample_data[i]},{output_data[i]}\n')
