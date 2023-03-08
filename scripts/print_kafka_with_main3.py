@@ -5,7 +5,9 @@ from bluesky_kafka import RemoteDispatcher
 import matplotlib.pyplot as plt
 import time
 import databroker
-from side_functions import export_qepro_from_uid
+from side_functions import read_qepro_by_stream, dic_to_csv_for_stream
+import os
+from plot_helper import plot_uvvis
 # db = databroker.Broker.named('xpd-ldrd20-31')
 # catalog = databroker.catalog['xpd-ldrd20-31']
 
@@ -13,6 +15,13 @@ try:
     from nslsii import _read_bluesky_kafka_config_file  # nslsii <0.7.0
 except (ImportError, AttributeError):
     from nslsii.kafka_utils import _read_bluesky_kafka_config_file  # nslsii >=0.7.0
+
+# these two lines allow a stale plot to remain interactive and prevent
+# the current plot from stealing focus.  thanks to Tom:
+# https://nsls2.slack.com/archives/C02D9V72QH1/p1674589090772499
+plt.ion()
+plt.rcParams["figure.raise_window"] = False
+
 
 def print_kafka_messages(beamline_acronym, csv_path):
     print(f"Listening for Kafka messages for {beamline_acronym}")
@@ -66,28 +75,19 @@ def print_kafka_messages(beamline_acronym, csv_path):
             print(f"{datetime.datetime.now().isoformat()} documents {name}\n"
                   f"contents: {pprint.pformat(doc)}"
             )
+            # num_events = len(doc['num_events'])
+
+            time.sleep(2)
             uid = doc['run_start']
-            num_events = len(doc['num_events'])
-
-            print(db[uid].table())
-            print(f'export directory: {csv_path}')
-
-            # x_axis_data = db[uid].table().QEPro_x_axis[1]
-            # output_data = db[uid].table().QEPro_output[1]
-            # print(x_axis_data[:5])
-            # print(output_data[:5])
-            # plt.figure()
-            # plt.plot(x_axis_data, output_data)
-            # plt.show()
-
-            if num_events == 1:
-                time.sleep(2)
-                # export_from_scan(uid, csv_path, plot=True, data_agent='db', wait=False)
-                export_qepro_from_uid(uid, csv_path, plot=False, data_agent='db', wait=False)
-                print('export successfully\n')
-            else:
-                print('Not yet ready...\n')
-            # print('Events printing finished!\n')
+            print(f'\n*** start to export uid: {uid} ***')
+            for stream_name in ['primary', 'absorbance', 'fluorescence']:
+                if stream_name in doc['num_events'].keys():
+                    qepro_dic, metadata_dic = read_qepro_by_stream(uid, stream_name=stream_name, data_agent='catalog')
+                    dic_to_csv_for_stream(csv_path, qepro_dic, metadata_dic, stream_name=stream_name)
+                    print(f'export {stream_name} in uid: {uid[0:8]} to ../{os.path.basename(csv_path)} done!')
+                    u = plot_uvvis(uid, stream_name, qepro_dic, metadata_dic)
+                    u.plot_data()
+            print('*** export complete ***\n')
             print('########### Events printing division ############\n')
 
     # plt.show()
