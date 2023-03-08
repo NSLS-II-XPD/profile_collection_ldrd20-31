@@ -9,7 +9,7 @@ import os
 def _readable_time(unix_time):
     from datetime import datetime
     dt = datetime.fromtimestamp(unix_time)
-    print(f'{dt.year}{dt.month:02d}{dt.day:02d},{dt.hour:02d}{dt.minute:02d}{dt.second:02d}')
+    # print(f'{dt.year}{dt.month:02d}{dt.day:02d},{dt.hour:02d}{dt.minute:02d}{dt.second:02d}')
     return (f'{dt.year}{dt.month:02d}{dt.day:02d}'), (f'{dt.hour:02d}{dt.minute:02d}{dt.second:02d}')
 
 
@@ -43,23 +43,25 @@ def read_qepro_by_stream(uid, stream_name='primary', data_agent='catalog'):
         except NameError:
             import databroker
             catalog = databroker.catalog['xpd-ldrd20-31']
+        run = catalog[uid]
+        meta = run.metadata
     
     if data_agent == 'tiled':
         try:
             from_profile
         except NameError:
             from tiled.client import from_profile
-            tiled_client = from_profile("xpd-ldrd20-31") 
-    
-    run = catalog[uid]
-    meta = run.metadata
+            tiled_client = from_profile("xpd-ldrd20-31")
+        run = tiled_client[uid]
+        meta = run.metadata
+   
     
     try:
         data = run[stream_name].read()
         qepro_list, qepro_dic, metadata_list, metadata_dic = _data_keys()
 
         for i in qepro_list:
-            qepro_dic[i] = data[i]
+            qepro_dic[i] = data[i].values
 
         for i in metadata_list:
             if i in meta['start'].keys():
@@ -77,13 +79,13 @@ def read_qepro_by_stream(uid, stream_name='primary', data_agent='catalog'):
 
 def dic_to_csv_for_stream(csv_path, qepro_dic, metadata_dic, stream_name='primary'):
         
-    spectrum_type = qepro_dic['QEPro_spectrum_type'].values
+    spectrum_type = qepro_dic['QEPro_spectrum_type']
     sample_type = metadata_dic['sample_type']
     date, time = _readable_time(metadata_dic['time'])
     full_uid = metadata_dic['uid']
-    int_time = qepro_dic['QEPro_integration_time'].values
-    num_average = qepro_dic['QEPro_num_spectra'].values
-    boxcar_width = qepro_dic['QEPro_buff_capacity'].values
+    int_time = qepro_dic['QEPro_integration_time']
+    num_average = qepro_dic['QEPro_num_spectra']
+    boxcar_width = qepro_dic['QEPro_buff_capacity']
     pump_names = metadata_dic['pumps']
     precursor = metadata_dic['precursors']
     infuse_rate = metadata_dic['infuse_rate']
@@ -92,20 +94,20 @@ def dic_to_csv_for_stream(csv_path, qepro_dic, metadata_dic, stream_name='primar
     mixer = metadata_dic['mixer']
     note = metadata_dic['note']
 
-    x_axis_data = qepro_dic['QEPro_x_axis'].values
-    dark_data = qepro_dic['QEPro_dark'].values
-    reference_data = qepro_dic['QEPro_reference'].values
-    sample_data = qepro_dic['QEPro_sample'].values
-    output_data = qepro_dic['QEPro_output'].values
+    x_axis_data = qepro_dic['QEPro_x_axis']
+    dark_data = qepro_dic['QEPro_dark']
+    reference_data = qepro_dic['QEPro_reference']
+    sample_data = qepro_dic['QEPro_sample']
+    output_data = qepro_dic['QEPro_output']
 
     if stream_name is 'primary':
         if spectrum_type == 3:
             spec = 'Abs'
-            fout = f'{csv_path}/{sample_type}_{spec}_{date}-{time}_{uid[0:8]}.csv'
+            fout = f'{csv_path}/{sample_type}_{spec}_{date}-{time}_{full_uid[0:8]}.csv'
             
         elif spectrum_type == 2:
             spec = 'PL'
-            fout = f'{csv_path}/{sample_type}_{spec}_{date}-{time}_{uid[0:8]}.csv'
+            fout = f'{csv_path}/{sample_type}_{spec}_{date}-{time}_{full_uid[0:8]}.csv'
 
         with open(fout, 'w') as fp:
             fp.write(f'uid,{full_uid}\n')
@@ -136,10 +138,10 @@ def dic_to_csv_for_stream(csv_path, qepro_dic, metadata_dic, stream_name='primar
                     fp.write(f'{x_axis_data[0,i]},{dark_data[0,i]},{sample_data[0,i]},{output_data[0,i]}\n')
     
     else:
-        new_dir = f'{csv_path}/{date}{time}_{uid[0:8]}_{stream_name}'
+        new_dir = f'{csv_path}/{date}{time}_{full_uid[0:8]}_{stream_name}'
         os.makedirs(new_dir, exist_ok=True)
         for j in range(x_axis_data.shape[0]):
-            fout = f'{new_dir}/{sample_type}_{date}-{time}_{uid[0:8]}_{j:03d}.csv'
+            fout = f'{new_dir}/{sample_type}_{date}-{time}_{full_uid[0:8]}_{j:03d}.csv'
             
             with open(fout, 'w') as fp:
                 fp.write(f'uid,{full_uid}\n')
