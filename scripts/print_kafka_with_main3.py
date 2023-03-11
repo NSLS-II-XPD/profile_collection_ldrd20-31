@@ -2,6 +2,7 @@ import datetime
 import pprint
 import uuid
 from bluesky_kafka import RemoteDispatcher
+from bluesky_kafka.consume import BasicConsumer
 import matplotlib.pyplot as plt
 import time
 import databroker
