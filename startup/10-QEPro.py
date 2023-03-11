@@ -216,9 +216,12 @@ class QEPro(Device):
             self.export_from_scan(uid, csv_path, sample_type=f'Dark_{integration_time}ms')
 
         yield from bps.mv(UV_shutter, 'High')
-        yield from bps.sleep(5)
+        yield from bps.sleep(2)
         yield from self.get_reference_frame2()
         uid = (yield from count([self], md = {'note':ref_name}))
+        
+        yield from bps.mv(LED, 'Low', UV_shutter, 'Low')
+
         if csv_path != None:
             print(f'Export reference file to {csv_path}...')
             self.export_from_scan(uid, csv_path, sample_type=f'{ref_name}_{integration_time}ms')
@@ -392,6 +395,8 @@ class QEPro(Device):
                 yield from bps.mv(LED, 'High', UV_shutter, 'Low')
                 yield from bps.sleep(2)
                 uid = (yield from count([self], md=_md))
+        
+        yield from bps.mv(LED, 'Low', UV_shutter, 'Low')
         
         if csv_path!=None or plot==True:
             yield from bps.sleep(2)
