@@ -68,6 +68,7 @@ def read_qepro_by_stream(uid, stream_name='primary', data_agent='catalog'):
                 metadata_dic[i] = meta['start'][i]
             else:
                 metadata_dic[i] = [None]
+        metadata_dic['stream_name'] = stream_name
 
     except (KeyError, AttributeError):
         qepro_dic, metadata_dic = {}, {}
@@ -100,7 +101,7 @@ def dic_to_csv_for_stream(csv_path, qepro_dic, metadata_dic, stream_name='primar
     sample_data = qepro_dic['QEPro_sample']
     output_data = qepro_dic['QEPro_output']
 
-    if stream_name is 'primary':
+    if stream_name == 'primary':
         if spectrum_type == 3:
             spec = 'Abs'
             fout = f'{csv_path}/{sample_type}_{spec}_{date}-{time}_{full_uid[0:8]}.csv'
