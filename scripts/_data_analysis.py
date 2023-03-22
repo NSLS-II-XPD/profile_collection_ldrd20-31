@@ -124,12 +124,6 @@ def _2peak_fit_PL3(x, y, distr='G', distance=30, height=930, plot=False, plot_ti
         else:
             popt, pcov = curve_fit(_2Lorentz, x, y, p0=[y[peaks[0]], x[peaks[0]], sigma, y[peaks[-1]], x[peaks[-1]], sigma], maxfev=maxfev)
     else:
-        while len(peak) > 2:
-        try:
-            len(peak) == 2
-    except:
-        len(peak)   
-
         if abs(second_peak)<20:
             if distr == 'G' and abs(second_peak)<20:
                 popt, pcov = curve_fit(_2gauss, x, y, p0=[y[peaks[0]], x[peaks[0]], sigma, y[peaks[0]]/abs(second_peak), x[peaks[0]]-second_peak*sigma, sigma], maxfev=maxfev)
