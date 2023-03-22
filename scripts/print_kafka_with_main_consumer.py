@@ -6,9 +6,9 @@ from bluesky_kafka.consume import BasicConsumer
 import matplotlib.pyplot as plt
 import time
 import databroker
-from side_functions import read_qepro_by_stream, dic_to_csv_for_stream
+from _data_export import read_qepro_by_stream, dic_to_csv_for_stream
 import os
-from plot_helper import plot_uvvis
+from _plot_helper import plot_uvvis
 # db = databroker.Broker.named('xpd-ldrd20-31')
 # catalog = databroker.catalog['xpd-ldrd20-31']
 
@@ -87,8 +87,8 @@ def print_kafka_messages(beamline_acronym, csv_path):
                 if stream_name in message['num_events'].keys():
                     qepro_dic, metadata_dic = read_qepro_by_stream(uid, stream_name=stream_name, data_agent='catalog')
                     dic_to_csv_for_stream(csv_path, qepro_dic, metadata_dic, stream_name=stream_name)
-                    print(f'export {stream_name} in uid: {uid[0:8]} to ../{os.path.basename(csv_path)} done!')
-                    u = plot_uvvis(uid, stream_name, qepro_dic, metadata_dic)
+                    print(f'export {stream_name} in uid: {uid[0:8]} to ../{os.path.basename(csv_path)}')
+                    u = plot_uvvis(qepro_dic, metadata_dic)
                     u.plot_data()
             print('*** export complete ***\n')
             print('########### Events printing division ############\n')
