@@ -84,12 +84,12 @@ def good_bad_data(x, y, key_height = 2000, data_id = 'test', distance=30, height
     if c2_c3 == True:
         try:
             c2 = (x[peak[-1]]<threshold[0] and peak_diff < threshold[1])
-        except IndexError, TypeError:
+        except (IndexError, TypeError):
             pass
         
         try:
             c3 = (x[peak[-1]]<threshold[0] and peak_diff < threshold[2])
-        except IndexError, TypeError:
+        except (IndexError, TypeError):
             pass
        
     if c1:
