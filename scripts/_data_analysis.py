@@ -78,34 +78,115 @@ def good_bad_data(x, y, key_height = 2000, data_id = 'test', distance=30, height
         else:
             peak_heights_2.append(y[i])
 
-    c1 = (max(peak_heights_2) < key_height)
+    max_idx = peak_heights_2.index(max(peak_heights_2))
+
+    c1 = (peak_heights_2[max_idx] < key_height)
 
     c2, c3 = False, False
     if c2_c3 == True:
         try:
-            c2 = (x[peak[-1]]<threshold[0] and peak_diff < threshold[1])
-        except (IndexError, TypeError):
-            pass
-        
-        try:
-            c3 = (x[peak[-1]]>threshold[0] and peak_diff < threshold[2])
+            if x[peak[max_idx]]<threshold[0]:
+                c3 = None
+                c2 = (x[peak[max_idx]]<threshold[0] and peak_diff < threshold[1])
+            else:
+                c2 = None
+                c3 = (x[peak[max_idx]]>threshold[0] and peak_diff < threshold[2])
         except (IndexError, TypeError):
             pass
        
+    
     if c1:
-        print(f'Spectra {data_id} is bad.')
+        print(f'Spectra {data_id} is bad due to a low peak height (c1).')
         return False
     elif c2:
-        print(f'Spectra {data_id} is bad.')
+        print(f'Spectra {data_id} is bad due to a low peak integartion (c2).')
         return False
     elif c3:
-        print(f'Spectra {data_id} is bad.')
+        print(f'Spectra {data_id} is bad due to a low peak integartion (c3).')
         return False
     else:
-        print(f'Spectra {data_id} is good.')
-        return True
+        if c2_c3 == False:
+            print(f'Spectra {data_id} passes c1 so is good.')
+        else:
+            if c3 == None:
+                print(f'Spectra {data_id} passes c1, c2, so is good.')
+            if c2 == None:
+                print(f'Spectra {data_id} passes c1, c3 so is good.')
+        return peak, prop
 
 
+
+
+
+def _1peak_fit_good_PL(x, y, peak=False, prop=False, distr='G', maxfev=100000, fit_boundary = [340, 400, 800], plot=False, plot_title=None):    
+    # 'G': Guassian
+    # 'L': Lorentz
+
+    if distr == 'G':
+        fit_function = _1gauss
+        fit_model = 'Gaussian'
+    
+    if distr == 'L':
+        fit_function = _1Lorentz
+        fit_model = 'Lorentz'
+    
+    try:
+        w1, _ = find_nearest(x, fit_boundary[0])
+        w2, _ = find_nearest(x, fit_boundary[1])
+        w3, _ = find_nearest(x, fit_boundary[2])
+    except IndexError:
+        w1, _ = find_nearest(x, 340)
+        w2, _ = find_nearest(x, 400)
+        w3, _ = find_nearest(x, 800)
+    
+    
+    x = x[w2:w3]
+    y = y[w2:w3]
+    mean = sum(x * y) / sum(y)
+    sigma = np.sqrt(sum(y * (x - mean) ** 2) / sum(y))
+    
+    
+    try:
+        initial_guess = [prop['peak_heights'][-1], peak[-1], sigma]
+    except (TypeError, IndexError):
+        initial_guess = [max(y), mean, sigma]
+    
+    
+    try:
+        popt, pcov = curve_fit(fit_function, x, y, p0=initial_guess, maxfev=maxfev)
+    except RuntimeError:
+        maxfev=1000000
+        popt, pcov = curve_fit(fit_function, x, y, p0=initial_guess, maxfev=maxfev)
+    
+    A = popt[0]
+    x0 = popt[1]
+    sigma = popt[2]
+    
+    
+    fitted_result = fit_function(x, *popt)
+    
+    #fitted_result = _1gauss(x, *popt)
+    residulas = y - fitted_result
+    ss_res = np.sum(residulas**2)
+    ss_tot = np.sum((y-np.mean(y))**2)
+    r_2 = 1 - (ss_res / ss_tot)
+    r2 = f'R\u00b2={r_2:.2f}'
+    
+    if plot == True:
+        plt.figure()
+        plt.plot(x,y,'b+:',label='data')
+        plt.plot(x,fitted_result,'ro:',label='Total fit\n'+r2)
+        plt.legend()
+        plt.title(f'{fit_model} : {plot_title}')
+        plt.show()
+    else: pass
+    
+    return popt, r_2
+    
+
+    
+
+    
 def _2peak_fit_PL3(x, y, distr='G', distance=30, height=930, plot=False, plot_title=None, second_peak=None, maxfev=100000):
     # 'G': Guassian
     # 'L': Lorentz  
