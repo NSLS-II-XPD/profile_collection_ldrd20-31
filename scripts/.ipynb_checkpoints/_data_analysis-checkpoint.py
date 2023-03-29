@@ -52,6 +52,14 @@ def find_nearest(array, value):
 
 
 
+def r_square(x, y, fitted_y):
+    residulas = y - fitted_y
+    ss_res = np.sum(residulas**2)
+    ss_tot = np.sum((y-np.mean(y))**2)
+    r_sq = 1 - (ss_res / ss_tot)
+    return r_sq
+
+
 #### Criteria to identify a bad fluorescence peak ####
 # c1. PL peak height < 2000 --> execute in scipy.find_peaks
 # c2. PL peak wavelength < 560 nm, and the diference of peak integrstion (PL minus LED) < 100000
@@ -122,19 +130,8 @@ def good_bad_data(x, y, key_height = 2000, data_id = 'test', distance=30, height
 
 
 
-def _1peak_fit_good_PL(x0, y0, peak=False, prop=False, distr='G', maxfev=100000, fit_boundary = [340, 400, 800], plot=False, 
-                       plot_title=None):    
-    # 'G': Guassian
-    # 'L': Lorentz
-
-    if distr == 'G':
-        fit_function = _1gauss
-        fit_model = 'Gaussian'
-    
-    if distr == 'L':
-        fit_function = _1Lorentz
-        fit_model = 'Lorentz'
-    
+def _1peak_fit_good_PL(x0, y0, fit_function, peak=False, maxfev=100000, fit_boundary=[340, 400, 800], raw_data=False,
+                       plot=False, plot_title=None):    
     try:
         w1, _ = find_nearest(x, fit_boundary[0])
         w2, _ = find_nearest(x, fit_boundary[1])
@@ -152,7 +149,7 @@ def _1peak_fit_good_PL(x0, y0, peak=False, prop=False, distr='G', maxfev=100000,
     
     
     try:
-        initial_guess = [prop['peak_heights'][-1], peak[-1], sigma]
+        initial_guess = [y0[peaks[-1]], x0[peaks[-1]], sigma]
     except (TypeError, IndexError):
         initial_guess = [max(y), mean, sigma]
     
@@ -163,35 +160,103 @@ def _1peak_fit_good_PL(x0, y0, peak=False, prop=False, distr='G', maxfev=100000,
         maxfev=1000000
         popt, pcov = curve_fit(fit_function, x, y, p0=initial_guess, maxfev=maxfev)
     
-    A = popt[0]
-    x0 = popt[1]
-    sigma = popt[2]
-    
-    
-    fitted_result = fit_function(x, *popt)
-    
-    #fitted_result = _1gauss(x, *popt)
-    residulas = y - fitted_result
-    ss_res = np.sum(residulas**2)
-    ss_tot = np.sum((y-np.mean(y))**2)
-    r_2 = 1 - (ss_res / ss_tot)
-    r2 = f'R\u00b2={r_2:.2f}'
+    # A = popt[0]
+    # x0 = popt[1]
+    # sigma = popt[2]
+
     
     if plot == True:
+        fitted_result = fit_function(x, *popt)
+        r_2 = r_square(x, y, fitted_result)
+        r2 = f'R\u00b2={r_2:.2f}'
         plt.figure()
         plt.plot(x,y,'b+:',label='data')
         plt.plot(x,fitted_result,'ro:',label='Total fit\n'+r2)
         plt.legend()
-        plt.title(f'{fit_model} : {plot_title}')
+        plt.title(f'{fit_function.__name__} : {plot_title}')
         plt.show()
     else: pass
     
-    return popt, r_2, x, y
+    if raw_data:
+        return popt, pcov, x, y
+    else:
+        return popt, pcov
     
 
+
+
+def _2peak_fit_good_PL(x0, y0, fit_function, peak=False, maxfev=100000, fit_boundary=[340, 400, 800], raw_data=False, 
+                       second_peak=None, plot=False, plot_title=None):    
+    try:
+        w1, _ = find_nearest(x, fit_boundary[0])
+        w2, _ = find_nearest(x, fit_boundary[1])
+        w3, _ = find_nearest(x, fit_boundary[2])
+    except IndexError:
+        w1, _ = find_nearest(x, 340)
+        w2, _ = find_nearest(x, 400)
+        w3, _ = find_nearest(x, 800)
     
+    
+    x = x0[w2:w3]
+    y = y0[w2:w3]
+    mean = sum(x * y) / sum(y)
+    sigma = np.sqrt(sum(y * (x - mean) ** 2) / sum(y))
+    
+    
+    try:
+        initial_guess = [y.max(), x[y.argmax()], sigma, y[find_nearest(x, second_peak)[0]], second_peak, sigma]
+    except (TypeError, IndexError):
+        initial_guess = [y0[peaks[0]], x0[peaks[0]], sigma, y0[peaks[-1]], x0[peaks[-1]], sigma]
+    
+    
+    try:
+        popt, pcov = curve_fit(fit_function, x, y, p0=initial_guess, maxfev=maxfev)
+    except RuntimeError:
+        maxfev=1000000
+        popt, pcov = curve_fit(fit_function, x, y, p0=initial_guess, maxfev=maxfev)
+    
+    # A = popt[0]
+    # x0 = popt[1]
+    # sigma = popt[2]
+   
+    if plot == True:
+        fitted_result = fit_function(x, *popt)
+        r_2 = r_square(x, y, fitted_result)
+        r2 = f'R\u00b2={r_2:.2f}'
+        plt.figure()
+        plt.plot(x,y,'b+:',label='data')
+        plt.plot(x,fitted_result,'ro:',label='Total fit\n'+r2)
+        
+        pars_1 = popt[0:3]
+        pars_2 = popt[3:6]
+        peak_1 = fit_function(x, *pars_1)
+        peak_2 = fit_function(x, *pars_2)
+        
+        # peak 1
+        plt.plot(x, peak_1, "g", label='peak 1')
+        plt.fill_between(x, peak_1.min(), peak_1, facecolor="green", alpha=0.5)
+  
+        # peak 2
+        plt.plot(x, peak_2, "y", label='peak 2')
+        plt.fill_between(x, peak_2.min(), peak_2, facecolor="yellow", alpha=0.5)  
+        
+        plt.legend()
+        plt.title(f'{fit_function.__name__} : {plot_title}')
+        plt.show()
+    else: pass
+    
+    if raw_data:
+        return popt, pcov, x, y
+    else:
+        return popt, pcov
+
+
+
 
     
+    
+######## Old versions of function #########    
+
 def _2peak_fit_PL3(x, y, distr='G', distance=30, height=930, plot=False, plot_title=None, second_peak=None, maxfev=100000):
     # 'G': Guassian
     # 'L': Lorentz  
@@ -353,171 +418,6 @@ def _3peak_fit_PL2(x, y, distr='G', height=930, plot=False, plot_title=None, sec
 
 
 
-######## Old versions of function #########
-
-def _2peak_fit_PL2(x, y, distr='G', height=930, plot=False, plot_title=None, second_peak=None, maxfev=100000):
-    # 'G': Guassian
-    # 'L': Lorentz  
-    peak, _ = find_peaks(y, height=height)
-    peaks=[peak[0]]
-    for i in range(1, len(peak)):
-        if peak[i]-peak[i-1]>20:
-            peaks.append(peak[i])
-    
-    if len(peaks) >2:
-        raise IndexError('Number of peaks should be less than 2.')
-        
-    mean = sum(x * y) / sum(y)
-    sigma = np.sqrt(sum(y * (x - mean) ** 2) / sum(y))
-    
-    if len(peaks) == 2:
-        if distr == 'G':
-            popt, pcov = curve_fit(_2gauss, x, y, p0=[y[peaks[0]], x[peaks[0]], sigma, y[peaks[-1]], x[peaks[-1]], sigma], maxfev=maxfev)
-        else:
-            popt, pcov = curve_fit(_2Lorentz, x, y, p0=[y[peaks[0]], x[peaks[0]], sigma, y[peaks[-1]], x[peaks[-1]], sigma], maxfev=maxfev)
-    else:
-        if abs(second_peak)<20:
-            if distr == 'G' and abs(second_peak)<20:
-                popt, pcov = curve_fit(_2gauss, x, y, p0=[y[peaks[0]], x[peaks[0]], sigma, y[peaks[0]]/abs(second_peak), x[peaks[0]]-second_peak*sigma, sigma], maxfev=maxfev)
-            else:
-                popt, pcov = curve_fit(_2Lorentz, x, y, p0=[y[peaks[0]], x[peaks[0]], sigma, y[peaks[0]]/abs(second_peak*sigma), x[peaks[0]]-second_peak*sigma, sigma], maxfev=maxfev)
-            
-        else:
-            if distr == 'G' and abs(second_peak)>=20:
-                popt, pcov = curve_fit(_2gauss, x, y, p0=[y[peaks[0]], x[peaks[0]], sigma, y[find_nearest(x, second_peak)[0]], second_peak, sigma], maxfev=maxfev)
-            else:
-                popt, pcov = curve_fit(_2Lorentz, x, y, p0=[y[peaks[0]], x[peaks[0]], sigma, y[peaks[0]]/abs(second_peak*sigma), x[peaks[0]]-second_peak*sigma, sigma], maxfev=maxfev)
-    #A = popt[0]
-    #x0 = popt[1]
-    #sigma = popt[2]
-    
-    pars_1 = popt[0:3]
-    pars_2 = popt[3:6]
-    
-    if distr == 'G':
-        peak_1 = _1gauss(x, *pars_1)
-        peak_2 = _1gauss(x, *pars_2)
-        fit_model = 'Gaussian'
-    else:
-        peak_1 = _1Lorentz(x, *pars_1)
-        peak_2 = _1Lorentz(x, *pars_2)
-        fit_model = 'Lorentz'
-    
-    fitted_result = _2gauss(x, *popt)
-    residulas = y - fitted_result
-    ss_res = np.sum(residulas**2)
-    ss_tot = np.sum((y-np.mean(y))**2)
-    r_2 = 1 - (ss_res / ss_tot)
-    r2 = f'R\u00b2={r_2:.2f}'
-    
-    if plot == True:
-        plt.figure()
-        plt.plot(x,y,'b+:',label='data')
-        plt.plot(x,fitted_result,'ro:',label='Total fit\n'+r2)
-        
-        # peak 1
-        plt.plot(x, peak_1, "g", label='peak 1')
-        plt.fill_between(x, peak_1.min(), peak_1, facecolor="green", alpha=0.5)
-  
-        # peak 2
-        plt.plot(x, peak_2, "y", label='peak 2')
-        plt.fill_between(x, peak_2.min(), peak_2, facecolor="yellow", alpha=0.5)  
-        
-        plt.title(f'{fit_model} : {plot_title}')
-        plt.legend()
-        plt.show()
-    else: pass
-    
-    return popt, r_2
-
-
-
-def _3peak_fit_PL2(x, y, distr='G', height=930, plot=False, plot_title=None, second_peak=None, third_peak=None,maxfev=100000):
-    # 'G': Guassian
-    # 'L': Lorentz  
-    peak, _ = find_peaks(y, height=height)
-    peaks=[peak[0]]
-    for i in range(1, len(peak)):
-        if peak[i]-peak[i-1]>20:
-            peaks.append(peak[i])
-    
-    if len(peaks) >3:
-        raise IndexError('Number of peaks should be less than 2.')
-        
-    mean = sum(x * y) / sum(y)
-    sigma = np.sqrt(sum(y * (x - mean) ** 2) / sum(y))
-
-    
-    if len(peaks) == 3:
-        if distr == 'G':
-            popt, pcov = curve_fit(_3gauss, x, y, 
-                                   p0=[y[peaks[0]], x[peaks[0]], sigma, y[peaks[1]], x[peaks[1]], sigma, y[peaks[-1]], x[peaks[-1]], sigma], 
-                                   maxfev=maxfev)
-        else:
-            popt, pcov = curve_fit(_3Lorentz, x, y, 
-                                   p0=[y[peaks[0]], x[peaks[0]], sigma, y[peaks[1]], x[peaks[1]], sigma, y[peaks[-1]], x[peaks[-1]], sigma], 
-                                   maxfev=maxfev)
-    else:            
-        if distr == 'G':
-            popt, pcov = curve_fit(_3gauss, x, y, 
-                                   p0=[y[peaks[0]], x[peaks[0]], sigma, y[find_nearest(x, second_peak)[0]], second_peak, sigma, y[find_nearest(x, third_peak)[0]], third_peak, sigma], 
-                                   maxfev=maxfev)
-        else:
-            popt, pcov = curve_fit(_3Lorentz, x, y, 
-                                   p0=[y[peaks[0]], x[peaks[0]], sigma, y[find_nearest(x, second_peak)[0]], second_peak, sigma, y[find_nearest(x, third_peak)[0]], third_peak, sigma], 
-                                   maxfev=maxfev)
-    #A = popt[0]
-    #x0 = popt[1]
-    #sigma = popt[2]
-    
-    pars_1 = popt[0:3]
-    pars_2 = popt[3:6]
-    pars_3 = popt[6:9]
-    
-    if distr == 'G':
-        peak_1 = _1gauss(x, *pars_1)
-        peak_2 = _1gauss(x, *pars_2)
-        peak_3 = _1gauss(x, *pars_3)
-        fit_model = 'Gaussian'
-    else:
-        peak_1 = _1Lorentz(x, *pars_1)
-        peak_2 = _1Lorentz(x, *pars_2)
-        peak_3 = _1gauss(x, *pars_3)
-        fit_model = 'Lorentz'
-    
-    fitted_result = _3gauss(x, *popt)
-    residulas = y - fitted_result
-    ss_res = np.sum(residulas**2)
-    ss_tot = np.sum((y-np.mean(y))**2)
-    r_2 = 1 - (ss_res / ss_tot)
-    r2 = f'R\u00b2={r_2:.2f}'
-    
-    if plot == True:
-        plt.figure()
-        plt.plot(x,y,'b+:',label='data')
-        plt.plot(x,fitted_result,'ro:',label='Total fit\n'+r2)
-        
-        # peak 1
-        plt.plot(x, peak_1, "g", label='peak 1')
-        plt.fill_between(x, peak_1.min(), peak_1, facecolor="green", alpha=0.5)
-  
-        # peak 2
-        plt.plot(x, peak_2, "y", label='peak 2')
-        plt.fill_between(x, peak_2.min(), peak_2, facecolor="yellow", alpha=0.5)
-        
-        # peak 3
-        plt.plot(x, peak_3, "b", label='peak 3')
-        plt.fill_between(x, peak_3.min(), peak_3, facecolor="blue", alpha=0.5)
-        
-        plt.title(f'{fit_model} : {plot_title}')
-        plt.legend()
-        plt.show()
-    else: pass
-    
-    return popt, r_2
-
-
-
 def _1peak_fit_PL(x, y, distr='G', plot=False, plot_title=None, maxfev=100000):    
     # 'G': Guassian
     # 'L': Lorentz        
@@ -558,64 +458,4 @@ def _1peak_fit_PL(x, y, distr='G', plot=False, plot_title=None, maxfev=100000):
     return popt, r_2
 
 
-def _2peak_fit_PL(x, y, distr='G', height=930, plot=False, plot_title=None, second_peak=3, maxfev=100000):
-    # 'G': Guassian
-    # 'L': Lorentz  
-    peaks, _ = find_peaks(y, height=height)
-    if len(peaks) >2:
-        raise IndexError('Number of peaks should be less than 2.')
-    mean = sum(x * y) / sum(y)
-    sigma = np.sqrt(sum(y * (x - mean) ** 2) / sum(y))
-    
-    if len(peaks) == 2:
-        if distr == 'G':
-            popt, pcov = curve_fit(_2gauss, x, y, p0=[y[peaks[0]], x[peaks[0]], sigma, y[peaks[-1]], x[peaks[-1]], sigma], maxfev=maxfev)
-        else:
-            popt, pcov = curve_fit(_2Lorentz, x, y, p0=[y[peaks[0]], x[peaks[0]], sigma, y[peaks[-1]], x[peaks[-1]], sigma], maxfev=maxfev)
-    else:
-        if distr == 'G':
-            popt, pcov = curve_fit(_2gauss, x, y, p0=[y[peaks[0]], x[peaks[0]], sigma, y[peaks[0]]/abs(second_peak), x[peaks[0]]-second_peak*sigma, sigma], maxfev=maxfev)
-        else:
-            popt, pcov = curve_fit(_2Lorentz, x, y, p0=[y[peaks[0]], x[peaks[0]], sigma, y[peaks[0]]/abs(second_peak*sigma), x[peaks[0]]-second_peak*sigma, sigma], maxfev=maxfev)
-    #A = popt[0]
-    #x0 = popt[1]
-    #sigma = popt[2]
-    
-    pars_1 = popt[0:3]
-    pars_2 = popt[3:6]
-    
-    if distr == 'G':
-        peak_1 = _1gauss(x, *pars_1)
-        peak_2 = _1gauss(x, *pars_2)
-        fit_model = 'Gaussian'
-    else:
-        peak_1 = _1Lorentz(x, *pars_1)
-        peak_2 = _1Lorentz(x, *pars_2)
-        fit_model = 'Lorentz'
-    
-    fitted_result = _2gauss(x, *popt)
-    residulas = y - fitted_result
-    ss_res = np.sum(residulas**2)
-    ss_tot = np.sum((y-np.mean(y))**2)
-    r_2 = 1 - (ss_res / ss_tot)
-    r2 = f'R\u00b2={r_2:.2f}'
-    
-    if plot == True:
-        plt.figure()
-        plt.plot(x,y,'b+:',label='data')
-        plt.plot(x,fitted_result,'ro:',label='Total fit\n'+r2)
-        
-        # peak 1
-        plt.plot(x, peak_1, "g", label='peak 1')
-        plt.fill_between(x, peak_1.min(), peak_1, facecolor="green", alpha=0.5)
-  
-        # peak 2
-        plt.plot(x, peak_2, "y", label='peak 2')
-        plt.fill_between(x, peak_2.min(), peak_2, facecolor="yellow", alpha=0.5)  
-        
-        plt.title(f'{fit_model} : {plot_title}')
-        plt.legend()
-        plt.show()
-    else: pass
-    
-    return popt, r_2
+

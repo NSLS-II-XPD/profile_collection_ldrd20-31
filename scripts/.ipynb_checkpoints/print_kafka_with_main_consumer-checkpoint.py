@@ -12,6 +12,7 @@ import os
 
 from _data_export import read_qepro_by_stream, dic_to_csv_for_stream, _readable_time
 from _plot_helper import plot_uvvis
+import _data_analysis as da
 
 # db = databroker.Broker.named('xpd-ldrd20-31')
 # catalog = databroker.catalog['xpd-ldrd20-31']
@@ -113,14 +114,15 @@ def print_kafka_messages(beamline_acronym, csv_path):
                         _for_average[f'{data_id}_mean'] = _for_average.mean(axis=1)
                         
                         x0 = x_i
-                        y0 = _for_average[f'{data_id}_mean']                        
-                        peak, prop = good_bad_data(x, y, key_height = 200, data_id = data_id, distance=30, height=50)                            
+                        y0 = _for_average[f'{data_id}_mean']
+                        f = da._1gauss
+                        peak, prop = da.good_bad_data(x, y, key_height = 200, data_id = data_id, distance=30, height=50)                            
                         if len(peak) == 1:
-                            popt, r_2, x, y = _1peak_fit_good_PL(x0, y0, peak=peak, prop=prop, distr='G', fit_boundary = [340, 400, 800])
+                            popt, _, x, y = da._1peak_fit_good_PL(x0, y0, f, peak=peak, prop=prop, raw_data=True)
                         # if len(peak) == 2:
                         #     popt, r_2, x, y = _2peak_fit_good_PL(x0, y0, peak=peak, prop=prop, distr='G', fit_boundary = [340, 400, 800])
                     
-                        u.plot_analysis(x, y, peak, prop, popt, r_2)
+                        u.plot_analysis(x, y, peak, f, popt)
                     
             print('*** export complete ***\n')
             print('########### Events printing division ############\n')
