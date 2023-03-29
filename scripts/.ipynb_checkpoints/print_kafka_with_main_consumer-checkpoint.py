@@ -4,11 +4,15 @@ import uuid
 # from bluesky_kafka import RemoteDispatcher
 from bluesky_kafka.consume import BasicConsumer
 import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
 import time
 import databroker
-from _data_export import read_qepro_by_stream, dic_to_csv_for_stream
 import os
+
+from _data_export import read_qepro_by_stream, dic_to_csv_for_stream, _readable_time
 from _plot_helper import plot_uvvis
+
 # db = databroker.Broker.named('xpd-ldrd20-31')
 # catalog = databroker.catalog['xpd-ldrd20-31']
 
@@ -89,7 +93,35 @@ def print_kafka_messages(beamline_acronym, csv_path):
                     dic_to_csv_for_stream(csv_path, qepro_dic, metadata_dic, stream_name=stream_name)
                     print(f'export {stream_name} in uid: {uid[0:8]} to ../{os.path.basename(csv_path)}')
                     u = plot_uvvis(qepro_dic, metadata_dic)
-                    u.plot_data()
+                    u.plot_data()            
+                    
+                    if qepro_dic['QEPro_spectrum_type'][0] == 2:
+                        _, time = _readable_time(metadata_dic['time'])
+                        data_id = time + '_' + metadata_dic['uid'][:8]
+                        
+                        # peak_all, prop_all = [], []
+                        _for_average = pd.DataFrame()
+                        for i range(qepro_dic['QEPro_spectrum_type'].shape[0]):
+                            x_i = qepro_dic['QEPro_x_axis'][i]
+                            y_i = qepro_dic['QEPro_output'][i]
+                            p1, p2 = good_bad_data(x_i, y_i, key_height = 200, data_id = data_id, distance=30, height=50)
+                            # peak_all.append(p1)
+                            # prop_all.append(p2)
+                            if (type(p1) is np.ndarray) and (type(p2) is dict):
+                                _for_average[f'{data_id}_{i:03d}'] = y_i
+                        
+                        _for_average[f'{data_id}_mean'] = _for_average.mean(axis=1)
+                        
+                        x0 = x_i
+                        y0 = _for_average[f'{data_id}_mean']                        
+                        peak, prop = good_bad_data(x, y, key_height = 200, data_id = data_id, distance=30, height=50)                            
+                        if len(peak) == 1:
+                            popt, r_2, x, y = _1peak_fit_good_PL(x0, y0, peak=peak, prop=prop, distr='G', fit_boundary = [340, 400, 800])
+                        # if len(peak) == 2:
+                        #     popt, r_2, x, y = _2peak_fit_good_PL(x0, y0, peak=peak, prop=prop, distr='G', fit_boundary = [340, 400, 800])
+                    
+                        u.plot_analysis(x, y, peak, prop, popt, r_2)
+                    
             print('*** export complete ***\n')
             print('########### Events printing division ############\n')
 

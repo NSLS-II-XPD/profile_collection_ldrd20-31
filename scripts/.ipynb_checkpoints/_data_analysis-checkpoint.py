@@ -72,11 +72,14 @@ def good_bad_data(x, y, key_height = 2000, data_id = 'test', distance=30, height
         peak_diff = PL_integration - LED_integration
 
     peak_heights_2 = []
+    peak2 = [], prop2 = {'peak_heights':[]}
     for i in peak:
         if x[i] < 400:
             peak_heights_2.append(0.0)
         else:
             peak_heights_2.append(y[i])
+            peak2.append(i)
+            prop2['peak_heights'].append(y[i])
 
     max_idx = peak_heights_2.index(max(peak_heights_2))
 
@@ -96,29 +99,31 @@ def good_bad_data(x, y, key_height = 2000, data_id = 'test', distance=30, height
        
     
     if c1:
-        print(f'Spectra {data_id} is bad due to a low peak height (c1).')
-        return False
+        print(f'{data_id} is bad due to a low peak height (c1).')
+        peak, prop = [], []
     elif c2:
-        print(f'Spectra {data_id} is bad due to a low peak integartion (c2).')
-        return False
+        print(f'{data_id} is bad due to a low peak integartion (c2).')
+        peak, prop = [], []
     elif c3:
-        print(f'Spectra {data_id} is bad due to a low peak integartion (c3).')
-        return False
+        print(f'{data_id} is bad due to a low peak integartion (c3).')
+        peak, prop = [], []
     else:
         if c2_c3 == False:
-            print(f'Spectra {data_id} passes c1 so is good.')
+            print(f'{data_id} passes c1 so is good.')
         else:
             if c3 == None:
-                print(f'Spectra {data_id} passes c1, c2, so is good.')
+                print(f'{data_id} passes c1, c2, so is good.')
             if c2 == None:
-                print(f'Spectra {data_id} passes c1, c3 so is good.')
-        return peak, prop
+                print(f'{data_id} passes c1, c3 so is good.')
+    
+    return np.asarray(peak2), prop2
 
 
 
 
 
-def _1peak_fit_good_PL(x, y, peak=False, prop=False, distr='G', maxfev=100000, fit_boundary = [340, 400, 800], plot=False, plot_title=None):    
+def _1peak_fit_good_PL(x0, y0, peak=False, prop=False, distr='G', maxfev=100000, fit_boundary = [340, 400, 800], plot=False, 
+                       plot_title=None):    
     # 'G': Guassian
     # 'L': Lorentz
 
@@ -140,8 +145,8 @@ def _1peak_fit_good_PL(x, y, peak=False, prop=False, distr='G', maxfev=100000, f
         w3, _ = find_nearest(x, 800)
     
     
-    x = x[w2:w3]
-    y = y[w2:w3]
+    x = x0[w2:w3]
+    y = y0[w2:w3]
     mean = sum(x * y) / sum(y)
     sigma = np.sqrt(sum(y * (x - mean) ** 2) / sum(y))
     
@@ -181,7 +186,7 @@ def _1peak_fit_good_PL(x, y, peak=False, prop=False, distr='G', maxfev=100000, f
         plt.show()
     else: pass
     
-    return popt, r_2
+    return popt, r_2, x, y
     
 
     
