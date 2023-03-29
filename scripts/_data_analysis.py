@@ -80,7 +80,9 @@ def good_bad_data(x, y, key_height = 2000, data_id = 'test', distance=30, height
         peak_diff = PL_integration - LED_integration
 
     peak_heights_2 = []
-    peak2 = [], prop2 = {'peak_heights':[]}
+    peak2 = []
+    prop2 = {'peak_heights':[]}
+    
     for i in peak:
         if x[i] < 400:
             peak_heights_2.append(0.0)
@@ -133,13 +135,13 @@ def good_bad_data(x, y, key_height = 2000, data_id = 'test', distance=30, height
 def _1peak_fit_good_PL(x0, y0, fit_function, peak=False, maxfev=100000, fit_boundary=[340, 400, 800], raw_data=False,
                        plot=False, plot_title=None):    
     try:
-        w1, _ = find_nearest(x, fit_boundary[0])
-        w2, _ = find_nearest(x, fit_boundary[1])
-        w3, _ = find_nearest(x, fit_boundary[2])
+        w1, _ = find_nearest(x0, fit_boundary[0])
+        w2, _ = find_nearest(x0, fit_boundary[1])
+        w3, _ = find_nearest(x0, fit_boundary[2])
     except IndexError:
-        w1, _ = find_nearest(x, 340)
-        w2, _ = find_nearest(x, 400)
-        w3, _ = find_nearest(x, 800)
+        w1, _ = find_nearest(x0, 340)
+        w2, _ = find_nearest(x0, 400)
+        w3, _ = find_nearest(x0, 800)
     
     
     x = x0[w2:w3]
@@ -149,7 +151,7 @@ def _1peak_fit_good_PL(x0, y0, fit_function, peak=False, maxfev=100000, fit_boun
     
     
     try:
-        initial_guess = [y0[peaks[-1]], x0[peaks[-1]], sigma]
+        initial_guess = [y0[peak[-1]], x0[peak[-1]], sigma]
     except (TypeError, IndexError):
         initial_guess = [max(y), mean, sigma]
     
@@ -188,13 +190,13 @@ def _1peak_fit_good_PL(x0, y0, fit_function, peak=False, maxfev=100000, fit_boun
 def _2peak_fit_good_PL(x0, y0, fit_function, peak=False, maxfev=100000, fit_boundary=[340, 400, 800], raw_data=False, 
                        second_peak=None, plot=False, plot_title=None):    
     try:
-        w1, _ = find_nearest(x, fit_boundary[0])
-        w2, _ = find_nearest(x, fit_boundary[1])
-        w3, _ = find_nearest(x, fit_boundary[2])
+        w1, _ = find_nearest(x0, fit_boundary[0])
+        w2, _ = find_nearest(x0, fit_boundary[1])
+        w3, _ = find_nearest(x0, fit_boundary[2])
     except IndexError:
-        w1, _ = find_nearest(x, 340)
-        w2, _ = find_nearest(x, 400)
-        w3, _ = find_nearest(x, 800)
+        w1, _ = find_nearest(x0, 340)
+        w2, _ = find_nearest(x0, 400)
+        w3, _ = find_nearest(x0, 800)
     
     
     x = x0[w2:w3]
@@ -206,7 +208,7 @@ def _2peak_fit_good_PL(x0, y0, fit_function, peak=False, maxfev=100000, fit_boun
     try:
         initial_guess = [y.max(), x[y.argmax()], sigma, y[find_nearest(x, second_peak)[0]], second_peak, sigma]
     except (TypeError, IndexError):
-        initial_guess = [y0[peaks[0]], x0[peaks[0]], sigma, y0[peaks[-1]], x0[peaks[-1]], sigma]
+        initial_guess = [y0[peak[0]], x0[peak[0]], sigma, y0[peak[-1]], x0[peak[-1]], sigma]
     
     
     try:

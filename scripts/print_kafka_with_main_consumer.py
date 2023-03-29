@@ -1,3 +1,4 @@
+import os
 import datetime
 import pprint
 import uuid
@@ -8,7 +9,7 @@ import numpy as np
 import pandas as pd
 import time
 import databroker
-import os
+
 
 from _data_export import read_qepro_by_stream, dic_to_csv_for_stream, _readable_time
 from _plot_helper import plot_uvvis
@@ -87,44 +88,46 @@ def print_kafka_messages(beamline_acronym, csv_path):
 
             time.sleep(2)
             uid = message['run_start']
-            print(f'\n*** start to export uid: {uid} ***')
+            print(f'\n**** start to export uid: {uid} ****\n')
             for stream_name in ['primary', 'absorbance', 'fluorescence']:
                 if stream_name in message['num_events'].keys():
                     qepro_dic, metadata_dic = read_qepro_by_stream(uid, stream_name=stream_name, data_agent='catalog')
                     dic_to_csv_for_stream(csv_path, qepro_dic, metadata_dic, stream_name=stream_name)
-                    print(f'export {stream_name} in uid: {uid[0:8]} to ../{os.path.basename(csv_path)}')
+                    print(f'\n** export {stream_name} in uid: {uid[0:8]} to ../{os.path.basename(csv_path)} **\n')
                     u = plot_uvvis(qepro_dic, metadata_dic)
-                    u.plot_data()            
+                    u.plot_data()
+                    print(f'\n** Plot {stream_name} in uid: {uid[0:8]} complete **\n')
                     
+                    print('\n*** start to identify good/bad data ***\n')
                     if qepro_dic['QEPro_spectrum_type'][0] == 2:
-                        _, time = _readable_time(metadata_dic['time'])
-                        data_id = time + '_' + metadata_dic['uid'][:8]
-                        
-                        # peak_all, prop_all = [], []
+                        _, time1 = _readable_time(metadata_dic['time'])
+                        data_id = time1 + '_' + metadata_dic['uid'][:8]
                         _for_average = pd.DataFrame()
-                        for i range(qepro_dic['QEPro_spectrum_type'].shape[0]):
+                        for i in range(qepro_dic['QEPro_spectrum_type'].shape[0]):
                             x_i = qepro_dic['QEPro_x_axis'][i]
                             y_i = qepro_dic['QEPro_output'][i]
-                            p1, p2 = good_bad_data(x_i, y_i, key_height = 200, data_id = data_id, distance=30, height=50)
-                            # peak_all.append(p1)
-                            # prop_all.append(p2)
+                            p1, p2 = da.good_bad_data(x_i, y_i, key_height = 200, data_id = f'{data_id}_{i:03d}', distance=30, height=50)
                             if (type(p1) is np.ndarray) and (type(p2) is dict):
                                 _for_average[f'{data_id}_{i:03d}'] = y_i
                         
                         _for_average[f'{data_id}_mean'] = _for_average.mean(axis=1)
                         
                         x0 = x_i
-                        y0 = _for_average[f'{data_id}_mean']
-                        f = da._1gauss
-                        peak, prop = da.good_bad_data(x, y, key_height = 200, data_id = data_id, distance=30, height=50)                            
+                        y0 = _for_average[f'{data_id}_mean'].values
+                        
+                        peak, prop = da.good_bad_data(x0, y0, key_height = 200, data_id = f'{data_id}_average', distance=100, height=50)                            
+                        print(f'\n** Average of {data_id} has peaks at {peak}**\n')
+                        print(f'\n** start to do peak fitting by Gaussian**\n')
                         if len(peak) == 1:
-                            popt, _, x, y = da._1peak_fit_good_PL(x0, y0, f, peak=peak, prop=prop, raw_data=True)
-                        # if len(peak) == 2:
-                        #     popt, r_2, x, y = _2peak_fit_good_PL(x0, y0, peak=peak, prop=prop, distr='G', fit_boundary = [340, 400, 800])
-                    
-                        u.plot_analysis(x, y, peak, f, popt)
-                    
-            print('*** export complete ***\n')
+                            f = da._1gauss
+                            popt, _, x, y = da._1peak_fit_good_PL(x0, y0, f, peak=peak, raw_data=True)
+                        if len(peak) == 2:
+                            f = da._2gauss
+                            popt, _, x, y = da._2peak_fit_good_PL(x0, y0, f, peak=peak, raw_data=True)
+                        shift, _ = da.find_nearest(x0, x[0])
+                        u.plot_peak_fit(x, y, peak-shift, f, popt, fill_between=True)
+                        print(f'\n** plot fitting result complete**\n')
+            print('\n*** export, identify good/bad, fitting complete ***\n')
             print('########### Events printing division ############\n')
 
     kafka_config = _read_bluesky_kafka_config_file(config_file_path="/etc/bluesky/kafka.yml")
