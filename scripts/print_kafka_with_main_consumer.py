@@ -117,13 +117,21 @@ def print_kafka_messages(beamline_acronym, csv_path):
                         
                         peak, prop = da.good_bad_data(x0, y0, key_height = 200, data_id = f'{data_id}_average', distance=100, height=50)                            
                         print(f'\n** Average of {data_id} has peaks at {peak}**\n')
+                        
                         print(f'\n** start to do peak fitting by Gaussian**\n')
                         if len(peak) == 1:
                             f = da._1gauss
                             popt, _, x, y = da._1peak_fit_good_PL(x0, y0, f, peak=peak, raw_data=True)
-                        if len(peak) == 2:
+                        elif len(peak) == 2:
                             f = da._2gauss
                             popt, _, x, y = da._2peak_fit_good_PL(x0, y0, f, peak=peak, raw_data=True)
+                        else:
+                            f = da._1gauss
+                            M = max(prop['peak_heights'])
+                            M_idx, _ = da.find_nearest(prop['peak_heights'], M)
+                            peak = np.asarray([peak[M_idx]])
+                            popt, _, x, y = da._1peak_fit_good_PL(x0, y0, f, peak=peak, raw_data=True)                           
+                        
                         shift, _ = da.find_nearest(x0, x[0])
                         u.plot_peak_fit(x, y, peak-shift, f, popt, fill_between=True)
                         print(f'\n** plot fitting result complete**\n')
