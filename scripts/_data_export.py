@@ -108,6 +108,7 @@ def dic_to_csv_for_stream(csv_path, qepro_dic, metadata_dic, stream_name='primar
         f = fitting['fit_function']
         popt = fitting['curve_fit']
         fitted_y = f(x_axis_data[-1], *popt)
+        output_mean = np.mean(output_data, axis=0)
     except TypeError:
         print('Input fitting info is not correct.')
 
@@ -213,9 +214,9 @@ def dic_to_csv_for_stream(csv_path, qepro_dic, metadata_dic, stream_name='primar
                 fp.write(f',{popt[i]}')
             fp.write('\n')
 
-            fp.write('Wavelength,Dark,Sample,Fluorescence,Fitting\n')
+            fp.write('Wavelength,Dark,Sample,Fluorescence_mean,Fitting\n')
             for i in range(x_axis_data.shape[1]):
-                fp.write(f'{x_axis_data[-1,i]},{dark_data[-1,i]},{sample_data[-1,i]},{output_data[-1,i]},{fitted_y[i]}\n')
+                fp.write(f'{x_axis_data[-1,i]},{dark_data[-1,i]},{sample_data[-1,i]},{output_mean[i]},{fitted_y[i]}\n')
 
         
 
