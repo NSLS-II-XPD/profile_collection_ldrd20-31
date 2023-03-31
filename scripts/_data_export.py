@@ -4,6 +4,7 @@ import time
 import numpy as np
 import pandas as pd
 import os
+import _data_analysis as da
 
 
 def _readable_time(unix_time):
@@ -78,8 +79,10 @@ def read_qepro_by_stream(uid, stream_name='primary', data_agent='catalog'):
 
 
 
-def dic_to_csv_for_stream(csv_path, qepro_dic, metadata_dic, stream_name='primary'):
-        
+def dic_to_csv_for_stream(csv_path, qepro_dic, metadata_dic, stream_name='primary', fitting=None):
+    # to save fitting results for good data, fitting needs be a dict with two keys:
+    # fitting = {'fit_function': da._1gauss, 'curve_fit': popt}
+
     spectrum_type = qepro_dic['QEPro_spectrum_type']
     sample_type = metadata_dic['sample_type']
     date, time = _readable_time(metadata_dic['time'])
@@ -101,7 +104,14 @@ def dic_to_csv_for_stream(csv_path, qepro_dic, metadata_dic, stream_name='primar
     sample_data = qepro_dic['QEPro_sample']
     output_data = qepro_dic['QEPro_output']
 
-    if stream_name == 'primary':
+    try:
+        f = fitting['fit_function']
+        popt = fitting['curve_fit']
+        fitted_y = f(x_axis_data[-1], *popt)
+    except TypeError:
+        print('Input fitting info is not correct.')
+
+    if stream_name == 'primary' and fitting == None:
         if spectrum_type == 3:
             spec = 'Abs'
             fout = f'{csv_path}/{sample_type}_{spec}_{date}-{time}_{full_uid[0:8]}.csv'
@@ -138,7 +148,7 @@ def dic_to_csv_for_stream(csv_path, qepro_dic, metadata_dic, stream_name='primar
                 else:
                     fp.write(f'{x_axis_data[0,i]},{dark_data[0,i]},{sample_data[0,i]},{output_data[0,i]}\n')
     
-    else:
+    elif stream_name != 'primary' and fitting == None:
         new_dir = f'{csv_path}/{date}{time}_{full_uid[0:8]}_{stream_name}'
         os.makedirs(new_dir, exist_ok=True)
         for j in range(x_axis_data.shape[0]):
@@ -171,7 +181,43 @@ def dic_to_csv_for_stream(csv_path, qepro_dic, metadata_dic, stream_name='primar
                         fp.write(f'{x_axis_data[j,i]},{dark_data[j,i]},{reference_data[j,i]},{sample_data[j,i]},{output_data[j,i]}\n')
                     else:
                         fp.write(f'{x_axis_data[j,i]},{dark_data[j,i]},{sample_data[j,i]},{output_data[j,i]}\n')
+    
+    elif type(fitting) is dict:
+        if stream_name == 'primary':
+            fout = f'{csv_path}/{sample_type}_PL_{date}-{time}_{full_uid[0:8]}_fitted.csv'
+        
+        elif stream_name == 'fluorescence':
+            new_dir = f'{csv_path}/{date}{time}_{full_uid[0:8]}_{stream_name}'
+            os.makedirs(new_dir, exist_ok=True)
+            fout = f'{new_dir}/{sample_type}_{date}-{time}_{full_uid[0:8]}_fitted.csv'
 
+        with open(fout, 'w') as fp:
+            fp.write(f'uid,{full_uid}\n')
+            fp.write(f'Time_QEPro,{date},{time}\n')
+            fp.write(f'Integration time (ms),{int_time[0]}\n')
+            fp.write(f'Number of averaged spectra,{num_average[0]}\n')
+            fp.write(f'Boxcar width,{boxcar_width[0]}\n')
+
+            for i in range(len(pump_names)):
+                fp.write(f'{pump_names[i]},{precursor[i]},{infuse_rate[i]},{infuse_rate_unit[i]},{pump_status[i]}\n')
+        
+            if mixer != None:
+                for i in range(len(mixer)):
+                    fp.write(f'Mixer no. {i+1},{mixer[i]}\n')
+
+            if type(note) is str:
+                fp.write(f'Note,{note}\n')
+            
+            fp.write('popt')
+            for i in range(len(popt)):
+                fp.write(f',{popt[i]}')
+            fp.write('\n')
+
+            fp.write('Wavelength,Dark,Sample,Fluorescence,Fitting\n')
+            for i in range(x_axis_data.shape[1]):
+                fp.write(f'{x_axis_data[-1,i]},{dark_data[-1,i]},{sample_data[-1,i]},{output_data[-1,i]},{fitted_y[i]}\n')
+
+        
 
 
 

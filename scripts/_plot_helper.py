@@ -75,6 +75,7 @@ class plot_uvvis(open_figures):
         except (IndexError):
             f = plt.figure(self.fig[-1])
         
+        plt.clf()
         ax = f.gca()
         
         fitted_y = fit_function(x, *popt)

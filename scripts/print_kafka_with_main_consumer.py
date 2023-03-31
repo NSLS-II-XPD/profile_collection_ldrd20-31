@@ -10,8 +10,7 @@ import pandas as pd
 import time
 import databroker
 
-
-from _data_export import read_qepro_by_stream, dic_to_csv_for_stream, _readable_time
+import _data_export as de
 from _plot_helper import plot_uvvis
 import _data_analysis as da
 
@@ -91,50 +90,24 @@ def print_kafka_messages(beamline_acronym, csv_path):
             print(f'\n**** start to export uid: {uid} ****\n')
             for stream_name in ['primary', 'absorbance', 'fluorescence']:
                 if stream_name in message['num_events'].keys():
-                    qepro_dic, metadata_dic = read_qepro_by_stream(uid, stream_name=stream_name, data_agent='catalog')
-                    dic_to_csv_for_stream(csv_path, qepro_dic, metadata_dic, stream_name=stream_name)
+                    qepro_dic, metadata_dic = de.read_qepro_by_stream(uid, stream_name=stream_name, data_agent='catalog')
+                    de.dic_to_csv_for_stream(csv_path, qepro_dic, metadata_dic, stream_name=stream_name)
                     print(f'\n** export {stream_name} in uid: {uid[0:8]} to ../{os.path.basename(csv_path)} **\n')
                     u = plot_uvvis(qepro_dic, metadata_dic)
                     u.plot_data()
                     print(f'\n** Plot {stream_name} in uid: {uid[0:8]} complete **\n')
                     
-                    print('\n*** start to identify good/bad data ***\n')
                     if qepro_dic['QEPro_spectrum_type'][0] == 2:
-                        _, time1 = _readable_time(metadata_dic['time'])
-                        data_id = time1 + '_' + metadata_dic['uid'][:8]
-                        _for_average = pd.DataFrame()
-                        for i in range(qepro_dic['QEPro_spectrum_type'].shape[0]):
-                            x_i = qepro_dic['QEPro_x_axis'][i]
-                            y_i = qepro_dic['QEPro_output'][i]
-                            p1, p2 = da.good_bad_data(x_i, y_i, key_height = 200, data_id = f'{data_id}_{i:03d}', distance=30, height=50)
-                            if (type(p1) is np.ndarray) and (type(p2) is dict):
-                                _for_average[f'{data_id}_{i:03d}'] = y_i
+                        print('\n*** start to identify good/bad data ***\n')
+                        x, y, p, f, popt = da._fitting_in_kafka(qepro_dic, metadata_dic, key_height=200, distance=100, height=50)
                         
-                        _for_average[f'{data_id}_mean'] = _for_average.mean(axis=1)
+                        ff={'fit_function': f, 'curve_fit': popt}
+                        de.dic_to_csv_for_stream(csv_path, qepro_dic, metadata_dic, stream_name=stream_name, fitting=ff)
+                        print(f'\n** export fitting results complete**\n')
                         
-                        x0 = x_i
-                        y0 = _for_average[f'{data_id}_mean'].values
-                        
-                        peak, prop = da.good_bad_data(x0, y0, key_height = 200, data_id = f'{data_id}_average', distance=100, height=50)                            
-                        print(f'\n** Average of {data_id} has peaks at {peak}**\n')
-                        
-                        print(f'\n** start to do peak fitting by Gaussian**\n')
-                        if len(peak) == 1:
-                            f = da._1gauss
-                            popt, _, x, y = da._1peak_fit_good_PL(x0, y0, f, peak=peak, raw_data=True)
-                        elif len(peak) == 2:
-                            f = da._2gauss
-                            popt, _, x, y = da._2peak_fit_good_PL(x0, y0, f, peak=peak, raw_data=True)
-                        else:
-                            f = da._1gauss
-                            M = max(prop['peak_heights'])
-                            M_idx, _ = da.find_nearest(prop['peak_heights'], M)
-                            peak = np.asarray([peak[M_idx]])
-                            popt, _, x, y = da._1peak_fit_good_PL(x0, y0, f, peak=peak, raw_data=True)                           
-                        
-                        shift, _ = da.find_nearest(x0, x[0])
-                        u.plot_peak_fit(x, y, peak-shift, f, popt, fill_between=True)
-                        print(f'\n** plot fitting result complete**\n')
+                        u.plot_peak_fit(x, y, p, f, popt, fill_between=True)
+                        print(f'\n** plot fitting results complete**\n')
+            
             print('\n*** export, identify good/bad, fitting complete ***\n')
             print('########### Events printing division ############\n')
 
