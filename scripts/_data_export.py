@@ -110,7 +110,8 @@ def dic_to_csv_for_stream(csv_path, qepro_dic, metadata_dic, stream_name='primar
         fitted_y = f(x_axis_data[-1], *popt)
         output_mean = np.mean(output_data, axis=0)
     except TypeError:
-        print('Input fitting info is not correct.')
+        print('Input fitting info is not correct.\n'
+              'Please fllow as:  {"fit_function": da._1gauss, "curve_fit": popt}')
 
     if stream_name == 'primary' and fitting == None:
         if spectrum_type == 3:
@@ -209,6 +210,12 @@ def dic_to_csv_for_stream(csv_path, qepro_dic, metadata_dic, stream_name='primar
             if type(note) is str:
                 fp.write(f'Note,{note}\n')
             
+            try:
+                fun_name = f.__name__
+                fp.write(f'fitting function,{fun_name}\n')
+            except (AttributeError, TypeError):
+                pass
+
             fp.write('popt')
             for i in range(len(popt)):
                 fp.write(f',{popt[i]}')
