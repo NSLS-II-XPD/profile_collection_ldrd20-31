@@ -2,6 +2,7 @@ import datetime
 import pprint
 import uuid
 from bluesky_kafka import RemoteDispatcher
+from bluesky_queueserver.manager.comms import zmq_single_request
 
 try:
     from nslsii import _read_bluesky_kafka_config_file  # nslsii <0.7.0
@@ -23,6 +24,12 @@ def print_kafka_messages(beamline_acronym):
         if name == 'stop':
             print(db[doc['run_start']].table())
 
+            zmq_single_request(method='queue_item_add', params={'item':{"name":"insitu_test", "args": [1 ,1]
+            , "kwargs": {"sample": "quinine_qserver", "csv_path": "/home/xf28id2/Documents/ChengHung/20230403_qserver_collection", "data_agent":"tiled"}, "item_type":"plan"}, 'user_group':'primary', 'user':'chlin'})
+
+            zmq_single_request(method='queue_start')
+            
+    
     kafka_config = _read_bluesky_kafka_config_file(config_file_path="/etc/bluesky/kafka.yml")
 
     # this consumer should not be in a group with other consumers
@@ -38,6 +45,7 @@ def print_kafka_messages(beamline_acronym):
 
     kafka_dispatcher.subscribe(print_message)
     kafka_dispatcher.start()
+
 
 
 if __name__ == "__main__":

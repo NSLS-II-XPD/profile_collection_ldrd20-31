@@ -82,17 +82,17 @@ def _readable_time(unix_time):
     return (f'{dt.year}{dt.month:02d}{dt.day:02d}'), (f'{dt.hour:02d}{dt.minute:02d}{dt.second:02d}')
 
 
-def insitu_test(abs_repeat, cor_repeat, csv_path=None, sample='rhodamine', pump_list=None, precursor_list=None, mixer=None, note=None):
+def insitu_test(abs_repeat, cor_repeat, csv_path=None, sample='rhodamine', pump_list=None, precursor_list=None, mixer=None, note=None, data_agent='db'):
     # yield from bps.sleep(2)
     for i in range(abs_repeat):
         yield from qepro.take_uvvis_save_csv(sample_type=sample, csv_path=csv_path, 
                                               spectrum_type='Absorbtion', correction_type='Reference', 
-                                              pump_list=pump_list, precursor_list=precursor_list, mixer=mixer, note=note)
+                                              pump_list=pump_list, precursor_list=precursor_list, mixer=mixer, note=note, data_agent=data_agent)
     # yield from bps.sleep(2)    
     for j in range(cor_repeat):
         yield from qepro.take_uvvis_save_csv(sample_type=sample, csv_path=csv_path, 
                                               spectrum_type='Corrected Sample', correction_type='Dark', 
-                                              pump_list=pump_list, precursor_list=precursor_list, mixer=mixer, note=note)
+                                              pump_list=pump_list, precursor_list=precursor_list, mixer=mixer, note=note, data_agent=data_agent)
 
 
 # def insitu_test2(abs_repeat, cor_repeat, csv_path=None, sample='rhodamine', pump_list=None, precursor_list=None):

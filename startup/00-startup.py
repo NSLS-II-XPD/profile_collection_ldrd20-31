@@ -17,19 +17,33 @@ ophyd.signal.EpicsSignal.set_defaults(connection_timeout=5)
 from bluesky.callbacks.broker import verify_files_saved, post_run
 # RE.subscribe(post_run(verify_files_saved, db), 'stop')
 from bluesky import RunEngine
-from bluesky.plans import count
+
+from databroker import Broker
+from bluesky.callbacks.best_effort import BestEffortCallback
+
 
 # Uncomment the following lines to turn on verbose messages for
 # debugging.
 # import logging
 # ophyd.logger.setLevel(logging.DEBUG)
-# logging.basicConfig(level=logging.DEBUG)
+# logging.basicConfig(level=loggisng.DEBUG)
 
 # nslsii.configure_base(get_ipython().user_ns, "xpd",
 #                       publish_documents_with_kafka=True)
 
-nslsii.configure_base(get_ipython().user_ns, "xpd-ldrd20-31",
-                      publish_documents_with_kafka=True)
+# nslsii.configure_base(get_ipython().user_ns, "xpd-ldrd20-31",
+#                       publish_documents_with_kafka=True)
+
+RE = RunEngine({})
+
+db = Broker.named("xpd-ldrd20-31")
+bec = BestEffortCallback()
+
+RE.subscribe(db.insert)
+RE.subscribe(bec)
+res = nslsii.configure_kafka_publisher(RE, beamline_name="xpd-ldrd20-31")
+
+
 
 RE.md['facility'] = 'NSLS-II'
 RE.md['group'] = 'XPD'
@@ -85,3 +99,10 @@ def show_env():
     a = out.decode('utf-8')
     b = a.split('\n')
     print(b[0].split('/')[-1][:-1])
+
+
+from bluesky_queueserver import is_re_worker_active
+if is_re_worker_active():
+    print('<code without interactive features, e.g. reading data from a file>')
+else:
+    print('<code with interactive features, e.g. manual data input>')

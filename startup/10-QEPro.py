@@ -133,6 +133,13 @@ class QEPro(Device):
         return self.features.get() & 1
 
 
+    def describe(self):
+        description = super().describe()
+        description[f"{self.name}_status_msg"].setdefault("dtype_str", "<i8")
+        # description[f"{self.name}_output"].setdefault("dtype_str", "|O")
+        return description
+    
+    
     def set_temp(self, temperature):
         self.tec_device.set(temperature).wait()
 
@@ -452,7 +459,7 @@ class QEPro(Device):
             ds = run.primary.read()
             meta = run.metadata
             
-            date, time = _readable_time(ds['time'][0])
+            date, time = _readable_time(int(ds['time'][0]))
             x_axis_data = ds['QEPro_x_axis'].values[0]
             output_data = ds['QEPro_output'].values[0]
             sample_data = ds['QEPro_sample'].values[0]
@@ -535,7 +542,9 @@ class QEPro(Device):
                     else:
                         fp.write(f'{x_axis_data[i]},{dark_data[i]},{sample_data[i]},{output_data[i]}\n')
         
-
-# from tiled.client import from_profile
-# tiled_client = from_profile("xpd")
+try:
+    from tiled.client import from_profile
+    tiled_client = from_profile("xpd-ldrd20-31")
+except (NameError, TypeError):
+    pass
 qepro = QEPro('XF:28ID2-ES{QEPro:Spec-1}:', name='QEPro', )
