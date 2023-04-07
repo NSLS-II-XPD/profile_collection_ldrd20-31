@@ -107,51 +107,120 @@ def insitu_test(abs_repeat, cor_repeat, csv_path=None, sample='rhodamine', pump_
 #                                               pump_list=pump_list, precursor_list=precursor_list)
 
 
-def setup_collection_uv(det, integration_time=100, num_spectra_to_average=10, buffer=3,
-                     spectrum_type='Absorbtion', correction_type='Reference', 
-                     electric_dark_correction=True):
+def setup_collection_q(integration_time=100, num_spectra_to_average=10, buffer=3,
+                       spectrum_type='Absorbtion', correction_type='Reference', 
+                       electric_dark_correction=True):
 
     # For absorbance: spectrum_type='Absorbtion', correction_type='Reference'
     # For fluorescence: spectrum_type='Corrected Sample', correction_type='Dark'
 
-    yield from bps.abs_set(det.integration_time, integration_time, wait=True)
-    yield from bps.abs_set(det.num_spectra, num_spectra_to_average, wait=True)
-    yield from bps.abs_set(det.buff_capacity, buffer, wait=True)
+    yield from bps.abs_set(qepro.integration_time, integration_time, wait=True)
+    yield from bps.abs_set(qepro.num_spectra, num_spectra_to_average, wait=True)
+    yield from bps.abs_set(qepro.buff_capacity, buffer, wait=True)
     if num_spectra_to_average > 1:
-        yield from bps.abs_set(det.collect_mode, 'Average', wait=True)
+        yield from bps.abs_set(qepro.collect_mode, 'Average', wait=True)
     else:
-        yield from bps.abs_set(det.collect_mode, 'Single', wait=True)
+        yield from bps.abs_set(qepro.collect_mode, 'Single', wait=True)
 
     if electric_dark_correction:
-        yield from bps.abs_set(det.electric_dark_correction, 1, wait=True)
+        yield from bps.abs_set(qepro.electric_dark_correction, 1, wait=True)
 
-    yield from bps.abs_set(det.correction, correction_type, wait=True)
-    yield from bps.abs_set(det.spectrum_type, spectrum_type, wait=True)
+    yield from bps.abs_set(qepro.correction, correction_type, wait=True)
+    yield from bps.abs_set(qepro.spectrum_type, spectrum_type, wait=True)
     
 
 
-def take_ref_bkg_uv(det, integration_time=15, num_spectra_to_average=16, 
-                  buffer=3, electric_dark_correction=True, ref_name='test', csv_path=None):
-    yield from setup_collection_uv(det, integration_time=integration_time, num_spectra_to_average=num_spectra_to_average, buffer=buffer, 
-                                     spectrum_type='Absorbtion', correction_type='Reference', 
-                                     electric_dark_correction=True)
+def take_ref_bkg_q(integration_time=15, num_spectra_to_average=16, 
+                   buffer=3, electric_dark_correction=True, ref_name='test', 
+                   data_agent='db', csv_path=None):
+    
+    yield from qepro.setup_collection2(integration_time=integration_time, 
+                                       num_spectra_to_average=num_spectra_to_average, buffer=buffer, 
+                                       spectrum_type='Absorbtion', correction_type='Reference', 
+                                       electric_dark_correction=True)
+    
     # yield from LED_off()
     # yield from shutter_close()
     yield from bps.mv(LED, 'Low', UV_shutter, 'Low')
     yield from bps.sleep(5)
-    yield from det.get_dark_frame2()
-    uid = (yield from count([det], md = {'note':'Dark'}))
+    yield from qepro.get_dark_frame2()
+    uid = (yield from count([qepro], md = {'note':'Dark'}))
     if csv_path != None:
         print(f'Export dark file to {csv_path}...')
-        det.export_from_scan(uid, csv_path, sample_type=f'Dark_{integration_time}ms')
+        qepro.export_from_scan(uid, csv_path, sample_type=f'Dark_{integration_time}ms', data_agent=data_agent)
 
     yield from bps.mv(UV_shutter, 'High')
     yield from bps.sleep(2)
-    yield from det.get_reference_frame2()
-    uid = (yield from count([det], md = {'note':ref_name}))
+    yield from qepro.get_reference_frame2()
+    uid = (yield from count([qepro], md = {'note':ref_name}))
 
     yield from bps.mv(LED, 'Low', UV_shutter, 'Low')
 
     if csv_path != None:
         print(f'Export reference file to {csv_path}...')
-        det.export_from_scan(uid, csv_path, sample_type=f'{ref_name}_{integration_time}ms')
+        qepro.export_from_scan(uid, csv_path, sample_type=f'{ref_name}_{integration_time}ms', data_agent=data_agent)
+
+
+
+
+
+def take_uvvis_save_csv_q(sample_type='test', plot=False, csv_path=None, data_agent='db', 
+                        spectrum_type='Absorbtion', correction_type='Reference', 
+                        pump_list=None, precursor_list=None, mixer=None, note=None, md=None):
+    
+    if (pump_list != None and precursor_list != None):
+        _md = {"pumps" : [pump.name for pump in pump_list], 
+                "precursors" : precursor_list, 
+                "infuse_rate" : [pump.read_infuse_rate.get() for pump in pump_list], 
+                "infuse_rate_unit" : [pump.read_infuse_rate_unit.get() for pump in pump_list],
+                "pump_status" : [pump.status.get() for pump in pump_list], 
+                "uvvis" :[spectrum_type, correction_type, qepro.integration_time.get(), qepro.num_spectra.get(), qepro.buff_capacity.get()], 
+                "mixer": mixer,
+                "sample_type": sample_type,
+                "note" : note if note else "None"}
+        _md.update(md or {})
+    
+    if (pump_list == None and precursor_list == None):
+        _md = { "uvvis" :[spectrum_type, correction_type, qepro.integration_time.get(), qepro.num_spectra.get(), qepro.buff_capacity.get()], 
+                "mixer": ['exsitu measurement'],
+                "sample_type": sample_type,
+                "note" : note if note else "None"}
+        _md.update(md or {})
+    
+    # For absorbance: spectrum_type='Absorbtion', correction_type='Reference'
+    # For fluorescence: spectrum_type='Corrected Sample', correction_type='Dark'
+    
+    # qepro.correction.put(correction_type)
+    # qepro.spectrum_type.put(spectrum_type)
+    
+    if spectrum_type == 'Absorbtion':
+        if LED.get()=='Low' and UV_shutter.get()=='High' and qepro.correction.get()==correction_type and qepro.spectrum_type.get()==spectrum_type:
+            uid = (yield from count([qepro], md=_md))
+        else:
+            yield from bps.abs_set(qepro.correction, correction_type, wait=True)
+            yield from bps.abs_set(qepro.spectrum_type, spectrum_type, wait=True)
+            # yield from LED_off()
+            # yield from shutter_open()
+            yield from bps.mv(LED, 'Low', UV_shutter, 'High')
+            yield from bps.sleep(2)
+            uid = (yield from count([qepro], md=_md))
+        
+        
+    else:
+        if LED.get()=='High' and UV_shutter.get()=='Low' and qepro.correction.get()==correction_type and qepro.spectrum_type.get()==spectrum_type:
+            uid = (yield from count([qepro], md=_md))
+        else:
+            yield from bps.abs_set(qepro.correction, correction_type, wait=True)
+            yield from bps.abs_set(qepro.spectrum_type, spectrum_type, wait=True)
+            # yield from shutter_close()
+            # yield from LED_on()
+            yield from bps.mv(LED, 'High', UV_shutter, 'Low')
+            yield from bps.sleep(2)
+            uid = (yield from count([qepro], md=_md))
+    
+    yield from bps.mv(LED, 'Low', UV_shutter, 'Low')
+    
+    if csv_path!=None or plot==True:
+        yield from bps.sleep(2)
+        qepro.export_from_scan(uid, csv_path, sample_type, plot=plot, data_agent=data_agent)
+

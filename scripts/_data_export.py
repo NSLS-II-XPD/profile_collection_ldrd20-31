@@ -105,9 +105,9 @@ def dic_to_csv_for_stream(csv_path, qepro_dic, metadata_dic, stream_name='primar
     output_data = qepro_dic['QEPro_output']
 
     try:
-        f = fitting['fit_function']
+        f1 = fitting['fit_function']
         popt = fitting['curve_fit']
-        fitted_y = f(x_axis_data[-1], *popt)
+        fitted_y = f1(x_axis_data[-1], *popt)
         output_mean = np.mean(output_data, axis=0)
     except TypeError:
         print('Input fitting info is not correct.\n'
@@ -211,7 +211,7 @@ def dic_to_csv_for_stream(csv_path, qepro_dic, metadata_dic, stream_name='primar
                 fp.write(f'Note,{note}\n')
             
             try:
-                fun_name = f.__name__
+                fun_name = f1.__name__
                 fp.write(f'fitting function,{fun_name}\n')
             except (AttributeError, TypeError):
                 pass
