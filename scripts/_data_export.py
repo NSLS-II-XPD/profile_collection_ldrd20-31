@@ -27,7 +27,7 @@ def _data_keys():
 
 
 ### the export funs below are revised from self.export_from_scan in 10-QEPro.py
-def export_qepro_by_stream(uid, csv_path, stream_name='primary', data_agent='catalog', plot=False, wait=False):
+def export_qepro_by_stream(uid, csv_path, stream_name='primary', data_agent='tiled', plot=False, wait=False):
     if wait==True:
         time.sleep(2)
     
@@ -36,7 +36,7 @@ def export_qepro_by_stream(uid, csv_path, stream_name='primary', data_agent='cat
     print(f'Export {stream_name} in uid: {uid[0:8]} to ../{os.path.basename(csv_path)} done!')
     
 
-def read_qepro_by_stream(uid, stream_name='primary', data_agent='catalog'):
+def read_qepro_by_stream(uid, stream_name='primary', data_agent='tiled'):
     
     if data_agent == 'catalog':
         try:

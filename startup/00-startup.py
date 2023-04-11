@@ -60,13 +60,7 @@ import numpy as np
 from ophyd.sim import det4, noisy_det, motor  # simulated detector, motor
 import h5py
 from datetime import datetime
-
-import bluesky.plan_stubs as bps
-from bluesky.plans import count
-
-import matplotlib.pyplot as plt
 import glob
-
 import bluesky.plan_stubs as bps
 from bluesky.plans import count, scan
 
