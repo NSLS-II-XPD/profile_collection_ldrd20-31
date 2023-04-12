@@ -109,9 +109,12 @@ def dic_to_csv_for_stream(csv_path, qepro_dic, metadata_dic, stream_name='primar
         popt = fitting['curve_fit']
         fitted_y = f1(x_axis_data[-1], *popt)
         output_mean = np.mean(output_data, axis=0)
-    except TypeError:
-        print('Input fitting info is not correct.\n'
-              'Please fllow as:  {"fit_function": da._1gauss, "curve_fit": popt}')
+    except (TypeError, KeyError):
+        if fitting == None:
+            pass
+        else:
+            print('Input fitting info is not correct.\n'
+                  'Please fllow as:  {"fit_function": da._1gauss, "curve_fit": popt}')
 
     if stream_name == 'primary' and fitting == None:
         if spectrum_type == 3:

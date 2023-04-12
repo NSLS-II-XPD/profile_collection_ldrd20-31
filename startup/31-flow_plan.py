@@ -1,11 +1,11 @@
 '''
-pump_list = [dds1_p1]
-syringe_list = [2.5]
-target_vol_list = ['0.5 ml']
-infuse_rates = ['500 ul/min']
-precursor_list = ['test']
-mixer = [None]
-syringe_mater_list=['glass_H1000']
+pump_list = [dds1_p1, dds1_p2]
+syringe_list = [50, 50]
+target_vol_list = ['30 ml', '30 ml']
+infuse_rates = ['100 ul/min', '100 ul/min']
+precursor_list = ['CsPbOA', 'ToABr']
+mixer = ['30 cm']
+syringe_mater_list=['steel', 'steel']
 '''
 
 def reset_pumps(pump_list, clear=True, update = '.2 second'):
@@ -164,7 +164,7 @@ def take_ref_bkg_q(integration_time=15, num_spectra_to_average=16,
 
 
 
-def take_uvvis_save_csv_q(sample_type='test', plot=False, csv_path=None, data_agent='tiled', 
+def take_a_uvvis_csv_q(sample_type='test', plot=False, csv_path=None, data_agent='tiled', 
                         spectrum_type='Absorbtion', correction_type='Reference', 
                         pump_list=None, precursor_list=None, mixer=None, note=None, md=None):
     
@@ -223,4 +223,28 @@ def take_uvvis_save_csv_q(sample_type='test', plot=False, csv_path=None, data_ag
     if csv_path!=None or plot==True:
         yield from bps.sleep(2)
         qepro.export_from_scan(uid, csv_path, sample_type, plot=plot, data_agent=data_agent)
+
+
+
+def wait_equilibrium(infuse_rates, mixer, ratio=1, tubing_ID_mm=1.016):
+
+    if len(mixer) != 1:
+        raise ValueError('Only one mixer can be in wait_equilibrium.')
+        
+    total_rate = 0
+    for k in infuse_rates:
+        rate = float(k.split(' ')[0])
+        rate_unit = k.split(' ')[1]
+        unit_const = vol_unit_converter(v0=rate_unit[:2], v1='ul')/t_unit_converter(t0=rate_unit[3:], t1='min')
+        total_rate += rate*unit_const
+
+
+    mixer_meter = float(mixer[-1].split(' ')[0])/100
+    mixer_vol_mm3 = np.pi*((tubing_ID_mm/2)**2)*mixer_meter*1000
+    res_time_sec = 60*mixer_vol_mm3/total_rate
+    
+    print(f'Reaction resident time is {res_time_sec:.2f} seconds.')
+    print(f'Wait for {ratio} times of resident time, in total of {res_time_sec*ratio:.2f} seconds.')
+    yield from bps.sleep(res_time_sec*ratio)
+
 

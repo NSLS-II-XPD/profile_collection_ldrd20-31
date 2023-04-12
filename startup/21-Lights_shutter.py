@@ -21,31 +21,31 @@ UV_shutter = EpicsSignal('XF:28IDC-ES:1{Light:Abs-Sht:1}Cmd', name='UV_shutter',
 def LED_on():
     yield from bps.abs_set(LED, 'High', wait=True)
     print(f'LED light is {LED.get()}.')
-    return 'test'
+    # return 'test'
     #st=DeviceStatus()
     #LED.put('High', wait=True)
     #return (yield from bps.rd(LED))
     
-def LED_on_2():
-    #yield from bps.abs_set(LED, 'High', wait=True)
-    LED.put('High', wait=True)
-    return LED.get()
+# def LED_on_2():
+#     #yield from bps.abs_set(LED, 'High', wait=True)
+#     LED.put('High', wait=True)
+#     return LED.get()
 
-def LED_on_3():
-    #yield from bps.abs_set(LED, 'High', wait=True)
-    #LED.put('High', wait=True)
-    return (yield from bps.trigger_and_read(LED))
+# def LED_on_3():
+#     #yield from bps.abs_set(LED, 'High', wait=True)
+#     #LED.put('High', wait=True)
+#     return (yield from bps.trigger_and_read(LED))
     
 def LED_off():
     yield from bps.abs_set(LED, 'Low', wait=True)
     print(f'LED light is {LED.get()}')
     #LED.put('Low', wait=True)
-    return LED.get()
+    # return LED.get()
     
-def LED_off_2():
-    #yield from bps.abs_set(LED, 'Low', wait=True)
-    LED.put('Low', wait=True)
-    return LED.get()
+# def LED_off_2():
+#     #yield from bps.abs_set(LED, 'Low', wait=True)
+#     LED.put('Low', wait=True)
+#     return LED.get()
     
 def shutter_open():
     yield from bps.abs_set(UV_shutter, 'High', wait=True)

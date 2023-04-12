@@ -2235,50 +2235,9 @@ existing_plans:
       name: pump_list
     properties:
       is_generator: true
-  take_ref_bkg_q:
+  take_a_uvvis_csv_q:
     module: startup_script
-    name: take_ref_bkg_q
-    parameters:
-    - default: '15'
-      kind:
-        name: POSITIONAL_OR_KEYWORD
-        value: 1
-      name: integration_time
-    - default: '16'
-      kind:
-        name: POSITIONAL_OR_KEYWORD
-        value: 1
-      name: num_spectra_to_average
-    - default: '3'
-      kind:
-        name: POSITIONAL_OR_KEYWORD
-        value: 1
-      name: buffer
-    - default: 'True'
-      kind:
-        name: POSITIONAL_OR_KEYWORD
-        value: 1
-      name: electric_dark_correction
-    - default: '''test'''
-      kind:
-        name: POSITIONAL_OR_KEYWORD
-        value: 1
-      name: ref_name
-    - default: '''db'''
-      kind:
-        name: POSITIONAL_OR_KEYWORD
-        value: 1
-      name: data_agent
-    - default: None
-      kind:
-        name: POSITIONAL_OR_KEYWORD
-        value: 1
-      name: csv_path
-    properties:
-      is_generator: true
-  take_uvvis_save_csv_q:
-    module: startup_script
-    name: take_uvvis_save_csv_q
+    name: take_a_uvvis_csv_q
     parameters:
     - default: '''test'''
       kind:
@@ -2335,6 +2294,47 @@ existing_plans:
         name: POSITIONAL_OR_KEYWORD
         value: 1
       name: md
+    properties:
+      is_generator: true
+  take_ref_bkg_q:
+    module: startup_script
+    name: take_ref_bkg_q
+    parameters:
+    - default: '15'
+      kind:
+        name: POSITIONAL_OR_KEYWORD
+        value: 1
+      name: integration_time
+    - default: '16'
+      kind:
+        name: POSITIONAL_OR_KEYWORD
+        value: 1
+      name: num_spectra_to_average
+    - default: '3'
+      kind:
+        name: POSITIONAL_OR_KEYWORD
+        value: 1
+      name: buffer
+    - default: 'True'
+      kind:
+        name: POSITIONAL_OR_KEYWORD
+        value: 1
+      name: electric_dark_correction
+    - default: '''test'''
+      kind:
+        name: POSITIONAL_OR_KEYWORD
+        value: 1
+      name: ref_name
+    - default: '''db'''
+      kind:
+        name: POSITIONAL_OR_KEYWORD
+        value: 1
+      name: data_agent
+    - default: None
+      kind:
+        name: POSITIONAL_OR_KEYWORD
+        value: 1
+      name: csv_path
     properties:
       is_generator: true
   xray_uvvis_plan:

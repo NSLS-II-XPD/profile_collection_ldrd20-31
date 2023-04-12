@@ -545,6 +545,6 @@ class QEPro(Device):
 try:
     from tiled.client import from_profile
     tiled_client = from_profile("xpd-ldrd20-31")
-except (NameError, TypeError):
+except (NameError, ModuleNotFoundError):
     pass
 qepro = QEPro('XF:28ID2-ES{QEPro:Spec-1}:', name='QEPro', )
