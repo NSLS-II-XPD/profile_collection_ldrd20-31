@@ -226,20 +226,34 @@ def take_a_uvvis_csv_q(sample_type='test', plot=False, csv_path=None, data_agent
 
 
 
-def wait_equilibrium(infuse_rates, mixer, ratio=1, tubing_ID_mm=1.016):
+
+def l_unit_converter(l0 = 'm', l1 = 'm'):
+    l_unit = ['mm', 'cm', 'm']
+    l_frame = pd.DataFrame(data={'mm': np.array([1, 10, 1000]), 
+                                 'cm': np.array([0.1, 1, 100]), 
+                                 'm' : np.array([0.001, 0.01, 1])}, index=l_unit)
+    return l_frame.loc[l0, l1]
+
+
+
+def wait_equilibrium(pump_list, mixer, ratio=1, tubing_ID_mm=1.016):
 
     if len(mixer) != 1:
         raise ValueError('Only one mixer can be in wait_equilibrium.')
-        
+
+    infuse_rates = [pump.read_infuse_rate.get() for pump in pump_list]
+    infuse_rate_unit = [pump.read_infuse_rate_unit.get() for pump in pump_list]
     total_rate = 0
-    for k in infuse_rates:
-        rate = float(k.split(' ')[0])
-        rate_unit = k.split(' ')[1]
+    for i in range(len(infuse_rates)):
+        rate = infuse_rates[i]
+        rate_unit = infuse_rate_unit[i]
         unit_const = vol_unit_converter(v0=rate_unit[:2], v1='ul')/t_unit_converter(t0=rate_unit[3:], t1='min')
         total_rate += rate*unit_const
 
-
-    mixer_meter = float(mixer[-1].split(' ')[0])/100
+    mixer_length = float(mixer[-1].split(' ')[0])
+    mixer_unit = mixer[-1].split(' ')[1]
+    l_unit_const = l_unit_converter(l0=mixer_unit, l1='m')
+    mixer_meter = mixer_length * l_unit_const
     mixer_vol_mm3 = np.pi*((tubing_ID_mm/2)**2)*mixer_meter*1000
     res_time_sec = 60*mixer_vol_mm3/total_rate
     

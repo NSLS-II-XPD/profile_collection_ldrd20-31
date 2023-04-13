@@ -1917,12 +1917,6 @@ existing_plans:
     parameters: []
     properties:
       is_generator: true
-  LED_on_3:
-    module: startup_script
-    name: LED_on_3
-    parameters: []
-    properties:
-      is_generator: true
   count:
     description: Take one or more readings from detectors.
     module: bluesky.plans
@@ -2335,6 +2329,30 @@ existing_plans:
         name: POSITIONAL_OR_KEYWORD
         value: 1
       name: csv_path
+    properties:
+      is_generator: true
+  wait_equilibrium:
+    module: startup_script
+    name: wait_equilibrium
+    parameters:
+    - kind:
+        name: POSITIONAL_OR_KEYWORD
+        value: 1
+      name: pump_list
+    - kind:
+        name: POSITIONAL_OR_KEYWORD
+        value: 1
+      name: mixer
+    - default: '1'
+      kind:
+        name: POSITIONAL_OR_KEYWORD
+        value: 1
+      name: ratio
+    - default: '1.016'
+      kind:
+        name: POSITIONAL_OR_KEYWORD
+        value: 1
+      name: tubing_ID_mm
     properties:
       is_generator: true
   xray_uvvis_plan:

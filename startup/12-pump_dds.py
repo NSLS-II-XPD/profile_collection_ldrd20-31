@@ -428,20 +428,20 @@ def syringe_diameter(volume, material='steel'):
 dds1 = syrng_DDS('XF:28IDC-ES:1{Pump:Syrng-DDS:1', name='DDS1')
 
 dds1_p1 = syrng_DDS_ax('XF:28IDC-ES:1{Pump:Syrng-DDS:1-Ax:A}', name='DDS1_p1', parent=dds1, 
-                     read_attrs=['status', 
-                                 'read_target_vol', 'read_target_vol_unit',
-                                 'read_infused', 'read_infused_unit', 
-                                 'read_withdrawn', 'read_withdrawn_unit',
-                                 'read_infuse_rate', 'read_infuse_rate_unit',
-                                 'read_withdraw_rate', 'read_withdraw_rate_unit'])
+                        read_attrs=['status', 
+                                    'read_target_vol', 'read_target_vol_unit',
+                                    'read_infused', 'read_infused_unit', 
+                                    'read_withdrawn', 'read_withdrawn_unit',
+                                    'read_infuse_rate', 'read_infuse_rate_unit',
+                                    'read_withdraw_rate', 'read_withdraw_rate_unit'])
     
 dds1_p2 = syrng_DDS_ax('XF:28IDC-ES:1{Pump:Syrng-DDS:1-Ax:B}', name='DDS1_p2', parent=dds1, 
-                     read_attrs=['status', 
-                                 'read_target_vol', 'read_target_vol_unit',
-                                 'read_infused', 'read_infused_unit', 
-                                 'read_withdrawn', 'read_withdrawn_unit',
-                                 'read_infuse_rate', 'read_infuse_rate_unit',
-                                 'read_withdraw_rate', 'read_withdraw_rate_unit'])
+                        read_attrs=['status', 
+                                    'read_target_vol', 'read_target_vol_unit',
+                                    'read_infused', 'read_infused_unit', 
+                                    'read_withdrawn', 'read_withdrawn_unit',
+                                    'read_infuse_rate', 'read_infuse_rate_unit',
+                                    'read_withdraw_rate', 'read_withdraw_rate_unit'])
                                  
 
 
