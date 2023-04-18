@@ -2199,6 +2199,16 @@ existing_plans:
     parameters: []
     properties:
       is_generator: true
+  sleep_sec_q:
+    module: startup_script
+    name: sleep_sec_q
+    parameters:
+    - kind:
+        name: POSITIONAL_OR_KEYWORD
+        value: 1
+      name: t
+    properties:
+      is_generator: true
   start_group_infuse:
     module: startup_script
     name: start_group_infuse

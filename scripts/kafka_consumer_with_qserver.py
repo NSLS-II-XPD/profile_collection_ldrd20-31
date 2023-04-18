@@ -32,13 +32,27 @@ plt.rcParams["figure.raise_window"] = False
 
 ## Input varaibales
 ## Maybe they can be read from a .txt file in future
-csv_path = '/home/xf28id2/Documents/ChengHung/20230411_qserver_plan'
+csv_path = '/home/xf28id2/Documents/ChengHung/20230418_qserver_plan'
 key_height = 20000
 height = 50
 distance = 100
+# pump_list = [dds1_p1.name, dds1_p2.name]
+pump_list = ['dds1_p1', 'dds1_p2']
+syringe_list = [50, 50]
+target_vol_list = ['30 ml', '30 ml']
+infuse_rates = [['100 ul/min', '100 ul/min'], ['200 ul/min', '200 ul/min'], ['50 ul/min', '50 ul/min']]
+precursor_list = ['CsPbOA', 'ToABr']
+mixer = ['30 cm']
+syringe_mater_list=['steel', 'steel']
+sample = ['CsPbBr_100ul', 'CsPbBr_200ul', 'CsPbBr_50ul']
+count = 0
+bad_data = []
+good_data = []
 
-
-def print_kafka_messages(beamline_acronym, csv_path=csv_path, key_height=key_height, height=height, distance=distance):
+def print_kafka_messages(beamline_acronym, csv_path=csv_path, 
+                         key_height=key_height, height=height, distance=distance, 
+                         bad_data = [], good_data = [], 
+                         pump_list=pump_list, sample=sample, precursor_list=precursor_list, mixer=mixer):
     print(f"Listening for Kafka messages for {beamline_acronym}")
     print(f'Defaul parameters:\n'
           f'                  csv path: {csv_path}\n'
@@ -50,11 +64,13 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path, key_height=key_hei
     global db, catalog
     db = databroker.Broker.named(beamline_acronym)
     catalog = databroker.catalog[f'{beamline_acronym}']
-    bad_data = []
+
 
     # plt.figure()
     # def print_message(name, doc):
-    def print_message(consumer, doctype, doc):
+    def print_message(consumer, doctype, doc, 
+                      count = 0, bad_data = bad_data, good_data = good_data, 
+                      pump_list=pump_list, sample=sample, precursor_list=precursor_list, mixer=mixer):
         name, message = doc
         # print(
         #     f"{datetime.datetime.now().isoformat()} document: {name}\n"
@@ -136,6 +152,7 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path, key_height=key_hei
                         
                         u.plot_peak_fit(x, y, p, f, popt, fill_between=True)
                         print(f'\n** plot fitting results complete**\n')
+                        good_data.append(data_id)
                     elif peak==[] and prop==[]:
                         bad_data.append(data_id)
 
@@ -143,23 +160,35 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path, key_height=key_hei
                     print(f"\n*** No need to carry out fitting for {stream_name} in uid: {uid[:8]} ***\n")
             
             print('\n*** export, identify good/bad, fitting complete ***\n')
+            print(f'*** Accumulated num of good data: {len(good_data)} ***\n')
             print(f'*** Accumulated num of bad data: {len(bad_data)} ***\n')
             print('########### Events printing division ############\n')
             
+                
             if len(bad_data) > 5:
-                zmq_single_request(method='re_abort')
-            else:
+                print('*** qsever aborted due to too many bad scans, please check setup ***\n')
+                zmq_single_request(method='queue_stop')
+                # zmq_single_request(method='re_abort')
+                
+            elif len(good_data) <= 5:
+                print('*** Add another fluorescence scan to the fron of qsever ***\n')
                 zmq_single_request(method='queue_item_add', 
-                    params={'item':{
-                                    "name":"take_a_uvvis_csv_q", 
-                                    "kwargs": {"sample_type": "quinine_qserver", 
-                                                "spectrum_type": 'Corrected Sample', 
-                                                "correction_type": 'Dark', 
-                                                "data_agent":"tiled"
-                                                }, "item_type":"plan"
-                                    }, 
-                            'user_group':'primary', 'user':'chlin'})
-                zmq_single_request(method='queue_start')
+                                   params={
+                                           'item':{"name":"take_a_uvvis_csv_q",  
+                                            "kwargs": {'sample_type':sample[count], 
+                                                       'spectrum_type':'Corrected Sample', 'correction_type':'Dark', 
+                                                       'pump_list':pump_list, 'precursor_list':precursor_list, 
+                                                        'mixer':mixer
+                                                        }, "item_type":"plan"
+                                                  }, 'pos':'front', 'user_group':'primary', 'user':'chlin'})
+            
+            elif len(good_data) > 5:
+                print('*** # of good data is enough so go to the next: bundle plan ***\n')
+                bad_data = []
+                good_data = []
+                count += 1
+                
+                # zmq_single_request(method='queue_start')
 
 
     kafka_config = _read_bluesky_kafka_config_file(config_file_path="/etc/bluesky/kafka.yml")

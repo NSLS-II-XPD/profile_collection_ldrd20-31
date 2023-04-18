@@ -236,6 +236,12 @@ def l_unit_converter(l0 = 'm', l1 = 'm'):
 
 
 
+def sleep_sec_q(t):
+    print(f'Sleep for a while: {t} seconds.')
+    yield from bps.sleep(t)
+
+
+
 def wait_equilibrium(pump_list, mixer, ratio=1, tubing_ID_mm=1.016):
 
     if len(mixer) != 1:
