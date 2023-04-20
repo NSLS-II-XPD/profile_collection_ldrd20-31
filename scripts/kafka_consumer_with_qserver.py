@@ -114,33 +114,44 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
             )
             # num_events = len(message['num_events'])
 
+            ## wait 2 seconds for databroker to save data
             time.sleep(2)
             uid = message['run_start']
             print(f'\n**** start to export uid: {uid} ****\n')
             # print(list(message['num_events'].keys())[0])
             stream_list = list(message['num_events'].keys())
+            
+            ## remove 'scattering' from stream_list to avoid redundant work in next for loop
             if 'scattering' in stream_list:
                 stream_list.remove('scattering')
-
+            
+            ## Export, plotting, fitting, calculate # of good/bad data, add queue item
             for stream_name in stream_list:
+                ## Read data from databroker and turn into dic
                 qepro_dic, metadata_dic = de.read_qepro_by_stream(uid, stream_name=stream_name, data_agent='tiled')
+                ## Save data in dic into .csv file
                 de.dic_to_csv_for_stream(csv_path, qepro_dic, metadata_dic, stream_name=stream_name)
                 print(f'\n** export {stream_name} in uid: {uid[0:8]} to ../{os.path.basename(csv_path)} **\n')
+                ## Plot data in dic
                 u = plot_uvvis(qepro_dic, metadata_dic)
                 u.plot_data()
                 print(f'\n** Plot {stream_name} in uid: {uid[0:8]} complete **\n')
                     
-                
+                ## Idenfify good/bad data if it is a fluorescence sacn in 'primary'
                 if qepro_dic['QEPro_spectrum_type'][0]==2 and stream_name=='primary':
                     print(f'\n*** start to identify good/bad data in stream: {stream_name} ***\n')
                     x0, y0, data_id, peak, prop = da._identify_one_in_kafka(qepro_dic, metadata_dic, key_height=key_height, distance=distance, height=height)
                 
+                ## Avergae scans in 'fluorescence' and idenfify good/bad
                 elif stream_name == 'fluorescence':
                     print(f'\n*** start to identify good/bad data in stream: {stream_name} ***\n')
                     x0, y0, data_id, peak, prop = da._identify_multi_in_kafka(qepro_dic, metadata_dic, key_height=key_height, distance=distance, height=height)
                     
                 try:
                     data_id, peak, prop
+                    ## for a good data, type(peak) will be a np.array and type(prop) will be a dic
+                    ## fit the good data, export/plotting fitting results
+                    ## append data_id into good_data or bad_data for calculate numbers
                     if (type(peak) is np.ndarray) and (type(prop) is dict):
                         x, y, p, f, popt = da._fitting_in_kafka(x0, y0, data_id, peak, prop)                       
                         ff={'fit_function': f, 'curve_fit': popt}
@@ -164,6 +175,8 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
             print(f'*** Accumulated num of bad data: {len(bad_data)} ***\n')
             print('########### Events printing division ############\n')
             
+            
+            ## Depend on # of good/bad data, add items into queue item or stop 
             if stream_name == 'primary':     
                 if len(bad_data) > 5:
                     print('*** qsever aborted due to too many bad scans, please check setup ***\n')
