@@ -24,7 +24,8 @@ i=0
 ## 0. Clear queue
 zmq_single_request(method='queue_clear')
 
-for i in range(len(infuse_rates)):    
+for i in range(len(infuse_rates)):
+# for i in range(2): 
     ## 1. reset pump
     zmq_single_request(method='queue_item_add', 
                     params={
@@ -87,7 +88,7 @@ for i in range(len(infuse_rates)):
     zmq_single_request(method='queue_item_add', 
                     params={
                             'item':{"name":"sleep_sec_q", 
-                                    "args":[7], 
+                                    "args":[5], 
                                     "item_type":"plan"
                                     }, 'user_group':'primary', 'user':'chlin'})
     

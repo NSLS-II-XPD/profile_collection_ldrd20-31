@@ -32,8 +32,8 @@ plt.rcParams["figure.raise_window"] = False
 
 ## Input varaibales
 ## Maybe they can be read from a .txt file in future
-csv_path = '/home/xf28id2/Documents/ChengHung/20230418_qserver_plan'
-key_height = 20000
+csv_path = '/home/xf28id2/Documents/ChengHung/20230420_qserver_plan'
+key_height = 200
 height = 50
 distance = 100
 # pump_list = [dds1_p1.name, dds1_p2.name]
@@ -45,13 +45,10 @@ precursor_list = ['CsPbOA', 'ToABr']
 mixer = ['30 cm']
 syringe_mater_list=['steel', 'steel']
 sample = ['CsPbBr_100ul', 'CsPbBr_200ul', 'CsPbBr_50ul']
-count = 0
-bad_data = []
-good_data = []
+
 
 def print_kafka_messages(beamline_acronym, csv_path=csv_path, 
                          key_height=key_height, height=height, distance=distance, 
-                         bad_data = [], good_data = [], 
                          pump_list=pump_list, sample=sample, precursor_list=precursor_list, mixer=mixer):
     print(f"Listening for Kafka messages for {beamline_acronym}")
     print(f'Defaul parameters:\n'
@@ -69,7 +66,7 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
     # plt.figure()
     # def print_message(name, doc):
     def print_message(consumer, doctype, doc, 
-                      count = 0, bad_data = bad_data, good_data = good_data, 
+                      bad_data = [], good_data = [], finished = [], 
                       pump_list=pump_list, sample=sample, precursor_list=precursor_list, mixer=mixer):
         name, message = doc
         # print(
@@ -152,7 +149,9 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
                         
                         u.plot_peak_fit(x, y, p, f, popt, fill_between=True)
                         print(f'\n** plot fitting results complete**\n')
-                        good_data.append(data_id)
+                        if stream_name == 'primary':
+                            good_data.append(data_id)
+                    
                     elif peak==[] and prop==[]:
                         bad_data.append(data_id)
 
@@ -161,34 +160,45 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
             
             print('\n*** export, identify good/bad, fitting complete ***\n')
             print(f'*** Accumulated num of good data: {len(good_data)} ***\n')
+            print(f'good_data = {good_data}\n')
             print(f'*** Accumulated num of bad data: {len(bad_data)} ***\n')
             print('########### Events printing division ############\n')
             
-                
-            if len(bad_data) > 5:
-                print('*** qsever aborted due to too many bad scans, please check setup ***\n')
-                zmq_single_request(method='queue_stop')
-                # zmq_single_request(method='re_abort')
-                
-            elif len(good_data) <= 5:
-                print('*** Add another fluorescence scan to the fron of qsever ***\n')
-                zmq_single_request(method='queue_item_add', 
-                                   params={
-                                           'item':{"name":"take_a_uvvis_csv_q",  
-                                            "kwargs": {'sample_type':sample[count], 
-                                                       'spectrum_type':'Corrected Sample', 'correction_type':'Dark', 
-                                                       'pump_list':pump_list, 'precursor_list':precursor_list, 
-                                                        'mixer':mixer
-                                                        }, "item_type":"plan"
-                                                  }, 'pos':'front', 'user_group':'primary', 'user':'chlin'})
-            
-            elif len(good_data) > 5:
-                print('*** # of good data is enough so go to the next: bundle plan ***\n')
-                bad_data = []
-                good_data = []
-                count += 1
-                
-                # zmq_single_request(method='queue_start')
+            if stream_name == 'primary':     
+                if len(bad_data) > 5:
+                    print('*** qsever aborted due to too many bad scans, please check setup ***\n')
+                    zmq_single_request(method='queue_stop')
+                    # zmq_single_request(method='re_abort')
+                    
+                elif len(good_data) <= 5:
+                    print('*** Add another fluorescence scan to the fron of qsever ***\n')
+                    
+                    zmq_single_request(method='queue_item_add', 
+                                    params={
+                                            'item':{"name":"sleep_sec_q", 
+                                                        "args":[5], 
+                                                        "item_type":"plan"
+                                                    }, 'pos':'front', 'user_group':'primary', 'user':'chlin'})
+                    
+                    zmq_single_request(method='queue_item_add', 
+                                    params={
+                                            'item':{"name":"take_a_uvvis_csv_q",  
+                                                "kwargs": {'sample_type':sample[len(finished)], 
+                                                        'spectrum_type':'Corrected Sample', 'correction_type':'Dark', 
+                                                        'pump_list':pump_list, 'precursor_list':precursor_list, 
+                                                            'mixer':mixer
+                                                            }, "item_type":"plan"
+                                                    }, 'pos':'front', 'user_group':'primary', 'user':'chlin'})
+
+                elif len(good_data) > 5:
+                    print('*** # of good data is enough so go to the next: bundle plan ***\n')
+                    bad_data.clear()
+                    good_data.clear()
+                    finished.append(metadata_dic['sample_type'])
+                    print(f'After event: good_data = {good_data}\n')
+                    print(f'After event: finished sample = {finished}\n')
+                    
+                    # zmq_single_request(method='queue_start')
 
 
     kafka_config = _read_bluesky_kafka_config_file(config_file_path="/etc/bluesky/kafka.yml")
