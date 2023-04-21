@@ -32,7 +32,7 @@ plt.rcParams["figure.raise_window"] = False
 
 ## Input varaibales
 ## Maybe they can be read from a .txt file in future
-csv_path = '/home/xf28id2/Documents/ChengHung/20230420_qserver_plan'
+csv_path = '/home/xf28id2/Documents/ChengHung/20230421_qserver_device_on'
 key_height = 200
 height = 50
 distance = 100

@@ -21,21 +21,19 @@ zmq_single_request(method='queue_get')
 Arrange tasks in queue
 '''
 i=0
-## 0. Clear queue
+## 0. Clear queue and reset syringe pumps
 zmq_single_request(method='queue_clear')
+
+# zmq_single_request(method='queue_item_add', 
+#                 params={
+#                         'item':{"name":"reset_pumps2", 
+#                                 "args": [pump_list], 
+#                                 "item_type":"plan"
+#                                 }, 'user_group':'primary', 'user':'chlin'})
 
 for i in range(len(infuse_rates)):
 # for i in range(2): 
-    ## 1. reset pump
-    zmq_single_request(method='queue_item_add', 
-                    params={
-                            'item':{"name":"reset_pumps2", 
-                                    "args": [pump_list], 
-                                    "item_type":"plan"
-                                    }, 'user_group':'primary', 'user':'chlin'})
-
-
-    ## 2. set i infuese rates
+    ## 1. set i infuese rates
     zmq_single_request(method='queue_item_add', 
                     params={
                             'item':{"name":"set_group_infuse", 
@@ -45,16 +43,16 @@ for i in range(len(infuse_rates)):
                                     }, 'user_group':'primary', 'user':'chlin'})
 
 
-    ## 3. start infuese
-    # zmq_single_request(method='queue_item_add', 
-    #                 params={
-    #                         'item':{"name":"start_group_infuse", 
-    #                                 "args": [pump_list],  
-    #                                 "item_type":"plan"
-    #                                 }, 'user_group':'primary', 'user':'chlin'})
+    # 2. start infuese
+    zmq_single_request(method='queue_item_add', 
+                    params={
+                            'item':{"name":"start_group_infuse", 
+                                    "args": [pump_list],  
+                                    "item_type":"plan"
+                                    }, 'user_group':'primary', 'user':'chlin'})
 
 
-    ## 4. wait for equilibrium
+    ## 3. wait for equilibrium
     # zmq_single_request(method='queue_item_add', 
     #                 params={
     #                         'item':{"name":"wait_equilibrium", 
@@ -66,12 +64,12 @@ for i in range(len(infuse_rates)):
     zmq_single_request(method='queue_item_add', 
                     params={
                             'item':{"name":"sleep_sec_q", 
-                                    "args":[2], 
+                                    "args":[10], 
                                     "item_type":"plan"
                                     }, 'user_group':'primary', 'user':'chlin'})    
 
 
-    ## 5. take a fluorescence peak to check reaction
+    ## 4. take a fluorescence peak to check reaction
     zmq_single_request(method='queue_item_add', 
                     params={
                             'item':{"name":"take_a_uvvis_csv_q",  
@@ -84,7 +82,7 @@ for i in range(len(infuse_rates)):
 
     #### Kafka check data here.
 
-    ## 6. Sleep for 5 seconds for Kafak to check good/bad data
+    ## 5. Sleep for 5 seconds for Kafak to check good/bad data
     zmq_single_request(method='queue_item_add', 
                     params={
                             'item':{"name":"sleep_sec_q", 
@@ -96,7 +94,7 @@ for i in range(len(infuse_rates)):
     
     
     
-    ## 7. start xray_uvvis bundle plan to take real data
+    ## 6. start xray_uvvis bundle plan to take real data
     zmq_single_request(method='queue_item_add', 
                     params={
                             'item':{"name":"xray_uvvis_plan", 
@@ -113,7 +111,13 @@ for i in range(len(infuse_rates)):
 
     ## Wash the loop and mixer?
     
-
+# 7. stop infuese
+zmq_single_request(method='queue_item_add', 
+                params={
+                        'item':{"name":"stop_group", 
+                                "args": [pump_list],  
+                                "item_type":"plan"
+                                }, 'user_group':'primary', 'user':'chlin'})
 
 
 '''
