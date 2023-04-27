@@ -28,7 +28,7 @@ class plot_uvvis(open_figures):
         super().__init__(figure_labels)
 
 
-    def plot_data(self):
+    def plot_data(self, label=None, title=None):
         self.wavelength = self.qepro_dic['QEPro_x_axis']
         self.output = self.qepro_dic['QEPro_output']
         
@@ -57,11 +57,17 @@ class plot_uvvis(open_figures):
                 ax = f.gca()
 
         for i in range(self.wavelength.shape[0]):
-            ax.plot(self.wavelength[i], self.output[i], label=f'{self.time}_{i:03d}')
+            if label == None:
+                ax.plot(self.wavelength[i], self.output[i], label=f'{self.time}_{i:03d}')
+            else:
+                ax.plot(self.wavelength[i], self.output[i], label=label)
         # ax.set_facecolor((0.95, 0.95, 0.95))
         ax.set_xlabel('Wavelength (nm)', fontdict={'size': 14})
         ax.set_ylabel(y_label, fontdict={'size': 14})
-        ax.set_title(f'{self.date}-{self.time}_{self.uid[0:8]}_{self.stream_name}')
+        if title == None:
+            ax.set_title(f'{self.date}-{self.time}_{self.uid[0:8]}_{self.stream_name}')
+        else:
+            ax.set_title(title)
         ax.legend()
         f.canvas.manager.show()
         f.canvas.flush_events()
