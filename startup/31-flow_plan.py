@@ -268,3 +268,29 @@ def wait_equilibrium(pump_list, mixer, ratio=1, tubing_ID_mm=1.016):
     yield from bps.sleep(res_time_sec*ratio)
 
 
+def cal_equilibrium(pump_list, mixer, ratio=1, tubing_ID_mm=1.016):
+
+    if len(mixer) != 1:
+        raise ValueError('Only one mixer can be in wait_equilibrium.')
+
+    infuse_rates = [pump.read_infuse_rate.get() for pump in pump_list]
+    infuse_rate_unit = [pump.read_infuse_rate_unit.get() for pump in pump_list]
+    total_rate = 0
+    for i in range(len(infuse_rates)):
+        rate = infuse_rates[i]
+        rate_unit = infuse_rate_unit[i]
+        unit_const = vol_unit_converter(v0=rate_unit[:2], v1='ul')/t_unit_converter(t0=rate_unit[3:], t1='min')
+        total_rate += rate*unit_const
+
+    mixer_length = float(mixer[-1].split(' ')[0])
+    mixer_unit = mixer[-1].split(' ')[1]
+    l_unit_const = l_unit_converter(l0=mixer_unit, l1='m')
+    mixer_meter = mixer_length * l_unit_const
+    mixer_vol_mm3 = np.pi*((tubing_ID_mm/2)**2)*mixer_meter*1000
+    res_time_sec = 60*mixer_vol_mm3/total_rate
+    
+    print(f'Reaction resident time is {res_time_sec:.2f} seconds.')
+    print(f'Wait for {ratio} times of resident time, in total of {res_time_sec*ratio:.2f} seconds.')
+    # yield from bps.sleep(res_time_sec*ratio)
+
+
