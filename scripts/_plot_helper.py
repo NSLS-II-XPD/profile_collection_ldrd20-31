@@ -28,7 +28,7 @@ class plot_uvvis(open_figures):
         super().__init__(figure_labels)
 
 
-    def plot_data(self, label=None, title=None):
+    def plot_data(self, label=None, title=None, clear_fig=False):
         self.wavelength = self.qepro_dic['QEPro_x_axis']
         self.output = self.qepro_dic['QEPro_output']
         
@@ -36,12 +36,14 @@ class plot_uvvis(open_figures):
             y_label = 'Absorbance'
             try: f = plt.figure(self.fig[2])
             except (IndexError): f = plt.figure(self.fig[-1])
+            plt.clf()
             ax = f.gca()
         
         elif self.stream_name == 'fluorescence':
             y_label = 'Fluorescence'
             try: f = plt.figure(self.fig[3])
             except (IndexError): f = plt.figure(self.fig[-1])
+            plt.clf()
             ax = f.gca()
         
         elif self.stream_name == 'primary':
@@ -49,11 +51,15 @@ class plot_uvvis(open_figures):
                 y_label = 'Absorbance'
                 try: f = plt.figure(self.fig[0])
                 except (IndexError): f = plt.figure(self.fig[-1])
+                if clear_fig:
+                    plt.clf()
                 ax = f.gca()
             else:
                 y_label = 'Fluorescence'
                 try: f = plt.figure(self.fig[1])
                 except (IndexError): f = plt.figure(self.fig[-1])
+                if clear_fig:
+                    plt.clf()
                 ax = f.gca()
 
         for i in range(self.wavelength.shape[0]):

@@ -1,4 +1,6 @@
 '''
+BS_ENV=2023-1.3-py310-tiled bsui
+
 pump_list = [dds1_p1, dds1_p2]
 syringe_list = [50, 50]
 target_vol_list = ['30 ml', '30 ml']
@@ -47,6 +49,18 @@ def set_group_infuse(syringe_list, pump_list, target_vol_list=['50 ml', '50 ml']
         rate_unit = k.split(' ')[1]        
         yield from i.set_infuse(l, target_vol = vol, target_unit = vol_unit, infuse_rate = rate, 
                                 infuse_unit = rate_unit, syringe_material=m)
+
+
+def set_group_infuse2(syringe_list, pump_list, set_target_list=[True, True], target_vol_list=['50 ml', '50 ml'], 
+                     rate_list = ['100 ul/min', '100 ul/min'], syringe_mater_list=['steel', 'steel']):
+    for i, j, k, l, m, n in zip(pump_list, target_vol_list, rate_list, syringe_list, syringe_mater_list, set_target_list):
+        vol = float(j.split(' ')[0])
+        vol_unit = j.split(' ')[1]
+        rate = float(k.split(' ')[0])
+        rate_unit = k.split(' ')[1]        
+        yield from i.set_infuse2(l, set_target = n, target_vol = vol, target_unit = vol_unit, 
+                                 infuse_rate = rate, infuse_unit = rate_unit, syringe_material=m)
+
         
 def set_group_withdraw(syringe_list, pump_list, target_vol_list=['50 ml', '50 ml'], 
                        rate_list = ['100 ul/min', '100 ul/min'], syringe_mater_list=['steel', 'steel']):
@@ -244,8 +258,8 @@ def sleep_sec_q(t):
 
 def wait_equilibrium(pump_list, mixer, ratio=1, tubing_ID_mm=1.016):
 
-    if len(mixer) != 1:
-        raise ValueError('Only one mixer can be in wait_equilibrium.')
+    if type(mixer) != list:
+        raise TypeError('Type of mixer must be a list.')
 
     infuse_rates = [pump.read_infuse_rate.get() for pump in pump_list]
     infuse_rate_unit = [pump.read_infuse_rate_unit.get() for pump in pump_list]
@@ -256,7 +270,12 @@ def wait_equilibrium(pump_list, mixer, ratio=1, tubing_ID_mm=1.016):
         unit_const = vol_unit_converter(v0=rate_unit[:2], v1='ul')/t_unit_converter(t0=rate_unit[3:], t1='min')
         total_rate += rate*unit_const
 
-    mixer_length = float(mixer[-1].split(' ')[0])
+    l = []
+    for i in mixer:
+        ll = float(i.split(' ')[0])
+        l.append(ll)
+    mixer_length = sum(l)
+
     mixer_unit = mixer[-1].split(' ')[1]
     l_unit_const = l_unit_converter(l0=mixer_unit, l1='m')
     mixer_meter = mixer_length * l_unit_const
@@ -270,8 +289,8 @@ def wait_equilibrium(pump_list, mixer, ratio=1, tubing_ID_mm=1.016):
 
 def cal_equilibrium(pump_list, mixer, ratio=1, tubing_ID_mm=1.016):
 
-    if len(mixer) != 1:
-        raise ValueError('Only one mixer can be in wait_equilibrium.')
+    if type(mixer) != list:
+        raise TypeError('Type of mixer must be a list.')
 
     infuse_rates = [pump.read_infuse_rate.get() for pump in pump_list]
     infuse_rate_unit = [pump.read_infuse_rate_unit.get() for pump in pump_list]
@@ -282,7 +301,12 @@ def cal_equilibrium(pump_list, mixer, ratio=1, tubing_ID_mm=1.016):
         unit_const = vol_unit_converter(v0=rate_unit[:2], v1='ul')/t_unit_converter(t0=rate_unit[3:], t1='min')
         total_rate += rate*unit_const
 
-    mixer_length = float(mixer[-1].split(' ')[0])
+    l = []
+    for i in mixer:
+        ll = float(i.split(' ')[0])
+        l.append(ll)
+    mixer_length = sum(l)
+    
     mixer_unit = mixer[-1].split(' ')[1]
     l_unit_const = l_unit_converter(l0=mixer_unit, l1='m')
     mixer_meter = mixer_length * l_unit_const

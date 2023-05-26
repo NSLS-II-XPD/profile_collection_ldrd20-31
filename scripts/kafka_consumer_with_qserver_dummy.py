@@ -32,45 +32,29 @@ plt.rcParams["figure.raise_window"] = False
 
 ## Input varaibales
 ## Maybe they can be read from a .txt file in future
-csv_path = '/home/xf28id2/Documents/ChengHung/20230526_CsPbBr_ZnCl_6mM'
-key_height = 150
-height = 100
-distance = 70
+csv_path = '/home/xf28id2/Documents/ChengHung/20230523_dummy_toluene'
+key_height = 200
+height = 50
+distance = 100
 # pump_list = [dds1_p1.name, dds1_p2.name]
 pump_list = ['dds2_p1', 'dds2_p2', 'dds1_p2']
-precursor_list = ['CsPbOA_6mM_20221025', 'TOABr_12mM_20220712', 'ZnCl2_6mM_20220504']
-syringe_mater_list=['steel', 'steel', 'steel']
 syringe_list = [50, 50, 50]
 target_vol_list = ['30 ml', '30 ml', '30 ml']
-set_target_list=[[True, True, True], 
-                 [False, False, False],
-                 [False, False, False], 
-                 [False, False, False], 
-                 [False, False, False],
-                 [False, False, False], 
-                 ]
-infuse_rates = [ 
-                ['100 ul/min', '100 ul/min', '8 ul/min'], 
-                ['100 ul/min', '100 ul/min', '16 ul/min'],
-                ['100 ul/min', '100 ul/min', '32 ul/min'],
-                ['100 ul/min', '100 ul/min', '64 ul/min'],
-                ['100 ul/min', '100 ul/min', '128 ul/min'],  
-                ['100 ul/min', '100 ul/min', '8 ul/min'], 
+infuse_rates = [['100 ul/min', '100 ul/min', '8 ul/min'], 
+                ['100 ul/min', '100 ul/min', '16 ul/min'], 
+                ['100 ul/min', '100 ul/min', '32 ul/min'], 
+                ['100 ul/min', '100 ul/min', '64 ul/min']
                 ]
-sample = ['CsPbI3_008ul', 'CsPbI3_016ul', 'CsPbI3_032ul', 
-          'CsPbI3_064ul', 'CsPbI3_128ul', 'CsPbI3_008ul', 
-          ]
-
+precursor_list = ['Toluene_01', 'Toluene_02', 'Toluene_03']
 mixer = ['30 cm', '60 cm']
-wash_tube = [50, 'dds1_p2', '250 ul/min', 300]  ## [syringe, pump, rate, wash time]
-resident_t_ratio = 4
-dummy_test = False
+syringe_mater_list=['steel', 'steel', 'steel']
+sample = ['toluene_08ul', 'toluene_16ul', 'toluene_32ul', 'toluene_64ul']
 
 
 def print_kafka_messages(beamline_acronym, csv_path=csv_path, 
                          key_height=key_height, height=height, distance=distance, 
-                         pump_list=pump_list, sample=sample, precursor_list=precursor_list, 
-                         mixer=mixer, dummy_test=dummy_test):
+                         pump_list=pump_list, sample=sample, precursor_list=precursor_list, mixer=mixer
+                         ):
     print(f"Listening for Kafka messages for {beamline_acronym}")
     print(f'Defaul parameters:\n'
           f'                  csv path: {csv_path}\n'
@@ -88,8 +72,8 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
     # def print_message(name, doc):
     def print_message(consumer, doctype, doc, 
                       bad_data = [], good_data = [], finished = [], 
-                      pump_list=pump_list, sample=sample, precursor_list=precursor_list, 
-                      mixer=mixer, dummy_test=dummy_test):
+                      pump_list=pump_list, sample=sample, precursor_list=precursor_list, mixer=mixer, 
+                      dummy_test = True):
         name, message = doc
         # print(
         #     f"{datetime.datetime.now().isoformat()} document: {name}\n"
@@ -156,22 +140,18 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
                 print(f'\n** export {stream_name} in uid: {uid[0:8]} to ../{os.path.basename(csv_path)} **\n')
                 ## Plot data in dic
                 u = plot_uvvis(qepro_dic, metadata_dic)
-                if len(good_data)==0 and len(bad_data)==0:
-                    clear_fig=True
-                else:
-                    clear_fig=False
-                u.plot_data(clear_fig=clear_fig)
+                u.plot_data()
                 print(f'\n** Plot {stream_name} in uid: {uid[0:8]} complete **\n')
                     
                 ## Idenfify good/bad data if it is a fluorescence sacn in 'primary'
                 if qepro_dic['QEPro_spectrum_type'][0]==2 and stream_name=='primary':
                     print(f'\n*** start to identify good/bad data in stream: {stream_name} ***\n')
-                    x0, y0, data_id, peak, prop = da._identify_one_in_kafka(qepro_dic, metadata_dic, key_height=key_height, distance=distance, height=height, dummy_test=dummy_test)
+                    x0, y0, data_id, peak, prop = da._identify_one_in_kafka(qepro_dic, metadata_dic, key_height=key_height, distance=distance, height=height)
                 
                 ## Avergae scans in 'fluorescence' and idenfify good/bad
                 elif stream_name == 'fluorescence':
                     print(f'\n*** start to identify good/bad data in stream: {stream_name} ***\n')
-                    x0, y0, data_id, peak, prop = da._identify_multi_in_kafka(qepro_dic, metadata_dic, key_height=key_height, distance=distance, height=height, dummy_test=dummy_test)
+                    x0, y0, data_id, peak, prop = da._identify_multi_in_kafka(qepro_dic, metadata_dic, key_height=key_height, distance=distance, height=height)
                     
                 try:
                     data_id, peak, prop
@@ -179,7 +159,7 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
                     ## fit the good data, export/plotting fitting results
                     ## append data_id into good_data or bad_data for calculate numbers
                     if (type(peak) is np.ndarray) and (type(prop) is dict):
-                        x, y, p, f, popt = da._fitting_in_kafka(x0, y0, data_id, peak, prop, dummy_test=dummy_test)                       
+                        x, y, p, f, popt = da._fitting_in_kafka(x0, y0, data_id, peak, prop)                       
                         ff={'fit_function': f, 'curve_fit': popt}
                         de.dic_to_csv_for_stream(csv_path, qepro_dic, metadata_dic, stream_name=stream_name, fitting=ff)
                         print(f'\n** export fitting results complete**\n')
@@ -203,14 +183,44 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
             
             
             ## Depend on # of good/bad data, add items into queue item or stop 
-            if stream_name == 'primary':     
+            if dummy_test==True and stream_name=='primary':
+                
+                if len(bad_data) <= 5:
+                    print('*** Dummy test: Add another fluorescence scan to the front of qsever ***\n')
+                
+                    zmq_single_request(method='queue_item_add', 
+                                    params={
+                                            'item':{"name":"sleep_sec_q", 
+                                                        "args":[5], 
+                                                        "item_type":"plan"
+                                                    }, 'pos':'front', 'user_group':'primary', 'user':'chlin'})
+                    
+                    zmq_single_request(method='queue_item_add', 
+                                    params={
+                                            'item':{"name":"take_a_uvvis_csv_q",  
+                                                "kwargs": {'sample_type':sample[len(finished)], 
+                                                        'spectrum_type':'Corrected Sample', 'correction_type':'Dark', 
+                                                        'pump_list':pump_list, 'precursor_list':precursor_list, 
+                                                            'mixer':mixer
+                                                            }, "item_type":"plan"
+                                                    }, 'pos':'front', 'user_group':'primary', 'user':'chlin'})
+                
+                elif len(bad_data) > 5:
+                    print('*** Dummy test: # of bad data is enough so go to the next: bundle plan ***\n')
+                    bad_data.clear()
+                    good_data.clear()
+                    finished.append(metadata_dic['sample_type'])
+                    print(f'After event: good_data = {good_data}\n')
+                    print(f'After event: finished sample = {finished}\n')
+
+            elif stream_name == 'primary':     
                 if len(bad_data) > 5:
                     print('*** qsever aborted due to too many bad scans, please check setup ***\n')
                     zmq_single_request(method='queue_stop')
                     # zmq_single_request(method='re_abort')
                     
                 elif len(good_data) <= 5:
-                    print('*** Add another fluorescence scan to the fron of qsever ***\n')
+                    print('*** Add another fluorescence scan to the front of qsever ***\n')
                     
                     zmq_single_request(method='queue_item_add', 
                                     params={
@@ -222,7 +232,7 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
                     zmq_single_request(method='queue_item_add', 
                                     params={
                                             'item':{"name":"take_a_uvvis_csv_q",  
-                                                "kwargs": {'sample_type':metadata_dic['sample_type'], 
+                                                "kwargs": {'sample_type':sample[len(finished)], 
                                                         'spectrum_type':'Corrected Sample', 'correction_type':'Dark', 
                                                         'pump_list':pump_list, 'precursor_list':precursor_list, 
                                                             'mixer':mixer
@@ -236,7 +246,7 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
                     finished.append(metadata_dic['sample_type'])
                     print(f'After event: good_data = {good_data}\n')
                     print(f'After event: finished sample = {finished}\n')
-                    
+                        
                     # zmq_single_request(method='queue_start')
 
 

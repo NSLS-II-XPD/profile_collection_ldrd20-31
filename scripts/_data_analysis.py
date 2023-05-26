@@ -67,8 +67,8 @@ def r_square(x, y, fitted_y):
 # c2. PL peak wavelength < 560 nm, and the diference of peak integrstion (PL minus LED) < 100000
 # c3. PL peak wavelength >= 560 nm, and the diference of peak integrstion (PL minus LED) < 200000
 def good_bad_data(x, y, key_height = 2000, data_id = 'test', distance=30, height=30, 
-                  c2_c3 = False, threshold=[560, 100000, 200000], int_boundary = [340, 400, 800] 
-                 ):
+                  c2_c3 = False, threshold=[560, 100000, 200000], int_boundary = [340, 400, 800], 
+                  dummy_test = False):
     
     # Identify all peaks, including LED source, of UVVIS spectrum
     peak, prop = find_peaks(y, height=height, distance=distance)
@@ -92,13 +92,19 @@ def good_bad_data(x, y, key_height = 2000, data_id = 'test', distance=30, height
     # Take LED peak intensity off and only consider peaks > 400 nm for good/bad data because
     # 1. sometines LED peak has very high intensity which is larger than key_height
     # 2. fitting function depends on the # of peaks excluding the LED peak
+
     for i in peak:
-        if x[i] < 400:
-            peak_heights_2.append(0.0)
-        else:
+        if dummy_test:
             peak_heights_2.append(y[i])
             peak2.append(i)
             prop2['peak_heights'].append(y[i])
+        else:
+            if x[i] < 400:
+                peak_heights_2.append(0.0)
+            else:
+                peak_heights_2.append(y[i])
+                peak2.append(i)
+                prop2['peak_heights'].append(y[i])
 
     max_idx = peak_heights_2.index(max(peak_heights_2))
 
@@ -153,7 +159,7 @@ def good_bad_data(x, y, key_height = 2000, data_id = 'test', distance=30, height
 
 
 def _1peak_fit_good_PL(x0, y0, fit_function, peak=False, maxfev=100000, fit_boundary=[340, 400, 800], raw_data=False,
-                       plot=False, plot_title=None):    
+                       plot=False, plot_title=None, dummy_test=False):    
     try:
         w1, _ = find_nearest(x0, fit_boundary[0])
         w2, _ = find_nearest(x0, fit_boundary[1])
@@ -163,9 +169,13 @@ def _1peak_fit_good_PL(x0, y0, fit_function, peak=False, maxfev=100000, fit_boun
         w2, _ = find_nearest(x0, 400)
         w3, _ = find_nearest(x0, 800)
     
+    if dummy_test:
+        x = x0[w1:w2]
+        y = y0[w1:w2]
+    else:         
+        x = x0[w2:w3]
+        y = y0[w2:w3]
     
-    x = x0[w2:w3]
-    y = y0[w2:w3]
     mean = sum(x * y) / sum(y)
     sigma = np.sqrt(sum(y * (x - mean) ** 2) / sum(y))
     
@@ -275,25 +285,25 @@ def _2peak_fit_good_PL(x0, y0, fit_function, peak=False, maxfev=100000, fit_boun
 
 
 
-def _identify_one_in_kafka(qepro_dic, metadata_dic, key_height=200, distance=100, height=50):
+def _identify_one_in_kafka(qepro_dic, metadata_dic, key_height=200, distance=100, height=50, dummy_test=False):
     _, time1 = de._readable_time(metadata_dic['time'])
     data_id = time1 + '_' + metadata_dic['uid'][:8]
     x0 = qepro_dic['QEPro_x_axis'][0]
     y0 = qepro_dic['QEPro_output'][0]
-    peak, prop = good_bad_data(x0, y0, key_height=key_height, data_id = f'{data_id}', distance=distance, height=height)
+    peak, prop = good_bad_data(x0, y0, key_height=key_height, data_id = f'{data_id}', distance=distance, height=height, dummy_test=dummy_test)
     return x0, y0, data_id, peak, prop
 
 
 
 
-def _identify_multi_in_kafka(qepro_dic, metadata_dic, key_height=200, distance=100, height=50):
+def _identify_multi_in_kafka(qepro_dic, metadata_dic, key_height=200, distance=100, height=50, dummy_test=False):
     _, time1 = de._readable_time(metadata_dic['time'])
     data_id = time1 + '_' + metadata_dic['uid'][:8]
     _for_average = pd.DataFrame()
     for i in range(qepro_dic['QEPro_spectrum_type'].shape[0]):
         x_i = qepro_dic['QEPro_x_axis'][i]
         y_i = qepro_dic['QEPro_output'][i]
-        p1, p2 = good_bad_data(x_i, y_i, key_height=key_height, data_id = f'{data_id}_{i:03d}', distance=distance, height=height)
+        p1, p2 = good_bad_data(x_i, y_i, key_height=key_height, data_id = f'{data_id}_{i:03d}', distance=distance, height=height, dummy_test=dummy_test)
         if (type(p1) is np.ndarray) and (type(p2) is dict):
             _for_average[f'{data_id}_{i:03d}'] = y_i
     
@@ -302,18 +312,18 @@ def _identify_multi_in_kafka(qepro_dic, metadata_dic, key_height=200, distance=1
     x0 = x_i
     y0 = _for_average[f'{data_id}_mean'].values
     
-    peak, prop = good_bad_data(x0, y0, key_height=key_height, data_id = f'{data_id}_average', distance=distance, height=height)                            
+    peak, prop = good_bad_data(x0, y0, key_height=key_height, data_id = f'{data_id}_average', distance=distance, height=height, dummy_test=dummy_test)                            
     return x0, y0, data_id, peak, prop
 
     
     
-def _fitting_in_kafka(x0, y0, data_id, peak, prop):
+def _fitting_in_kafka(x0, y0, data_id, peak, prop, dummy_test=False):
     print(f'\n** Average of {data_id} has peaks at {peak}**\n')
     
     print(f'\n** start to do peak fitting by Gaussian**\n')
     if len(peak) == 1:
         f = _1gauss
-        popt, _, x, y = _1peak_fit_good_PL(x0, y0, f, peak=peak, raw_data=True)
+        popt, _, x, y = _1peak_fit_good_PL(x0, y0, f, peak=peak, raw_data=True, dummy_test=dummy_test)
     elif len(peak) == 2:
         f = _2gauss
         popt, _, x, y = _2peak_fit_good_PL(x0, y0, f, peak=peak, raw_data=True)
@@ -322,7 +332,7 @@ def _fitting_in_kafka(x0, y0, data_id, peak, prop):
         M = max(prop['peak_heights'])
         M_idx, _ = find_nearest(prop['peak_heights'], M)
         peak = np.asarray([peak[M_idx]])
-        popt, _, x, y = _1peak_fit_good_PL(x0, y0, f, peak=peak, raw_data=True)
+        popt, _, x, y = _1peak_fit_good_PL(x0, y0, f, peak=peak, raw_data=True, dummy_test=dummy_test)
 
     shift, _ = find_nearest(x0, x[0])
 
