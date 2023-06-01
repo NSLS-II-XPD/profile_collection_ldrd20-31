@@ -8,6 +8,19 @@ from scipy.signal import find_peaks
 import _data_export as de
 
 
+
+## Read meta data (fitting result) in csv
+def _read_meta_csv(fn, header=14):
+    meta = {}
+    with open (fn, 'r') as f:
+        temp = f.readlines()[:header]
+        for i in range(len(temp)):
+            t = temp[i].strip('\n').split(',')
+            meta[t[0]] = t[1:]
+    return meta
+
+
+
 ## Fit a peak by 1 Gaussian or Lorentz distribution
 ## http://hyperphysics.phy-astr.gsu.edu/hbase/Math/gaufcn2.html
 ## https://en.wikipedia.org/wiki/Cauchy_distribution
