@@ -251,13 +251,17 @@ def l_unit_converter(l0 = 'm', l1 = 'm'):
 
 
 def sleep_sec_q(t):
+    import datetime
+    from tqdm import tqdm
+    now = datetime.datetime.now()
     print(f'Sleep for a while: {t} seconds.')
-    yield from bps.sleep(t)
+    print(f'Waiting starts at {now}')
+    for i in tqdm(range(0,100), desc='Sleep'):
+        yield from bps.sleep(t/100)
 
 
 
 def wait_equilibrium(pump_list, mixer, ratio=1, tubing_ID_mm=1.016):
-
     if type(mixer) != list:
         raise TypeError('Type of mixer must be a list.')
 
@@ -284,7 +288,7 @@ def wait_equilibrium(pump_list, mixer, ratio=1, tubing_ID_mm=1.016):
     
     print(f'Reaction resident time is {res_time_sec:.2f} seconds.')
     print(f'Wait for {ratio} times of resident time, in total of {res_time_sec*ratio:.2f} seconds.')
-    yield from bps.sleep(res_time_sec*ratio)
+    yield from sleep_sec_q(res_time_sec*ratio)
 
 
 def cal_equilibrium(pump_list, mixer, ratio=1, tubing_ID_mm=1.016):

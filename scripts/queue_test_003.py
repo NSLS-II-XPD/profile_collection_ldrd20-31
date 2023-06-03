@@ -33,6 +33,7 @@ zmq_single_request(method='status')
 zmq_single_request(method='queue_get')
 zmq_single_request(method='queue_clear')
 
+
 '''
 Arrange tasks in queue
 '''
