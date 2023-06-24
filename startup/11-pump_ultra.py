@@ -296,7 +296,7 @@ class syrng_ultra(Device):
             max_rate = 182.529 
         else:
             min_rate = 'Unkonwn'
-            ax_rate = 'Unknown'
+            max_rate = 'Unknown'
         return min_rate, min_unit, max_rate, max_unit
     
     def stage(self):
