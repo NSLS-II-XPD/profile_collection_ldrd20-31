@@ -30,41 +30,29 @@ except (ImportError, AttributeError):
 plt.ion()
 plt.rcParams["figure.raise_window"] = False
 
-## Input varaibales
-## Maybe they can be read from a .txt file in future
-csv_path = '/home/xf28id2/Documents/ChengHung/20230526_CsPbBr_ZnCl_6mM'
-key_height = 150
-height = 100
-distance = 70
-# pump_list = [dds1_p1.name, dds1_p2.name]
-pump_list = ['dds2_p1', 'dds2_p2', 'dds1_p2']
-precursor_list = ['CsPbOA_6mM_20221025', 'TOABr_12mM_20220712', 'ZnCl2_6mM_20220504']
-syringe_mater_list=['steel', 'steel', 'steel']
-syringe_list = [50, 50, 50]
-target_vol_list = ['30 ml', '30 ml', '30 ml']
-set_target_list=[[True, True, True], 
-                 [False, False, False],
-                 [False, False, False], 
-                 [False, False, False], 
-                 [False, False, False],
-                 [False, False, False], 
-                 ]
-infuse_rates = [ 
-                ['100 ul/min', '100 ul/min', '8 ul/min'], 
-                ['100 ul/min', '100 ul/min', '16 ul/min'],
-                ['100 ul/min', '100 ul/min', '32 ul/min'],
-                ['100 ul/min', '100 ul/min', '64 ul/min'],
-                ['100 ul/min', '100 ul/min', '128 ul/min'],  
-                ['100 ul/min', '100 ul/min', '8 ul/min'], 
-                ]
-sample = ['CsPbI3_008ul', 'CsPbI3_016ul', 'CsPbI3_032ul', 
-          'CsPbI3_064ul', 'CsPbI3_128ul', 'CsPbI3_008ul', 
-          ]
+## Input varaibales: read from inputs_qserver_kafka.xlsx
+xlsx = '/home/xf28id2/Documents/ChengHung/inputs_qserver_kafka.xlsx'
+input_dic = de._read_input_xlsx(xlsx)
 
-mixer = ['30 cm', '60 cm']
-wash_tube = [50, 'dds1_p2', '250 ul/min', 300]  ## [syringe, pump, rate, wash time]
-resident_t_ratio = 4
-dummy_test = False
+##################################################################
+# Define namespace for tasks in Qserver and Kafa
+dummy_test = input_dic['dummy_test'][0]
+csv_path = input_dic['csv_path'][0]
+key_height = input_dic['key_height']
+height = input_dic['height']
+distance = input_dic['distance']
+pump_list = input_dic['pump_list']
+precursor_list = input_dic['precursor_list']
+syringe_mater_list = input_dic['syringe_mater_list']
+syringe_list = input_dic['syringe_list']
+target_vol_list = input_dic['target_vol_list']
+set_target_list = input_dic['set_target_list']
+infuse_rates = input_dic['infuse_rates']
+sample = input_dic['sample']
+mixer = input_dic['mixer']
+wash_tube = input_dic['wash_tube']
+resident_t_ratio = input_dic['resident_t_ratio'][0]
+###################################################################
 
 
 def print_kafka_messages(beamline_acronym, csv_path=csv_path, 
@@ -87,9 +75,9 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
     # plt.figure()
     # def print_message(name, doc):
     def print_message(consumer, doctype, doc, 
-                      bad_data = [], good_data = [], finished = [], 
-                      pump_list=pump_list, sample=sample, precursor_list=precursor_list, 
-                      mixer=mixer, dummy_test=dummy_test):
+                      bad_data = [], good_data = [], finished = []):
+                    #   pump_list=pump_list, sample=sample, precursor_list=precursor_list, 
+                    #   mixer=mixer, dummy_test=dummy_test):
         name, message = doc
         # print(
         #     f"{datetime.datetime.now().isoformat()} document: {name}\n"
@@ -130,7 +118,9 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
                 print(f"sample type: {message['sample_type']}")
             
         if name == 'stop':
-            # print('Kafka test good!!')
+            print('\n*** qsever stop for data export, identification, and fitting ***\n')
+            zmq_single_request(method='queue_stop')
+
             print(f"{datetime.datetime.now().isoformat()} documents {name}\n"
                   f"contents: {pprint.pformat(message)}"
             )
@@ -142,6 +132,16 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
             print(f'\n**** start to export uid: {uid} ****\n')
             # print(list(message['num_events'].keys())[0])
             stream_list = list(message['num_events'].keys())
+
+            ## Set good/bad data condictions to the corresponding sample
+            try:
+                kh = key_height[len(finished)]
+                hei = height[len(finished)]
+                dis = distance[len(finished)]
+            except IndexError:
+                kh = key_height[0]
+                hei = height[0]
+                dis = distance[0]
             
             ## remove 'scattering' from stream_list to avoid redundant work in next for loop
             if 'scattering' in stream_list:
@@ -166,12 +166,12 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
                 ## Idenfify good/bad data if it is a fluorescence sacn in 'primary'
                 if qepro_dic['QEPro_spectrum_type'][0]==2 and stream_name=='primary':
                     print(f'\n*** start to identify good/bad data in stream: {stream_name} ***\n')
-                    x0, y0, data_id, peak, prop = da._identify_one_in_kafka(qepro_dic, metadata_dic, key_height=key_height, distance=distance, height=height, dummy_test=dummy_test)
+                    x0, y0, data_id, peak, prop = da._identify_one_in_kafka(qepro_dic, metadata_dic, key_height=kh, distance=dis, height=hei, dummy_test=dummy_test)
                 
                 ## Avergae scans in 'fluorescence' and idenfify good/bad
                 elif stream_name == 'fluorescence':
                     print(f'\n*** start to identify good/bad data in stream: {stream_name} ***\n')
-                    x0, y0, data_id, peak, prop = da._identify_multi_in_kafka(qepro_dic, metadata_dic, key_height=key_height, distance=distance, height=height, dummy_test=dummy_test)
+                    x0, y0, data_id, peak, prop = da._identify_multi_in_kafka(qepro_dic, metadata_dic, key_height=kh, distance=dis, height=hei, dummy_test=dummy_test)
                     
                 try:
                     data_id, peak, prop
@@ -212,12 +212,12 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
                 elif len(good_data) <= 5:
                     print('*** Add another fluorescence scan to the fron of qsever ***\n')
                     
-                    zmq_single_request(method='queue_item_add', 
-                                    params={
-                                            'item':{"name":"sleep_sec_q", 
-                                                        "args":[5], 
-                                                        "item_type":"plan"
-                                                    }, 'pos':'front', 'user_group':'primary', 'user':'chlin'})
+                    # zmq_single_request(method='queue_item_add', 
+                    #                 params={
+                    #                         'item':{"name":"sleep_sec_q", 
+                    #                                     "args":[2], 
+                    #                                     "item_type":"plan"
+                    #                                 }, 'pos':'front', 'user_group':'primary', 'user':'chlin'})
                     
                     zmq_single_request(method='queue_item_add', 
                                     params={
@@ -228,7 +228,8 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
                                                             'mixer':mixer
                                                             }, "item_type":"plan"
                                                     }, 'pos':'front', 'user_group':'primary', 'user':'chlin'})
-
+                    zmq_single_request(method='queue_start')
+                
                 elif len(good_data) > 5:
                     print('*** # of good data is enough so go to the next: bundle plan ***\n')
                     bad_data.clear()
@@ -236,8 +237,9 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
                     finished.append(metadata_dic['sample_type'])
                     print(f'After event: good_data = {good_data}\n')
                     print(f'After event: finished sample = {finished}\n')
-                    
-                    # zmq_single_request(method='queue_start')
+                    zmq_single_request(method='queue_start')
+            else:
+                zmq_single_request(method='queue_start')
 
 
     kafka_config = _read_bluesky_kafka_config_file(config_file_path="/etc/bluesky/kafka.yml")
