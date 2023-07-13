@@ -338,8 +338,15 @@ def _fitting_in_kafka(x0, y0, data_id, peak, prop, dummy_test=False):
         f = _1gauss
         popt, _, x, y = _1peak_fit_good_PL(x0, y0, f, peak=peak, raw_data=True, dummy_test=dummy_test)
     elif len(peak) == 2:
-        f = _2gauss
-        popt, _, x, y = _2peak_fit_good_PL(x0, y0, f, peak=peak, raw_data=True)
+        try:
+            f = _2gauss
+            popt, _, x, y = _2peak_fit_good_PL(x0, y0, f, peak=peak, raw_data=True)
+        except RuntimeError:
+            f = _1gauss
+            M = max(prop['peak_heights'])
+            M_idx, _ = find_nearest(prop['peak_heights'], M)
+            peak = np.asarray([peak[M_idx]])
+            popt, _, x, y = _1peak_fit_good_PL(x0, y0, f, peak=peak, raw_data=True, dummy_test=dummy_test)
     else:
         f = _1gauss
         M = max(prop['peak_heights'])

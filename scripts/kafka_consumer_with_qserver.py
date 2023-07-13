@@ -31,12 +31,12 @@ plt.ion()
 plt.rcParams["figure.raise_window"] = False
 
 ## Input varaibales: read from inputs_qserver_kafka.xlsx
-xlsx = '/home/xf28id2/Documents/ChengHung/inputs_qserver_kafka.xlsx'
+xlsx = '/home/xf28id2/Documents/ChengHung/inputs_qserver_kafka_ZnI.xlsx'
 input_dic = de._read_input_xlsx(xlsx)
 
 ##################################################################
 # Define namespace for tasks in Qserver and Kafa
-dummy_test = input_dic['dummy_test'][0]
+dummy_test = bool(input_dic['dummy_test'][0])
 csv_path = input_dic['csv_path'][0]
 key_height = input_dic['key_height']
 height = input_dic['height']
@@ -71,6 +71,10 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
     db = databroker.Broker.named(beamline_acronym)
     catalog = databroker.catalog[f'{beamline_acronym}']
 
+    import palettable.colorbrewer.diverging as pld
+    palette = pld.RdYlGn_4_r
+    cmap = palette.mpl_colormap
+    color_idx = np.linspace(0, 1, len(sample))
 
     # plt.figure()
     # def print_message(name, doc):
@@ -172,6 +176,9 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
                 elif stream_name == 'fluorescence':
                     print(f'\n*** start to identify good/bad data in stream: {stream_name} ***\n')
                     x0, y0, data_id, peak, prop = da._identify_multi_in_kafka(qepro_dic, metadata_dic, key_height=kh, distance=dis, height=hei, dummy_test=dummy_test)
+                    color_idx = sample.index(metadata_dic['sample_type'])
+                    label_uid = f'{uid[0:8]}_{metadata_dic['sample_type']}'
+                    u.plot_average_good(x0, y0, color=cmap(color_idx), label=label_uid)
                     
                 try:
                     data_id, peak, prop

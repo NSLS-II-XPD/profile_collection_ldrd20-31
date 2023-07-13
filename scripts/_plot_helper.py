@@ -15,7 +15,7 @@ class plot_uvvis(open_figures):
     def __init__(self, qepro_dic, metadata_dic, 
                  figure_labels = ['primary_absorbance', 'primary_fluorescence', 
                                   'bundle_absorbance', 'bundle_fluorescence',
-                                  'peak fitting']):
+                                  'peak fitting', 'Spectra Evolution']):
         self.fig = figure_labels
         self.uid = metadata_dic['uid']
         self.stream_name = metadata_dic['stream_name']
@@ -66,6 +66,7 @@ class plot_uvvis(open_figures):
             if label == None:
                 label = f'{self.time}_{i:03d}'
             ax.plot(self.wavelength[i], self.output[i], label=label)
+            label = None
         # ax.set_facecolor((0.95, 0.95, 0.95))
         ax.set_xlabel('Wavelength (nm)', fontdict={'size': 14})
         ax.set_ylabel(y_label, fontdict={'size': 14})
@@ -116,4 +117,35 @@ class plot_uvvis(open_figures):
         f.canvas.manager.show()
         f.canvas.flush_events()
         
+
+
+    def plot_average_good(self, x, y, color=None, label=None):        
         
+        # import palettable.colorbrewer.diverging as pld
+        # palette = pld.RdYlGn_4_r
+        # cmap = palette.mpl_colormap
+
+        y_label = 'Fluorescence'
+        
+        try:
+            f = plt.figure(self.fig[5])
+        except (IndexError):
+            f = plt.figure(self.fig[-1])
+        
+        ax = f.gca()
+        
+        if label == None:
+            label = self.time + '_' + self.uid[:8]
+
+        if color == None:
+            ax.plot(x, y, label=label)
+        else:
+            ax.plot(x, y, label=label, color=color)
+
+        # ax.set_facecolor((0.95, 0.95, 0.95))
+        ax.set_xlabel('Wavelength (nm)', fontdict={'size': 14})
+        ax.set_ylabel(y_label, fontdict={'size': 14})
+        # ax.set_title(f'{self.date}-{self.time}_{self.uid[0:8]}_{self.stream_name}_{fit_function.__name__}')
+        ax.legend()
+        f.canvas.manager.show()
+        f.canvas.flush_events()

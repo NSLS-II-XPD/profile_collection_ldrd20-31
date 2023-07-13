@@ -5,12 +5,12 @@ import _data_export as de
 pump, syringe, precursor, mixer parameters
 '''
 ## Input varaibales: read from inputs_qserver_kafka.xlsx
-xlsx = '/home/xf28id2/Documents/ChengHung/inputs_qserver_kafka.xlsx'
+xlsx = '/home/xf28id2/Documents/ChengHung/inputs_qserver_kafka_ZnI.xlsx'
 input_dic = de._read_input_xlsx(xlsx)
 
 ##################################################################
 # Define namespace for tasks in Qserver and Kafa
-dummy_test = input_dic['dummy_test'][0]
+dummy_test = bool(input_dic['dummy_test'][0])
 csv_path = input_dic['csv_path'][0]
 key_height = input_dic['key_height']
 height = input_dic['height']
@@ -121,7 +121,7 @@ for i in range(len(infuse_rates)):
                     params={
                             'item':{"name":"xray_uvvis_plan", 
                                     "args":['det', 'qepro'],
-                                    "kwargs": {'num_abs':16, 'num_flu':16,
+                                    "kwargs": {'num_abs':4, 'num_flu':6,
                                                 'sample_type':sample[i], 
                                                 'spectrum_type':'Absorbtion', 'correction_type':'Reference', 
                                                 'pump_list':pump_list, 'precursor_list':precursor_list, 
