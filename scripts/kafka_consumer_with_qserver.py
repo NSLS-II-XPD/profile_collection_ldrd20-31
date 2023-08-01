@@ -176,9 +176,9 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
                 elif stream_name == 'fluorescence':
                     print(f'\n*** start to identify good/bad data in stream: {stream_name} ***\n')
                     x0, y0, data_id, peak, prop = da._identify_multi_in_kafka(qepro_dic, metadata_dic, key_height=kh, distance=dis, height=hei, dummy_test=dummy_test)
-                    color_idx = sample.index(metadata_dic['sample_type'])
-                    label_uid = f'{uid[0:8]}_{metadata_dic['sample_type']}'
-                    u.plot_average_good(x0, y0, color=cmap(color_idx), label=label_uid)
+                    sub_idx = sample.index(metadata_dic['sample_type'])
+                    label_uid = f'{uid[0:8]}_{metadata_dic["sample_type"]}'
+                    u.plot_average_good(x0, y0, color=cmap(color_idx[sub_idx]), label=label_uid)
                     
                 try:
                     data_id, peak, prop
