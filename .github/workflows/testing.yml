@@ -38,8 +38,17 @@ jobs:
       - name: Config files
         run: |
           set -vxeuo pipefail
+
+          # Databroker v0/v1 config:
           mkdir -v -p $HOME/.config/databroker/
           cp -v configs/databroker/local.yml $HOME/.config/databroker/xpd-ldrd20-31.yml
+
+          # Tiled profile config:
+          tiled_profiles_dir="$HOME/.config/tiled/profiles/"
+          mkdir -v -p ${tiled_profiles_dir}
+          cp -v configs/tiled/profiles.yml ${tiled_profiles_dir}/profiles.yml
+
+          # Bluesky-kafka config:
           sudo mkdir -v -p /etc/bluesky/
           sudo cp -v configs/kafka.yml /etc/bluesky/kafka.yml
 
