@@ -70,11 +70,12 @@ jobs:
       - name: Start MongoDB
         uses: supercharge/mongodb-github-action@1.6.0
 
-      - name: Prepare databroker config
+      - name: Config files
         run: |
           set -vxeuo pipefail
           mkdir -v -p $HOME/.config/databroker/
           cp -v configs/databroker/local.yml $HOME/.config/databroker/xpd-ldrd20-31.yml
+          sudo cp -v configs/kafka.yml /etc/bluesky/kafka.yml
 
       - name: Test the code
         run: |
