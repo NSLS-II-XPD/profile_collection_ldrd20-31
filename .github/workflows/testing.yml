@@ -72,6 +72,7 @@ jobs:
       - name: Test the code
         run: |
           set -vxeuo pipefail
+          conda activate ~/env
           # This is what IPython does internally to load the startup files:
           command="
           import os
