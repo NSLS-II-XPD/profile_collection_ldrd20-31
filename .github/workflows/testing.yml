@@ -45,7 +45,14 @@ jobs:
           mamba-version: "*"
           channels: conda-forge
 
-      - name: Install the package and its dependencies
+      - name: Cache conda pack file
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/env/${{ env.CONDA_PACKED_ENV }}
+          key: ${{ env.CONDA_PACKED_ENV }}
+
+      - name: Conda env
         run: |
           set -vxeo pipefail
           conda env list
