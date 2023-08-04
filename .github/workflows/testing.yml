@@ -35,6 +35,17 @@ jobs:
       - name: Checkout the code
         uses: actions/checkout@v3
 
+      - name: Config files
+        run: |
+          set -vxeuo pipefail
+          mkdir -v -p $HOME/.config/databroker/
+          cp -v configs/databroker/local.yml $HOME/.config/databroker/xpd-ldrd20-31.yml
+          sudo mkdir -v -p /etc/bluesky/
+          sudo cp -v configs/kafka.yml /etc/bluesky/kafka.yml
+
+      - name: Start MongoDB
+        uses: supercharge/mongodb-github-action@1.6.0
+
       - name: Set up Python ${{ matrix.python-version }} with conda
         uses: conda-incubator/setup-miniconda@v2
         with:
@@ -66,16 +77,6 @@ jobs:
 
           pip list
           conda list
-
-      - name: Start MongoDB
-        uses: supercharge/mongodb-github-action@1.6.0
-
-      - name: Config files
-        run: |
-          set -vxeuo pipefail
-          mkdir -v -p $HOME/.config/databroker/
-          cp -v configs/databroker/local.yml $HOME/.config/databroker/xpd-ldrd20-31.yml
-          sudo cp -v configs/kafka.yml /etc/bluesky/kafka.yml
 
       - name: Test the code
         run: |
