@@ -51,7 +51,7 @@ jobs:
           conda env list
           mkdir -p ~/env/
           cd ~/env/
-          wget "https://zenodo.org/record/8098505/files/${CONDA_PACKED_ENV}?download=1" -O "${CONDA_PACKED_ENV}"
+          wget --progress=dot:giga "https://zenodo.org/record/8098505/files/${CONDA_PACKED_ENV}?download=1" -O "${CONDA_PACKED_ENV}"
           tar -xvf "${CONDA_PACKED_ENV}"
           conda activate $PWD
           conda-unpack
