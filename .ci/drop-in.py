@@ -1,3 +1,5 @@
+print(f"Loading {__file__}")
+
 from pprint import pprint
 
 for dev in [
