@@ -343,6 +343,7 @@ ultra1 = syrng_ultra('XF:28IDC-ES:1{Pump:Syrng-Ultra:1}:', name='Pump_Ultra1',
                                  'read_withdrawn', 'read_withdrawn_unit',
                                  'read_infuse_rate', 'read_infuse_rate_unit',
                                  'read_withdraw_rate', 'read_withdraw_rate_unit'])
+ultra1.wait_for_connection(10)
 
 ultra2 = syrng_ultra('XF:28IDC-ES:1{Pump:Syrng-Ultra:2}:', name='Pump_Ultra2', 
                      read_attrs=['status', 'communication', 'update_pump', 
@@ -351,3 +352,4 @@ ultra2 = syrng_ultra('XF:28IDC-ES:1{Pump:Syrng-Ultra:2}:', name='Pump_Ultra2',
                                  'read_withdrawn', 'read_withdrawn_unit',
                                  'read_infuse_rate', 'read_infuse_rate_unit',
                                  'read_withdraw_rate', 'read_withdraw_rate_unit'])
+ultra2.wait_for_connection()
