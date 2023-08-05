@@ -44,7 +44,7 @@ jobs:
           cp -v configs/databroker/local.yml $HOME/.config/databroker/xpd-ldrd20-31.yml
 
           # Tiled profile config:
-          tiled_profiles_dir="$HOME/.config/tiled/profiles/"
+          tiled_profiles_dir="$HOME/.config/tiled/profiles"
           mkdir -v -p ${tiled_profiles_dir}
           cp -v configs/tiled/profiles.yml ${tiled_profiles_dir}/profiles.yml
 
