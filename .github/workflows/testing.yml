@@ -18,6 +18,12 @@ jobs:
       fail-fast: false
     env:
       TZ: America/New_York
+      BLUESKY_KAFKA_BOOTSTRAP_SERVERS: ""
+      BLUESKY_KAFKA_PASSWORD: ""
+      EPICS_CA_ADDR_LIST: 127.0.0.1
+      EPICS_CA_AUTO_ADDR_LIST: NO
+      MPLBACKEND: Qt5Agg
+      OPHYD_TIMEOUT: 60
 
     defaults:
       run:
@@ -93,6 +99,15 @@ jobs:
         run: |
           set -vxeuo pipefail
           conda activate ~/env
+
+          # Start caproto "black-hole" IOC:
+
+          echo -e "\n" | caproto-spoof-beamline &
+
+          # Solve a missing "caRepeater" binary (same reason as in
+          # https://github.com/bluesky/tutorial/blob/master/binder/postBuild#L8):
+          ln -sv caproto-repeater ${CONDA_PREFIX}/bin/caRepeater
+
           # This is what IPython does internally to load the startup files:
           command="
           import os
