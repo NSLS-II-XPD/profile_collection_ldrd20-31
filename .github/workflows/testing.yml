@@ -110,6 +110,9 @@ jobs:
           # https://github.com/bluesky/tutorial/blob/master/binder/postBuild#L8):
           ln -sv caproto-repeater ${CONDA_PREFIX}/bin/caRepeater
 
+          # Check the docker containers with Kafka is still running:
+          docker-compose -f configs/bitnami-kafka-docker-compose.yml ps -a
+
           # This is what IPython does internally to load the startup files:
           command="
           import os
@@ -127,3 +130,10 @@ jobs:
               ip.parent._exec_file(f)"
 
           ipython --profile=test -c "$command"
+
+      - name: Test the code
+        run: |
+          set -vxeuo pipefail
+
+          # Check the docker logs after the testing
+          docker-compose -f configs/bitnami-kafka-docker-compose.yml logs
