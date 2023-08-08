@@ -131,7 +131,7 @@ jobs:
 
           ipython --profile=test -c "$command"
 
-      - name: Test the code
+      - name: Check docker-compose logs
         run: |
           set -vxeuo pipefail
 
