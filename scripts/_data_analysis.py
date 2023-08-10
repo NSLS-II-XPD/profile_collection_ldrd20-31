@@ -358,8 +358,46 @@ def _fitting_in_kafka(x0, y0, data_id, peak, prop, dummy_test=False):
 
     return x, y, peak-shift, f, popt
 
+
+
+### Calculate photoluminescence quantum yield (plqy) ###
+## reference 1: Fluorescein, SI: https://onlinelibrary.wiley.com/doi/full/10.1002/adfm.201900712
+## reference 2: Quinine, SI: https://pubs.rsc.org/en/content/articlelanding/2020/re/d0re00129e
+'''
+https://github.com/cheng-hung/Data_process/blob/main/20230726_CsPbBr_ZnI/20230726_CsPb_ZnI_PL.ipynb
+abs_365 = np.asarray([0.45788178937234225, 0.906788585562671, 1.3468533683956367, 1.8042517715092394, 2.0145695678124844])
+abs_365_r = 0.376390
+plqy_r = 0.546
+ref_idx_toluene = 1.506
+ref_idx_H2SO4 = 1.337
+integral_r = 468573.0
+integral_pqds = np.asarray(simpson_int)
+plqy = plqy_r*abs_365_r*(ref_idx_toluene**2)*integral_pqds / (integral_r*(ref_idx_H2SO4**2)*abs_365)
+'''
+
+def plqy_fluorescein(absorbance_sample, PL_integral_sample, refractive_index_solvent, 
+                     absorbance_reference, PL_integral_reference, refractive_index_reference, plqy_reference):
     
+    integral_ratio = PL_integral_sample / PL_integral_reference
+    absorbance_ratio = (1-10**(np.negative(absorbance_reference))) / (1-10**(np.negative(absorbance_sample)))
+    refractive_index_ratio = (refractive_index_solvent / refractive_index_reference)**2
+
+    plqy = plqy_reference * integral_ratio * absorbance_ratio * refractive_index_ratio
+    return plqy
     
+
+def plqy_quinine(absorbance_sample, PL_integral_sample, refractive_index_solvent, 
+                     absorbance_reference, PL_integral_reference, refractive_index_reference, plqy_reference):
+    
+    integral_ratio = PL_integral_sample / PL_integral_reference
+    absorbance_ratio = absorbance_reference / absorbance_sample
+    refractive_index_ratio = (refractive_index_solvent / refractive_index_reference)**2
+
+    plqy = plqy_reference * integral_ratio * absorbance_ratio * refractive_index_ratio
+    return plqy
+
+
+
 ######## Old versions of function #########    
 
 def _2peak_fit_PL3(x, y, distr='G', distance=30, height=930, plot=False, plot_title=None, second_peak=None, maxfev=100000):

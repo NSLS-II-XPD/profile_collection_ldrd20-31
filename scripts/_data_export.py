@@ -97,7 +97,7 @@ def read_qepro_by_stream(uid, stream_name='primary', data_agent='tiled'):
 
 
 
-def dic_to_csv_for_stream(csv_path, qepro_dic, metadata_dic, stream_name='primary', fitting=None):
+def dic_to_csv_for_stream(csv_path, qepro_dic, metadata_dic, stream_name='primary', fitting=None, plqy=None),:
     # to save fitting results for good data, fitting needs be a dict with two keys:
     # fitting = {'fit_function': da._1gauss, 'curve_fit': popt}
 
@@ -241,6 +241,14 @@ def dic_to_csv_for_stream(csv_path, qepro_dic, metadata_dic, stream_name='primar
             for i in range(len(popt)):
                 fp.write(f',{popt[i]}')
             fp.write('\n')
+
+            try: 
+                plqy = plqy_dic['plqy']
+                PL_integral = plqy_dic['PL_integral']
+                Absorbance_365 = plqy_dic['Absorbance_365']
+                fp.write(f'plqy,{plqy},PL_integral,{PL_integral},Absorbance_365,{Absorbance_365}\n')
+            except (TypeError, KeyError):
+                pass
 
             fp.write('Wavelength,Dark,Sample,Fluorescence_mean,Fitting\n')
             for i in range(x_axis_data.shape[1]):

@@ -7,6 +7,7 @@ from bluesky_kafka.consume import BasicConsumer
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+from scipy import integrate
 import time
 import databroker
 
@@ -52,13 +53,14 @@ sample = input_dic['sample']
 mixer = input_dic['mixer']
 wash_tube = input_dic['wash_tube']
 resident_t_ratio = input_dic['resident_t_ratio'][0]
+PLQY = input_dic['PLQY']
 ###################################################################
 
 
 def print_kafka_messages(beamline_acronym, csv_path=csv_path, 
                          key_height=key_height, height=height, distance=distance, 
                          pump_list=pump_list, sample=sample, precursor_list=precursor_list, 
-                         mixer=mixer, dummy_test=dummy_test):
+                         mixer=mixer, dummy_test=dummy_test, plqy=PLQY):
     print(f"Listening for Kafka messages for {beamline_acronym}")
     print(f'Defaul parameters:\n'
           f'                  csv path: {csv_path}\n'
@@ -187,8 +189,29 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
                     ## append data_id into good_data or bad_data for calculate numbers
                     if (type(peak) is np.ndarray) and (type(prop) is dict):
                         x, y, p, f, popt = da._fitting_in_kafka(x0, y0, data_id, peak, prop, dummy_test=dummy_test)                       
+                        
+                        ## Calculate PLQY for fluorescence stream
+                        if (stream_name == 'fluorescence') and (PLQY[0]==1):
+                            PL_integral_s = integrate.simpson(y,x)
+                            
+                            ## Find absorbance at 365 nm from absorbance stream
+                            q_dic, m_dic = de.read_qepro_by_stream(uid, stream_name='absorbance', data_agent='tiled')
+                            abs_array = q_dic['QEPro_output'][1:].mean(axis=0)
+                            wavelength = q_dic['QEPro_x_axis'][0]
+                            idx1, _ = da.find_nearest(wavelength, PLQY[2])
+                            absorbance_s = abs_array[idx1]
+
+                            if PLQY[1] == 'fluorescein':
+                                plqy = da.plqy_fluorescein(absorbance_s, PL_integral_s, 1.506, *PLQY[3:])
+                            else:
+                                plqy = da.plqy_quinine(absorbance_s, PL_integral_s, 1.506, *PLQY[3:])
+
+                            plqy_dic = {'PL_integral':PL_integral_s, 'Absorbance_365':absorbance_s, 'plqy': plqy}
+                        
+                        else: plqy_dic = None
+                        
                         ff={'fit_function': f, 'curve_fit': popt}
-                        de.dic_to_csv_for_stream(csv_path, qepro_dic, metadata_dic, stream_name=stream_name, fitting=ff)
+                        de.dic_to_csv_for_stream(csv_path, qepro_dic, metadata_dic, stream_name=stream_name, fitting=ff, plqy=plqy_dic)
                         print(f'\n** export fitting results complete**\n')
                         
                         u.plot_peak_fit(x, y, p, f, popt, fill_between=True)
