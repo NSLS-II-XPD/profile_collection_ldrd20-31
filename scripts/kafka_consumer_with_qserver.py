@@ -207,8 +207,13 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
                                 plqy = da.plqy_quinine(absorbance_s, PL_integral_s, 1.506, *PLQY[3:])
 
                             plqy_dic = {'PL_integral':PL_integral_s, 'Absorbance_365':absorbance_s, 'plqy': plqy}
-                        
-                        else: plqy_dic = None
+
+
+                            # TODO: add ML agent code here
+                            ...
+
+                        else:
+                            plqy_dic = None
                         
                         ff={'fit_function': f, 'curve_fit': popt}
                         de.dic_to_csv_for_stream(csv_path, qepro_dic, metadata_dic, stream_name=stream_name, fitting=ff, plqy=plqy_dic)
