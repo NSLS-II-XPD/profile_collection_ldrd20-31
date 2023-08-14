@@ -198,12 +198,13 @@ def _1peak_fit_good_PL(x0, y0, fit_function, peak=False, maxfev=100000, fit_boun
     except (TypeError, IndexError):
         initial_guess = [max(y), mean, sigma]
     
-    
+    bnd = ((0,200,0),(y.max()*1.15,1000, np.inf))
+
     try:
-        popt, pcov = curve_fit(fit_function, x, y, p0=initial_guess, maxfev=maxfev)
+        popt, pcov = curve_fit(fit_function, x, y, p0=initial_guess, bounds=bnd, maxfev=maxfev)
     except RuntimeError:
         maxfev=1000000
-        popt, pcov = curve_fit(fit_function, x, y, p0=initial_guess, maxfev=maxfev)
+        popt, pcov = curve_fit(fit_function, x, y, p0=initial_guess, bounds=bnd, maxfev=maxfev)
     
     # A = popt[0]
     # x0 = popt[1]
@@ -216,7 +217,7 @@ def _1peak_fit_good_PL(x0, y0, fit_function, peak=False, maxfev=100000, fit_boun
         r2 = f'R\u00b2={r_2:.2f}'
         plt.figure()
         plt.plot(x,y,'b+:',label='data')
-        plt.plot(x,fitted_result,'ro:',label='Total fit\n'+r2)
+        plt.plot(x,fitted_result,'r--',label='Total fit\n'+r2)
         plt.legend()
         plt.title(f'{fit_function.__name__} : {plot_title}')
         plt.show()
@@ -253,13 +254,15 @@ def _2peak_fit_good_PL(x0, y0, fit_function, peak=False, maxfev=100000, fit_boun
     except (TypeError, IndexError):
         initial_guess = [y0[peak[0]], x0[peak[0]], sigma, y0[peak[-1]], x0[peak[-1]], sigma]
     
+    bnd = ((0,200,0,0,200,0),(y.max()*1.15,1000, np.inf, y.max()*1.15,1000, np.inf))
     
     try:
-        popt, pcov = curve_fit(fit_function, x, y, p0=initial_guess, maxfev=maxfev)
+        popt, pcov = curve_fit(fit_function, x, y, p0=initial_guess, bounds=bnd, maxfev=maxfev)
     except RuntimeError:
         maxfev=1000000
-        popt, pcov = curve_fit(fit_function, x, y, p0=initial_guess, maxfev=maxfev)
-    
+        popt, pcov = curve_fit(fit_function, x, y, p0=initial_guess, bounds=bnd, maxfev=maxfev)
+   
+    # print(popt, len(popt))
     # A = popt[0]
     # x0 = popt[1]
     # sigma = popt[2]
@@ -270,12 +273,17 @@ def _2peak_fit_good_PL(x0, y0, fit_function, peak=False, maxfev=100000, fit_boun
         r2 = f'R\u00b2={r_2:.2f}'
         plt.figure()
         plt.plot(x,y,'b+:',label='data')
-        plt.plot(x,fitted_result,'ro:',label='Total fit\n'+r2)
+        plt.plot(x,fitted_result,'r--',label='Total fit\n'+r2)
+        
+        if 'gauss' in fit_function.__name__:
+            f1 = _1gauss
+        else:
+            f1 = _1Lorentz
         
         pars_1 = popt[0:3]
         pars_2 = popt[3:6]
-        peak_1 = fit_function(x, *pars_1)
-        peak_2 = fit_function(x, *pars_2)
+        peak_1 = f1(x, *pars_1)
+        peak_2 = f1(x, *pars_2)
         
         # peak 1
         plt.plot(x, peak_1, "g", label='peak 1')

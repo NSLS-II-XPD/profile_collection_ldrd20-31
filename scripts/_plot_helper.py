@@ -78,7 +78,7 @@ class plot_uvvis(open_figures):
         f.canvas.flush_events()
 
 
-    def plot_peak_fit(self, x, y, peak, fit_function, popt, fill_between=False):
+    def plot_peak_fit(self, x, y, fit_function, popt, peak=None, fill_between=False):
         y_label = 'Fluorescence'
         
         try:
@@ -95,13 +95,16 @@ class plot_uvvis(open_figures):
         ax.plot(x,y,'b+:',label='data')
         ax.plot(x,fitted_y,'r--',label='Total fit\n'+r2)
         
-        for i in range(len(peak)):
-            ax.plot(x[peak[i]], y[peak[i]], '*', markersize=12)
+        try:
+            for i in range(len(peak)):
+                ax.plot(x[peak[i]], y[peak[i]], '*', markersize=12)
+        except (TypeError, IndexError):
+            pass
         
         if fill_between:
             if 'gauss' in fit_function.__name__:
                 f1 = da._1gauss
-                for i in range(len(peak)):
+                for i in range(int(len(popt)/3)):
                     pars_i = popt[0+3*i:3+3*i]
                     peak_i = f1(x, *pars_i)
                     ax.plot(x, peak_i, label=f'peak {i+1}')

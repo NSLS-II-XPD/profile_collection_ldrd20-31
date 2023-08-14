@@ -190,6 +190,21 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
                     if (type(peak) is np.ndarray) and (type(prop) is dict):
                         x, y, p, f, popt = da._fitting_in_kafka(x0, y0, data_id, peak, prop, dummy_test=dummy_test)                       
                         
+                        if 'gauss' in f.__name__:
+                            constant = 2.355
+                        else:
+                            constant = 1
+
+                        peak_list = []
+                        fwhm_list = []
+                        for i in range(int(len(popt)/3)):
+                            peak_list.append(popt[i*3+1])
+                            fwhm_list.append(popt[i*3+2]*constant)
+                        
+                        peak_emission_id = np.argmax(np.asarray(peak_list))
+                        peak_emission = peak_list[peak_emission_id]
+                        fwhm = fwhm_list[peak_emission_id]
+
                         ## Calculate PLQY for fluorescence stream
                         if (stream_name == 'fluorescence') and (PLQY[0]==1):
                             PL_integral_s = integrate.simpson(y,x)
@@ -207,8 +222,9 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
                                 plqy = da.plqy_quinine(absorbance_s, PL_integral_s, 1.506, *PLQY[3:])
 
                             plqy_dic = {'PL_integral':PL_integral_s, 'Absorbance_365':absorbance_s, 'plqy': plqy}
-
-
+                            
+                            
+                            ### Three parameters for ML: peak_emission, fwhm, plqy
                             # TODO: add ML agent code here
                             ...
 
@@ -219,7 +235,7 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
                         de.dic_to_csv_for_stream(csv_path, qepro_dic, metadata_dic, stream_name=stream_name, fitting=ff, plqy=plqy_dic)
                         print(f'\n** export fitting results complete**\n')
                         
-                        u.plot_peak_fit(x, y, p, f, popt, fill_between=True)
+                        u.plot_peak_fit(x, y, f, popt, peak=p, fill_between=True)
                         print(f'\n** plot fitting results complete**\n')
                         if stream_name == 'primary':
                             good_data.append(data_id)
