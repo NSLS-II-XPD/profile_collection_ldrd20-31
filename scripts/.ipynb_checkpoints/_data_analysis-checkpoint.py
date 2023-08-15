@@ -67,10 +67,19 @@ def find_nearest(array, value):
 
 
 
-def r_square(x, y, fitted_y):
-    residulas = y - fitted_y
+def r_square(x, y, fitted_y, y_low_limit=200):
+    
+    x = np.asarray(x)
+    y = np.asarray(y)
+    fitted_y = np.asarray(fitted_y)
+    
+    y1 = y[y>=y_low_limit]
+    x1 = x[y>=y_low_limit]
+    fitted_y1 = fitted_y[y>=y_low_limit]
+    
+    residulas = y1 - fitted_y1
     ss_res = np.sum(residulas**2)
-    ss_tot = np.sum((y-np.mean(y))**2)
+    ss_tot = np.sum((y1-np.mean(y1))**2)
     r_sq = 1 - (ss_res / ss_tot)
     return r_sq
 
@@ -198,12 +207,13 @@ def _1peak_fit_good_PL(x0, y0, fit_function, peak=False, maxfev=100000, fit_boun
     except (TypeError, IndexError):
         initial_guess = [max(y), mean, sigma]
     
-    
+    bnd = ((0,200,0),(y.max()*1.15,1000, np.inf))
+
     try:
-        popt, pcov = curve_fit(fit_function, x, y, p0=initial_guess, maxfev=maxfev)
+        popt, pcov = curve_fit(fit_function, x, y, p0=initial_guess, bounds=bnd, maxfev=maxfev)
     except RuntimeError:
         maxfev=1000000
-        popt, pcov = curve_fit(fit_function, x, y, p0=initial_guess, maxfev=maxfev)
+        popt, pcov = curve_fit(fit_function, x, y, p0=initial_guess, bounds=bnd, maxfev=maxfev)
     
     # A = popt[0]
     # x0 = popt[1]
@@ -216,7 +226,7 @@ def _1peak_fit_good_PL(x0, y0, fit_function, peak=False, maxfev=100000, fit_boun
         r2 = f'R\u00b2={r_2:.2f}'
         plt.figure()
         plt.plot(x,y,'b+:',label='data')
-        plt.plot(x,fitted_result,'ro:',label='Total fit\n'+r2)
+        plt.plot(x,fitted_result,'r--',label='Total fit\n'+r2)
         plt.legend()
         plt.title(f'{fit_function.__name__} : {plot_title}')
         plt.show()
@@ -253,13 +263,15 @@ def _2peak_fit_good_PL(x0, y0, fit_function, peak=False, maxfev=100000, fit_boun
     except (TypeError, IndexError):
         initial_guess = [y0[peak[0]], x0[peak[0]], sigma, y0[peak[-1]], x0[peak[-1]], sigma]
     
+    bnd = ((0,200,0,0,200,0),(y.max()*1.15,1000, np.inf, y.max()*1.15,1000, np.inf))
     
     try:
-        popt, pcov = curve_fit(fit_function, x, y, p0=initial_guess, maxfev=maxfev)
+        popt, pcov = curve_fit(fit_function, x, y, p0=initial_guess, bounds=bnd, maxfev=maxfev)
     except RuntimeError:
         maxfev=1000000
-        popt, pcov = curve_fit(fit_function, x, y, p0=initial_guess, maxfev=maxfev)
-    
+        popt, pcov = curve_fit(fit_function, x, y, p0=initial_guess, bounds=bnd, maxfev=maxfev)
+   
+    # print(popt, len(popt))
     # A = popt[0]
     # x0 = popt[1]
     # sigma = popt[2]
@@ -270,12 +282,17 @@ def _2peak_fit_good_PL(x0, y0, fit_function, peak=False, maxfev=100000, fit_boun
         r2 = f'R\u00b2={r_2:.2f}'
         plt.figure()
         plt.plot(x,y,'b+:',label='data')
-        plt.plot(x,fitted_result,'ro:',label='Total fit\n'+r2)
+        plt.plot(x,fitted_result,'r--',label='Total fit\n'+r2)
+        
+        if 'gauss' in fit_function.__name__:
+            f1 = _1gauss
+        else:
+            f1 = _1Lorentz
         
         pars_1 = popt[0:3]
         pars_2 = popt[3:6]
-        peak_1 = fit_function(x, *pars_1)
-        peak_2 = fit_function(x, *pars_2)
+        peak_1 = f1(x, *pars_1)
+        peak_2 = f1(x, *pars_2)
         
         # peak 1
         plt.plot(x, peak_1, "g", label='peak 1')
@@ -338,8 +355,15 @@ def _fitting_in_kafka(x0, y0, data_id, peak, prop, dummy_test=False):
         f = _1gauss
         popt, _, x, y = _1peak_fit_good_PL(x0, y0, f, peak=peak, raw_data=True, dummy_test=dummy_test)
     elif len(peak) == 2:
-        f = _2gauss
-        popt, _, x, y = _2peak_fit_good_PL(x0, y0, f, peak=peak, raw_data=True)
+        try:
+            f = _2gauss
+            popt, _, x, y = _2peak_fit_good_PL(x0, y0, f, peak=peak, raw_data=True)
+        except RuntimeError:
+            f = _1gauss
+            M = max(prop['peak_heights'])
+            M_idx, _ = find_nearest(prop['peak_heights'], M)
+            peak = np.asarray([peak[M_idx]])
+            popt, _, x, y = _1peak_fit_good_PL(x0, y0, f, peak=peak, raw_data=True, dummy_test=dummy_test)
     else:
         f = _1gauss
         M = max(prop['peak_heights'])
@@ -351,8 +375,46 @@ def _fitting_in_kafka(x0, y0, data_id, peak, prop, dummy_test=False):
 
     return x, y, peak-shift, f, popt
 
+
+
+### Calculate photoluminescence quantum yield (plqy) ###
+## reference 1: Fluorescein, SI: https://onlinelibrary.wiley.com/doi/full/10.1002/adfm.201900712
+## reference 2: Quinine, SI: https://pubs.rsc.org/en/content/articlelanding/2020/re/d0re00129e
+'''
+https://github.com/cheng-hung/Data_process/blob/main/20230726_CsPbBr_ZnI/20230726_CsPb_ZnI_PL.ipynb
+abs_365 = np.asarray([0.45788178937234225, 0.906788585562671, 1.3468533683956367, 1.8042517715092394, 2.0145695678124844])
+abs_365_r = 0.376390
+plqy_r = 0.546
+ref_idx_toluene = 1.506
+ref_idx_H2SO4 = 1.337
+integral_r = 468573.0
+integral_pqds = np.asarray(simpson_int)
+plqy = plqy_r*abs_365_r*(ref_idx_toluene**2)*integral_pqds / (integral_r*(ref_idx_H2SO4**2)*abs_365)
+'''
+
+def plqy_fluorescein(absorbance_sample, PL_integral_sample, refractive_index_solvent, 
+                     absorbance_reference, PL_integral_reference, refractive_index_reference, plqy_reference):
     
+    integral_ratio = PL_integral_sample / PL_integral_reference
+    absorbance_ratio = (1-10**(np.negative(absorbance_reference))) / (1-10**(np.negative(absorbance_sample)))
+    refractive_index_ratio = (refractive_index_solvent / refractive_index_reference)**2
+
+    plqy = plqy_reference * integral_ratio * absorbance_ratio * refractive_index_ratio
+    return plqy
     
+
+def plqy_quinine(absorbance_sample, PL_integral_sample, refractive_index_solvent, 
+                     absorbance_reference, PL_integral_reference, refractive_index_reference, plqy_reference):
+    
+    integral_ratio = PL_integral_sample / PL_integral_reference
+    absorbance_ratio = absorbance_reference / absorbance_sample
+    refractive_index_ratio = (refractive_index_solvent / refractive_index_reference)**2
+
+    plqy = plqy_reference * integral_ratio * absorbance_ratio * refractive_index_ratio
+    return plqy
+
+
+
 ######## Old versions of function #########    
 
 def _2peak_fit_PL3(x, y, distr='G', distance=30, height=930, plot=False, plot_title=None, second_peak=None, maxfev=100000):

@@ -67,10 +67,19 @@ def find_nearest(array, value):
 
 
 
-def r_square(x, y, fitted_y):
-    residulas = y - fitted_y
+def r_square(x, y, fitted_y, y_low_limit=200):
+    
+    x = np.asarray(x)
+    y = np.asarray(y)
+    fitted_y = np.asarray(fitted_y)
+    
+    y1 = y[y>=y_low_limit]
+    x1 = x[y>=y_low_limit]
+    fitted_y1 = fitted_y[y>=y_low_limit]
+    
+    residulas = y1 - fitted_y1
     ss_res = np.sum(residulas**2)
-    ss_tot = np.sum((y-np.mean(y))**2)
+    ss_tot = np.sum((y1-np.mean(y1))**2)
     r_sq = 1 - (ss_res / ss_tot)
     return r_sq
 

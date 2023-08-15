@@ -152,3 +152,43 @@ class plot_uvvis(open_figures):
         ax.legend()
         f.canvas.manager.show()
         f.canvas.flush_events()
+        
+
+        
+
+class open_subfigures():
+    def __init__(self, rows, columns, figsize, ax_titles):
+        f1, ax1 = plt.subplots(rows, columns, figsize=figsize, constrained_layout=True)
+        ax1 = ax1.flatten()
+        for i in range(len(ax_titles)):
+            ax1[i].set_title(ax_titles[i], fontsize=10)
+        
+class multipeak_fitting(open_subfigures):
+    def __init__(self, rows=2, columns=2, figsize = (8, 6), ax_titles=['_1gauss', '_2gauss', '_3gauss', 'r_2']):
+        super().__init__(rows, columns, figsize, ax_titles)
+        self.fig = plt.gcf()
+        self.ax = self.fig.get_axes()
+        
+    def plot_fitting(self, x, y, popt_list, single_f, fill_between=True, num_var=3):
+        for i in range(len(popt_list)):
+            
+            fitted_y = np.zeros([x.shape[0]])
+            for j in range(i+1):
+                fitted_y += single_f(x, *popt_list[i][0+3*j:3+3*j])
+            
+            self.ax[i].plot(x ,y, 'b+:',label='data')
+            r_2 = da.r_square(x, y, fitted_y, y_low_limit=500)
+            r2 = f'R\u00b2={r_2:.2f}'
+            self.ax[i].plot(x,fitted_y,'r--',label='Total fit\n'+r2)
+            
+            if fill_between:
+                f1 = single_f
+                for k in range(int(len(popt_list[i])/3)):
+                    pars_k = popt_list[i][0+3*k:3+3*k]
+                    peak_k = f1(x, *pars_k)
+                    self.ax[i].plot(x, peak_k, label=f'peak {k+1}')
+                    self.ax[i].fill_between(x, peak_k.min(), peak_k, alpha=0.3)
+            
+            self.ax[i].legend()
+            
+        
