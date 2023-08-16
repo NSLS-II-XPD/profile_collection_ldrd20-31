@@ -174,7 +174,7 @@ class multipeak_fitting(open_subfigures):
             
             fitted_y = np.zeros([x.shape[0]])
             for j in range(i+1):
-                fitted_y += single_f(x, *popt_list[i][0+3*j:3+3*j])
+                fitted_y += single_f(x, *popt_list[i][0+num_var*j:num_var+num_var*j])
             
             self.ax[i].plot(x ,y, 'b+:',label='data')
             r_2 = da.r_square(x, y, fitted_y, y_low_limit=500)
