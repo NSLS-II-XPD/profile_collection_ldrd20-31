@@ -226,6 +226,10 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
                             
                             ### Three parameters for ML: peak_emission, fwhm, plqy
                             # TODO: add ML agent code here
+
+                            predicttion = ML(peak_emission, fwhm, plqy)
+
+
                             ...
 
                         else:
