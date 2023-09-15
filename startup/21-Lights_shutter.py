@@ -7,16 +7,19 @@ from ophyd import Component as Cpt
 
 LED = EpicsSignal('XF:28IDC-ES:1{Light:Flu-LED:1}Cmd', name='LED_M365LP1', string=True, kind='hinted')
 # 0: 'Low'; 1: 'High'
+LED.wait_for_connection(10)
 
 deuterium = EpicsSignal('XF:28IDC-ES:1{Light:Abs-Dut:1}Cmd', name='Deuterium', string=True, kind='Config')
 # 0: 'Low'; 1: 'High'
+deuterium.wait_for_connection(10)
 
 halogen = EpicsSignal('XF:28IDC-ES:1{Light:Abs-Hal:1}Cmd', name='Halogen', string=True, kind='Config')
 # 0: 'Low'; 1: 'High'
+halogen.wait_for_connection(10)
 
 UV_shutter = EpicsSignal('XF:28IDC-ES:1{Light:Abs-Sht:1}Cmd', name='UV_shutter', string=True, kind='hinted')
 # 0: 'Low' --> shutter close.; 1: 'High' --> Shutter open.
-
+UV_shutter.wait_for_connection(10)
 
 def LED_on():
     yield from bps.abs_set(LED, 'High', wait=True)

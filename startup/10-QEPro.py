@@ -548,3 +548,4 @@ try:
 except (NameError, ModuleNotFoundError):
     pass
 qepro = QEPro('XF:28ID2-ES{QEPro:Spec-1}:', name='QEPro', )
+qepro.wait_for_connection(10)
