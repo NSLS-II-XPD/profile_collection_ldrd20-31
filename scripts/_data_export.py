@@ -97,7 +97,7 @@ def read_qepro_by_stream(uid, stream_name='primary', data_agent='tiled'):
 
 
 
-def dic_to_csv_for_stream(csv_path, qepro_dic, metadata_dic, stream_name='primary', fitting=None, plqy=None):
+def dic_to_csv_for_stream(csv_path, qepro_dic, metadata_dic, stream_name='primary', fitting=None, plqy_dic=None):
     # to save fitting results for good data, fitting needs be a dict with two keys:
     # fitting = {'fit_function': da._1gauss, 'curve_fit': popt}
 
