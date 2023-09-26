@@ -53,13 +53,25 @@ def set_group_infuse(syringe_list, pump_list, target_vol_list=['50 ml', '50 ml']
 
 def set_group_infuse2(syringe_list, pump_list, set_target_list=[True, True], target_vol_list=['50 ml', '50 ml'], 
                      rate_list = ['100 ul/min', '100 ul/min'], syringe_mater_list=['steel', 'steel']):
+    # print(*pump_list, sep = '\n')
+    print('\n')
     for i, j, k, l, m, n in zip(pump_list, target_vol_list, rate_list, syringe_list, syringe_mater_list, set_target_list):
+        
+        print(f'len(pump_list) = {len(pump_list)}')
+        print(f'len(target_vol_list) = {len(target_vol_list)}')
+        print(f'len(rate_list) = {len(rate_list)}')
+        print(f'len(syringe_list) = {len(syringe_list)}')
+        print(f'len(syringe_mater_list) = {len(syringe_mater_list)}')
+        print(f'len(set_target_list) = {len(set_target_list)}')
+
         vol = float(j.split(' ')[0])
         vol_unit = j.split(' ')[1]
         rate = float(k.split(' ')[0])
         rate_unit = k.split(' ')[1]        
         yield from i.set_infuse2(l, set_target = n, target_vol = vol, target_unit = vol_unit, 
                                  infuse_rate = rate, infuse_unit = rate_unit, syringe_material=m)
+        print(f'Set infuse rate {rate} {rate_unit} of {i.name} is done.\n')
+        # yield from bps.sleep(1)
 
         
 def set_group_withdraw(syringe_list, pump_list, target_vol_list=['50 ml', '50 ml'], 

@@ -280,6 +280,8 @@ class syrng_DDS_ax(Device):
         
         yield from bps.abs_set(self.infuse_rate_unit, infuse_unit, wait=True)
         yield from bps.abs_set(self.infuse_rate, infuse_rate, wait=True)
+        yield from bps.sleep(1)
+        
     
 
 
