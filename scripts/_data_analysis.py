@@ -199,7 +199,7 @@ def _1peak_fit_good_PL(x0, y0, fit_function, peak=False, maxfev=100000, fit_boun
         y = y0[w2:w3]
     
     mean = sum(x * y) / sum(y)
-    sigma = np.sqrt(sum(y * (x - mean) ** 2) / sum(y))
+    sigma = np.sqrt(sum(abs(y) * (x - mean) ** 2) / sum(y))
     
     
     try:
@@ -255,7 +255,7 @@ def _2peak_fit_good_PL(x0, y0, fit_function, peak=False, maxfev=100000, fit_boun
     x = x0[w2:w3]
     y = y0[w2:w3]
     mean = sum(x * y) / sum(y)
-    sigma = np.sqrt(sum(y * (x - mean) ** 2) / sum(y))
+    sigma = np.sqrt(sum(abs(y) * (x - mean) ** 2) / sum(y))
     
     
     try:
