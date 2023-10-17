@@ -56,11 +56,31 @@ resident_t_ratio = input_dic['resident_t_ratio'][0]
 PLQY = input_dic['PLQY']
 ###################################################################
 
+import sys
+sys.path.insert(0, "/home/xf28id2/src/bloptools")
+
+from bloptools.bayesian import Agent, DOF, Objective
+
+dofs = [
+    DOF(name="infusion_rate_1", limits=(10, 100)),
+    DOF(name="infusion_rate_2", limits=(10, 100)),
+    DOF(name="infusion_rate_3", limits=(10, 100)),
+]
+
+objectives = [
+    Objective(name="Peak emission", key="peak_emission"),
+    Objective(name="Peak width", key="peak_fwhm"),
+    Objective(name="Quantum yield", key="plqy"),
+]
+
+agent = Agent(dofs=dofs, objectives=objectives, db=None, verbose=True)
+
 
 def print_kafka_messages(beamline_acronym, csv_path=csv_path, 
                          key_height=key_height, height=height, distance=distance, 
                          pump_list=pump_list, sample=sample, precursor_list=precursor_list, 
                          mixer=mixer, dummy_test=dummy_test, plqy=PLQY):
+
     print(f"Listening for Kafka messages for {beamline_acronym}")
     print(f'Defaul parameters:\n'
           f'                  csv path: {csv_path}\n'
@@ -236,6 +256,29 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
                                 # TODO: add ML agent code here
 
                                 # predicttion = ML(peak_emission, fwhm, plqy)
+
+                                table = pd.DataFrame(index=[0])
+
+                                # DOFs
+                                table.loc[0, "infusion_rate_1"] = metadata_dic["infuse_rate"][0]
+                                table.loc[0, "infusion_rate_2"] = metadata_dic["infuse_rate"][1]
+                                table.loc[0, "infusion_rate_3"] = metadata_dic["infuse_rate"][2]
+
+
+                                # Objectives
+                                table.loc[0, "peak_emission"] = peak_emission
+                                table.loc[0, "peak_fwhm"] = fwhm
+                                table.loc[0, "plqy"] = plqy
+                                
+
+                                agent.tell(table, append=True)
+
+                                if len(agent.table) < 4:
+                                    acq_func = "qr"
+                                else:
+                                    acq_func = "qei"
+
+                                new_inputs = agent.ask(acq_func, n=1)
 
 
                                 # ...
