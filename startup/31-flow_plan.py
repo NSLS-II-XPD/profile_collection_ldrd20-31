@@ -68,8 +68,12 @@ def set_group_infuse2(syringe_list, pump_list, set_target_list=[True, True], tar
         vol_unit = j.split(' ')[1]
         rate = float(k.split(' ')[0])
         rate_unit = k.split(' ')[1]        
-        yield from i.set_infuse2(l, set_target = n, target_vol = vol, target_unit = vol_unit, 
-                                 infuse_rate = rate, infuse_unit = rate_unit, syringe_material=m)
+        
+        if rate == 0.0:
+            pass
+        else:
+            yield from i.set_infuse2(l, set_target = n, target_vol = vol, target_unit = vol_unit, 
+                                     infuse_rate = rate, infuse_unit = rate_unit, syringe_material=m)
         print(f'Set infuse rate {rate} {rate_unit} of {i.name} is done.\n')
         # yield from bps.sleep(1)
 
@@ -85,9 +89,12 @@ def set_group_withdraw(syringe_list, pump_list, target_vol_list=['50 ml', '50 ml
                                   withdraw_unit = rate_unit, syringe_material=m)
 
 
-def start_group_infuse(pump_list):
-    for pump in pump_list:
-        yield from pump.infuse_pump2()
+def start_group_infuse(pump_list, rate_list):
+    for pump, rate in zip(pump_list, rate_list):
+        if float(rate.split(' ')[0]) == 0.0:
+            pass
+        else:
+            yield from pump.infuse_pump2()
         
 
 def start_group_withdraw(pump_list):

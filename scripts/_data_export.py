@@ -97,6 +97,104 @@ def read_qepro_by_stream(uid, stream_name='primary', data_agent='tiled'):
 
 
 
+
+## Convert device parameters (infuse rate) into ML parameters (non-dimensional)
+def device_to_ML_parameters(metadata_dic, exp_name='ldrd-2031'):
+    
+    ## Get data from metadata_dic
+    pump_status = metadata_dic['pump_status']
+    precursors = metadata_dic['precursors']
+    infuse_rate = np.float32(metadata_dic['infuse_rate'])
+    infuse_rate_unit = metadata_dic['infuse_rate_unit']
+
+    ## Turn pump_status into boolean array
+    pump_status = list(map(lambda status: status.lower().capitalize() == "Infusing", pump_status))    
+    pump_status = np.float32(pump_status)
+
+    ## Generate ruc (rate unit converter) to unify rate units as infuse_rate_unit[0]
+    ruc = []
+    for i in range(len(infuse_rate_unit)):
+        rr = rate_unit_converter(r0=infuse_rate_unit[i], r1=infuse_rate_unit[0])
+        ruc.append(rr)
+    ruc = np.float32(ruc)
+    
+    unified_rate = infuse_rate * pump_status * ruc
+    normalized_rate = unified_rate / unified_rate.sum()
+    
+    
+    ## Arrange normalized_rate into an array as input_names
+    if exp_name == 'ldrd-2031':
+        input_names = ['CsPb', 'Br', 'ZnI', 'ZnCl', 'Toluene']
+    else:
+        input_names = exp_name
+    
+    ML_parameters = np.zeros(len(input_names))
+    for i in range(len(input_names)):
+        for j in range(len(precursors)):
+            if input_names[i].lower() in precursors[j].lower():
+                ML_parameters[i] = normalized_rate[j]
+            
+    return ML_parameters
+
+
+
+## Convert ML parameters (non-dimensional) into device parameters (infuse rate)
+## Note: Before covertion, it is recommended take a dummy scan 
+##       to let BlueSky know the precursor list and total flow rate
+def ML_to_device_parameters(ML_dof, metadata_dic, unit = 'ul/min', 
+                            check_sum = True, check_negative = True, 
+                            exp_name='ldrd-2031'):
+    
+    ML_dof = np.float32(ML_dof)
+
+    _is_sum_equal_one = (ML_dof.sum() == 1.0)
+    _is_any_negative = (len(np.argwhere(ML_dof<0)) > 0)
+
+    if check_sum:
+        if _is_sum_equal_one == False:
+            raise ValueError(f'Sum of {ML_dof} is not equal to one.')
+
+
+    if check_negative:
+        if _is_any_negative == True:
+            raise ValueError(f'Found negative value in {ML_dof}.')
+    
+    
+    ## Get data from metadata_dic
+    pump_status = metadata_dic['pump_status']
+    precursors = metadata_dic['precursors']
+    infuse_rate = np.float32(metadata_dic['infuse_rate'])
+    infuse_rate_unit = metadata_dic['infuse_rate_unit']
+
+    ## Turn pump_status into boolean array
+    pump_status = list(map(lambda status: status.lower().capitalize() == "Infusing", pump_status))
+    pump_status = np.float32(pump_status)
+
+    ## Generate ruc (rate unit converter) to unify rate units as assigned unit
+    ruc = []
+    for i in range(len(infuse_rate_unit)):
+        rr = rate_unit_converter(r0=infuse_rate_unit[i], r1=unit)
+        ruc.append(rr)
+    ruc = np.float32(ruc)
+    
+    unified_rate = infuse_rate * pump_status * ruc
+    predicted_rate = np.round(ML_dof*unified_rate.sum(), decimals=2)
+
+    ## Arrange ML_dof into an array as infuse_rate / infuse_rate_unit
+    if exp_name == 'ldrd-2031':
+        input_names = ['CsPb', 'Br', 'ZnI', 'ZnCl', 'Toluene']
+    else:
+        input_names = exp_name
+
+    device_parameters = np.zeros(len(infuse_rate))
+    for i in range(len(input_names)):
+        for j in range(len(precursors)):
+            if input_names[i].lower() in precursors[j].lower():
+                device_parameters[j] = predicted_rate[i]
+    
+    return device_parameters
+
+
 def dic_to_csv_for_stream(csv_path, qepro_dic, metadata_dic, stream_name='primary', fitting=None, plqy_dic=None):
     # to save fitting results for good data, fitting needs be a dict with two keys:
     # fitting = {'fit_function': da._1gauss, 'curve_fit': popt}

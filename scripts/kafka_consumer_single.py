@@ -57,6 +57,26 @@ PLQY = input_dic['PLQY']
 ###################################################################
 
 
+import sys
+sys.path.insert(0, "/home/xf28id2/src/bloptools")
+
+from bloptools.bayesian import Agent, DOF, Objective
+
+dofs = [
+    #DOF(name="infusion_rate_1", limits=(1500, 2000)),
+    #DOF(name="infusion_rate_2", limits=(1500, 2000)),
+    DOF(name="infusion_rate_3", limits=(1500, 2000)),
+]
+
+objectives = [
+    Objective(name="Peak emission", key="peak_emission", target=525, units="nm"),
+    Objective(name="Peak width", key="peak_fwhm", minimize=True, units="nm"),
+    Objective(name="Quantum yield", key="plqy"),
+]
+
+agent = Agent(dofs=dofs, objectives=objectives, db=None, verbose=True)
+
+
 def print_kafka_messages(beamline_acronym, csv_path=csv_path, 
                          dummy_test=dummy_test, plqy=PLQY, 
                          key_height=key_height, height=height, distance=distance, 
@@ -237,6 +257,31 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
                                 # TODO: add ML agent code here
 
                                 # predicttion = ML(peak_emission, fwhm, plqy)
+
+                                table = pd.DataFrame(index=[0])
+
+                                # DOFs
+                                table.loc[0, "infusion_rate_1"] = metadata_dic["infuse_rate"][0]
+                                table.loc[0, "infusion_rate_2"] = metadata_dic["infuse_rate"][1]
+                                table.loc[0, "infusion_rate_3"] = metadata_dic["infuse_rate"][2]
+
+
+                                # Objectives
+                                table.loc[0, "peak_emission"] = peak_emission
+                                table.loc[0, "peak_fwhm"] = fwhm
+                                table.loc[0, "plqy"] = plqy
+                                
+
+                                agent.tell(table, append=True)
+
+                                if len(agent.table) < 4:
+                                    acq_func = "qr"
+                                else:
+                                    acq_func = "qei"
+
+                                new_points, _ = agent.ask(acq_func, n=1)
+
+
 
 
                                 # ...
