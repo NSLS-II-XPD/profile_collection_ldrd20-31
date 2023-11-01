@@ -5,12 +5,13 @@ import _data_export as de
 pump, syringe, precursor, mixer parameters
 '''
 ## Input varaibales: read from inputs_qserver_kafka.xlsx
-xlsx = '/home/xf28id2/Documents/ChengHung/inputs_qserver_kafka_ZnI.xlsx'
+xlsx = '/home/xf28id2/Documents/ChengHung/inputs_qserver_kafka_ML.xlsx'
 input_dic = de._read_input_xlsx(xlsx)
 
 ##################################################################
 # Define namespace for tasks in Qserver and Kafa
-dummy_test = bool(input_dic['dummy_test'][0])
+dummy_kafka = bool(input_dic['dummy_test'][0])
+dummy_qserver = bool(input_dic['dummy_test'][1])
 csv_path = input_dic['csv_path'][0]
 key_height = input_dic['key_height']
 height = input_dic['height']
@@ -52,12 +53,12 @@ zmq_single_request(method='queue_clear')
 for i in range(len(infuse_rates)):
 # for i in range(2): 
     ## 1. Set i infuese rates
-    for sl, pl, ir, tvl, stl in zip(syringe_list, pump_list, infuse_rates[i], target_vol_list, set_target_list[i]):
+    for sl, pl, ir, tvl, stl, sml in zip(syringe_list, pump_list, infuse_rates[i], target_vol_list, set_target_list[i], syringe_mater_list):
         zmq_single_request(method='queue_item_add', 
                         params={
                                 'item':{"name":"set_group_infuse2", 
                                         "args": [[sl], [pl]], 
-                                        "kwargs": {"rate_list":[ir], "target_vol_list":[tvl], "set_target_list":[stl]}, 
+                                        "kwargs": {"rate_list":[ir], "target_vol_list":[tvl], "set_target_list":[stl], "syringe_mater_list":[sml]}, 
                                         "item_type":"plan"
                                         }, 'user_group':'primary', 'user':'chlin'})
 
@@ -66,17 +67,17 @@ for i in range(len(infuse_rates)):
     zmq_single_request(method='queue_item_add', 
                     params={
                             'item':{"name":"start_group_infuse", 
-                                    "args": [[pump_list], [infuse_rates[i]]],  
+                                    "args": [pump_list, infuse_rates[i]],  
                                     "item_type":"plan"
                                     }, 'user_group':'primary', 'user':'chlin'})
 
 
     ## 3. Wait for equilibrium
-    if dummy_test:
+    if dummy_qserver:
         zmq_single_request(method='queue_item_add', 
                            params={
                                    'item':{"name":"sleep_sec_q", 
-                                            "args":[30], 
+                                            "args":[5], 
                                             "item_type":"plan"
                                             }, 'user_group':'primary', 'user':'chlin'}) 
     
@@ -122,7 +123,7 @@ for i in range(len(infuse_rates)):
                     params={
                             'item':{"name":"xray_uvvis_plan", 
                                     "args":['det', 'qepro'],
-                                    "kwargs": {'num_abs':4, 'num_flu':6,
+                                    "kwargs": {'num_abs':9, 'num_flu':9,
                                                 'sample_type':sample[i], 
                                                 'spectrum_type':'Absorbtion', 'correction_type':'Reference', 
                                                 'pump_list':pump_list, 'precursor_list':precursor_list, 

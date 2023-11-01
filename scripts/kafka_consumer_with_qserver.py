@@ -32,12 +32,13 @@ plt.ion()
 plt.rcParams["figure.raise_window"] = False
 
 ## Input varaibales: read from inputs_qserver_kafka.xlsx
-xlsx = '/home/xf28id2/Documents/ChengHung/inputs_qserver_kafka_dilute.xlsx'
+xlsx = '/home/xf28id2/Documents/ChengHung/inputs_qserver_kafka_ML.xlsx'
 input_dic = de._read_input_xlsx(xlsx)
 
 ##################################################################
 # Define namespace for tasks in Qserver and Kafa
-dummy_test = bool(input_dic['dummy_test'][0])
+dummy_kafka = bool(input_dic['dummy_test'][0])
+dummy_qserver = bool(input_dic['dummy_test'][1])
 csv_path = input_dic['csv_path'][0]
 key_height = input_dic['key_height']
 height = input_dic['height']
@@ -62,24 +63,33 @@ sys.path.insert(0, "/home/xf28id2/src/bloptools")
 from bloptools.bayesian import Agent, DOF, Objective
 
 dofs = [
-    DOF(name="infusion_rate_1", limits=(10, 100)),
-    DOF(name="infusion_rate_2", limits=(10, 100)),
-    DOF(name="infusion_rate_3", limits=(10, 100)),
+    DOF(name="infusion_rate_1", limits=(30, 150)),
+    DOF(name="infusion_rate_2", limits=(30, 150)),
+    # DOF(name="infusion_rate_3", limits=(1500, 2000)),
 ]
 
 objectives = [
-    Objective(name="Peak emission", key="peak_emission"),
-    Objective(name="Peak width", key="peak_fwhm"),
-    Objective(name="Quantum yield", key="plqy"),
+    Objective(name="Peak emission", key="peak_emission", target=500),
+    Objective(name="Peak width", key="peak_fwhm", target="min"),
+    Objective(name="Quantum yield", key="plqy", target="max"),
 ]
 
+
+# objectives = [
+#     Objective(name="Peak emission", key="peak_emission", target=525, units="nm"),
+#     Objective(name="Peak width", key="peak_fwhm", minimize=True, units="nm"),
+#     Objective(name="Quantum yield", key="plqy"),
+# ]
+
+
+USE_AGENT = False
 agent = Agent(dofs=dofs, objectives=objectives, db=None, verbose=True)
 
 
 def print_kafka_messages(beamline_acronym, csv_path=csv_path, 
                          key_height=key_height, height=height, distance=distance, 
                          pump_list=pump_list, sample=sample, precursor_list=precursor_list, 
-                         mixer=mixer, dummy_test=dummy_test, plqy=PLQY):
+                         mixer=mixer, dummy_test=dummy_kafka, plqy=PLQY):
 
     print(f"Listening for Kafka messages for {beamline_acronym}")
     print(f'Defaul parameters:\n'
@@ -255,30 +265,33 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
                                 ### Three parameters for ML: peak_emission, fwhm, plqy
                                 # TODO: add ML agent code here
 
-                                # predicttion = ML(peak_emission, fwhm, plqy)
+                                if USE_AGENT:
+                                    
+                                    print(f'\n** Send peak_emission, FWHM, PLQY to ML agent**\n')
+                                    table = pd.DataFrame(index=[0])
 
-                                table = pd.DataFrame(index=[0])
-
-                                # DOFs
-                                table.loc[0, "infusion_rate_1"] = metadata_dic["infuse_rate"][0]
-                                table.loc[0, "infusion_rate_2"] = metadata_dic["infuse_rate"][1]
-                                table.loc[0, "infusion_rate_3"] = metadata_dic["infuse_rate"][2]
+                                    # DOFs
+                                    table.loc[0, "infusion_rate_1"] = metadata_dic["infuse_rate"][0]
+                                    table.loc[0, "infusion_rate_2"] = metadata_dic["infuse_rate"][1]
+                                    # table.loc[0, "infusion_rate_3"] = metadata_dic["infuse_rate"][2]
 
 
-                                # Objectives
-                                table.loc[0, "peak_emission"] = peak_emission
-                                table.loc[0, "peak_fwhm"] = fwhm
-                                table.loc[0, "plqy"] = plqy
-                                
+                                    # Objectives
+                                    table.loc[0, "peak_emission"] = peak_emission
+                                    table.loc[0, "peak_fwhm"] = fwhm
+                                    table.loc[0, "plqy"] = plqy
+                                    
 
-                                agent.tell(table, append=True)
+                                    agent.tell(table, append=True)
 
-                                if len(agent.table) < 4:
-                                    acq_func = "qr"
-                                else:
-                                    acq_func = "qei"
+                                    if len(agent.table) < 2:
+                                        acq_func = "qr"
+                                    else:
+                                        acq_func = "qei"
 
-                                new_inputs = agent.ask(acq_func, n=1)
+                                    new_points, _ = agent.ask(acq_func, n=1)
+
+                                # print(f'\n** ML prediction: {new_points}**\n')
 
 
                                 # ...
