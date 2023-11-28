@@ -9,11 +9,15 @@ import numpy as np
 import pandas as pd
 from scipy import integrate
 import time
+import json
 import databroker
 
 import _data_export as de
 from _plot_helper import plot_uvvis
 import _data_analysis as da
+
+import resource
+resource.setrlimit(resource.RLIMIT_NOFILE, (65536, 65536))
 
 # from bluesky_queueserver.manager.comms import zmq_single_request
 
@@ -64,15 +68,15 @@ sys.path.insert(0, "/home/xf28id2/src/bloptools")
 from bloptools.bayesian import Agent, DOF, Objective
 
 dofs = [
-    DOF(name="infusion_rate_1", limits=(30, 150)),
-    DOF(name="infusion_rate_2", limits=(30, 150)),
+    DOF(description="CsPb(oleate)3", name="infusion_rate_1", limits=(30, 150)),
+    DOF(description="TOABr", name="infusion_rate_2", limits=(30, 150)),
     # DOF(name="infusion_rate_3", limits=(1500, 2000)),
 ]
 
 objectives = [
-    Objective(name="Peak emission", key="peak_emission", target=500),
-    Objective(name="Peak width", key="peak_fwhm", target="min"),
-    Objective(name="Quantum yield", key="plqy", target="max"),
+    Objective(description="Peak emission", name="Peak", target=520, weight=2),
+    Objective(description="Peak width", name="FWHM", target="min", weight=1),
+    Objective(description="Quantum yield", name="PLQY", target="max", weight=1e2),
 ]
 
 
@@ -115,6 +119,9 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
     # def print_message(name, doc):
 
     def print_message(consumer, doctype, doc):
+
+        # plt.clf()
+
         name, message = doc
         # print(
         #     f"{datetime.datetime.now().isoformat()} document: {name}\n"
@@ -208,7 +215,7 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
                     x0, y0, data_id, peak, prop = da._identify_multi_in_kafka(qepro_dic, metadata_dic, key_height=kh, distance=dis, height=hei, dummy_test=dummy_test)
                     # sub_idx = sample.index(metadata_dic['sample_type'])
                     label_uid = f'{uid[0:8]}_{metadata_dic["sample_type"]}'
-                    u.plot_average_good(x0, y0, label=label_uid)
+                    u.plot_average_good(x0, y0, label=label_uid, clf_limit=10)
                     # print(f'data_id: {data_id}\n')
                     # print(f'peak: {peak}\n')
                     # print(f'prop: {prop}\n')
@@ -261,6 +268,20 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
                                 print(f'plqy_dic: {plqy_dic}\n')
 
                                 optical_property = {'Peak': peak_emission, 'FWHM':fwhm, 'PLQY':plqy}
+
+                                agent_data = {}
+
+                                agent_data.update(optical_property)
+                                agent_data.update(metadata_dic)
+
+                                agent_data["infusion_rate_1"] = metadata_dic["infuse_rate"][0]
+                                agent_data["infusion_rate_2"] = metadata_dic["infuse_rate"][1]
+
+                                with open(f"/home/xf28id2/data/{data_id}.json", "w") as f:
+                                    json.dump(agent_data, f)
+
+                                print("wrote to ~/data")
+
                                 
                                 ### Three parameters for ML: peak_emission, fwhm, plqy
                                 # TODO: add ML agent code here
@@ -333,7 +354,7 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
     )
 
     try:
-        kafka_consumer.start_polling(work_during_wait=lambda : plt.pause(.1))
+        kafka_consumer.start_polling(work_during_wait=lambda : plt.pause(.5))
     except KeyboardInterrupt:
         print('\nExiting Kafka consumer')
         return()

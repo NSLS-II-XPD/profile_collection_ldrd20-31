@@ -10,6 +10,10 @@ import pandas as pd
 from scipy import integrate
 import time
 import databroker
+import json
+
+import resource
+resource.setrlimit(resource.RLIMIT_NOFILE, (65536, 65536))
 
 import _data_export as de
 from _plot_helper import plot_uvvis
@@ -57,34 +61,40 @@ resident_t_ratio = input_dic['resident_t_ratio'][0]
 PLQY = input_dic['PLQY']
 ###################################################################
 
-import sys
-sys.path.insert(0, "/home/xf28id2/src/bloptools")
+# import sys
+# sys.path.insert(0, "/home/xf28id2/src/bloptools")
 
-from bloptools.bayesian import Agent, DOF, Objective
+# from bloptools.bayesian import Agent, DOF, Objective
 
-dofs = [
-    DOF(name="infusion_rate_1", limits=(30, 150)),
-    DOF(name="infusion_rate_2", limits=(30, 150)),
-    # DOF(name="infusion_rate_3", limits=(1500, 2000)),
-]
-
-objectives = [
-    Objective(name="Peak emission", key="peak_emission", target=500),
-    Objective(name="Peak width", key="peak_fwhm", target="min"),
-    Objective(name="Quantum yield", key="plqy", target="max"),
-]
-
+# dofs = [
+#     DOF(description="CsPb(oleate)3", name="infusion_rate_1", limits=(10, 170)),
+#     DOF(description="TOABr", name="infusion_rate_2", limits=(10, 170)),
+#     # DOF(name="infusion_rate_3", limits=(1500, 2000)),
+# ]
 
 # objectives = [
-#     Objective(name="Peak emission", key="peak_emission", target=525, units="nm"),
-#     Objective(name="Peak width", key="peak_fwhm", minimize=True, units="nm"),
-#     Objective(name="Quantum yield", key="plqy"),
+#     Objective(description="Peak emission", name="Peak", target=520, weight=2),
+#     Objective(description="Peak width", name="FWHM", target="min", weight=1),
+#     Objective(description="Quantum yield", name="PLQY", target="max", weight=1e2),
 # ]
 
 
-USE_AGENT = False
-agent = Agent(dofs=dofs, objectives=objectives, db=None, verbose=True)
+# # objectives = [
+# #     Objective(name="Peak emission", key="peak_emission", target=525, units="nm"),
+# #     Objective(name="Peak width", key="peak_fwhm", minimize=True, units="nm"),
+# #     Objective(name="Quantum yield", key="plqy"),
+# # ]
 
+# USE_AGENT = False
+
+# agent = Agent(dofs=dofs, objectives=objectives, db=None, verbose=True)
+# #agent.load_data("~/blop/data/init.h5")
+
+# filepaths = glob.glob("/home/xf28id2/data/*.json")
+# for fp in np.array(filepaths):
+#     with open(fp, "r") as f:
+#         data = json.load(f)
+#     agent.tell(data=data)
 
 def print_kafka_messages(beamline_acronym, csv_path=csv_path, 
                          key_height=key_height, height=height, distance=distance, 
@@ -262,36 +272,46 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
                                 
                                 optical_property = {'Peak': peak_emission, 'FWHM':fwhm, 'PLQY':plqy}
 
-                                ### Three parameters for ML: peak_emission, fwhm, plqy
-                                # TODO: add ML agent code here
-
-                                if USE_AGENT:
-                                    
-                                    print(f'\n** Send peak_emission, FWHM, PLQY to ML agent**\n')
-                                    table = pd.DataFrame(index=[0])
-
-                                    # DOFs
-                                    table.loc[0, "infusion_rate_1"] = metadata_dic["infuse_rate"][0]
-                                    table.loc[0, "infusion_rate_2"] = metadata_dic["infuse_rate"][1]
-                                    # table.loc[0, "infusion_rate_3"] = metadata_dic["infuse_rate"][2]
+                                data_for_agent = {'infusion_rate_1': metadata_dic["infuse_rate"][0],
+                                            'infusion_rate_1': metadata_dic["infuse_rate"][1],
+                                'Peak': peak_emission, 
+                                'FWHM':fwhm, 
+                                'PLQY':plqy}
 
 
-                                    # Objectives
-                                    table.loc[0, "peak_emission"] = peak_emission
-                                    table.loc[0, "peak_fwhm"] = fwhm
-                                    table.loc[0, "plqy"] = plqy
-                                    
 
-                                    agent.tell(table, append=True)
+                                agent_data = {}
 
-                                    if len(agent.table) < 2:
-                                        acq_func = "qr"
-                                    else:
-                                        acq_func = "qei"
+                                agent_data.update(optical_property)
+                                agent_data.update(metadata_dic)
 
-                                    new_points, _ = agent.ask(acq_func, n=1)
+                                agent_data["infusion_rate_1"] = metadata_dic["infuse_rate"][0]
+                                agent_data["infusion_rate_2"] = metadata_dic["infuse_rate"][1]
 
-                                # print(f'\n** ML prediction: {new_points}**\n')
+                                with open(f"/home/xf28id2/data/{data_id}.json", "w") as f:
+                                    json.dump(agent_data, f)
+
+                                # print("wrote to ~/data")
+
+                                
+                                # ### Three parameters for ML: peak_emission, fwhm, plqy
+                                # # TODO: add ML agent code here
+
+                                # data = {}
+
+
+                                # if USE_AGENT:
+
+                                #     print(f"telling agent {data_for_agent}")
+
+                                #     agent.tell(data=data_for_agent, append=True)
+
+                                    # if len(agent.table) < 2:
+                                    #     acq_func = "qr"
+                                    # else:
+                                    #     acq_func = "qei"
+
+                                    # new_points, _ = agent.ask(acq_func, n=1)
 
 
                                 # ...

@@ -122,7 +122,7 @@ class plot_uvvis(open_figures):
         
 
 
-    def plot_average_good(self, x, y, color=None, label=None):        
+    def plot_average_good(self, x, y, color=None, label=None, clf_limit=10):        
         
         # import palettable.colorbrewer.diverging as pld
         # palette = pld.RdYlGn_4_r
@@ -137,6 +137,9 @@ class plot_uvvis(open_figures):
         
         ax = f.gca()
         
+        if len(list(ax.lines)) > clf_limit:
+            plt.clf()
+
         if label == None:
             label = self.time + '_' + self.uid[:8]
 
