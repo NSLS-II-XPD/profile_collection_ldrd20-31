@@ -59,7 +59,24 @@ mixer = input_dic['mixer']
 wash_tube = input_dic['wash_tube']
 resident_t_ratio = input_dic['resident_t_ratio'][0]
 PLQY = input_dic['PLQY']
+prefix = input_dic['prefix']
 ###################################################################
+## Add tasks into Qsever
+import _synthesis_queue as sq
+sq.synthesis_queue(
+                    syringe_list=syringe_list, 
+                    pump_list=pump_list, 
+                    set_target_list=set_target_list, 
+                    target_vol_list=target_vol_list, 
+                    rate_list = infuse_rates, 
+                    syringe_mater_list=syringe_mater_list, 
+                    precursor_list=precursor_list,
+                    mixer=mixer, 
+                    resident_t_ratio=resident_t_ratio, 
+                    prefix=prefix, 
+                    sample=sample, 
+                    wash_tube=wash_tube, 
+                    )
 
 # import sys
 # sys.path.insert(0, "/home/xf28id2/src/bloptools")
@@ -273,12 +290,8 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
                                 optical_property = {'Peak': peak_emission, 'FWHM':fwhm, 'PLQY':plqy}
 
                                 data_for_agent = {'infusion_rate_1': metadata_dic["infuse_rate"][0],
-                                            'infusion_rate_1': metadata_dic["infuse_rate"][1],
-                                'Peak': peak_emission, 
-                                'FWHM':fwhm, 
-                                'PLQY':plqy}
-
-
+                                                  'infusion_rate_2': metadata_dic["infuse_rate"][1],
+                                                  'Peak': peak_emission, 'FWHM':fwhm, 'PLQY':plqy}
 
                                 agent_data = {}
 

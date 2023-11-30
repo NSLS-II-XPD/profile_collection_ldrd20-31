@@ -28,6 +28,7 @@ mixer = input_dic['mixer']
 wash_tube = input_dic['wash_tube']
 resident_t_ratio = input_dic['resident_t_ratio'][0]
 PLQY = input_dic['PLQY']
+prefix = input_dic['prefix']
 ###################################################################
 
 

@@ -62,6 +62,23 @@ PLQY = input_dic['PLQY']
 prefix = input_dic['prefix']
 ###################################################################
 
+## Add tasks into Qsever
+import _synthesis_queue as sq
+sq.synthesis_queue(
+                    syringe_list=syringe_list, 
+                    pump_list=pump_list, 
+                    set_target_list=set_target_list, 
+                    target_vol_list=target_vol_list, 
+                    rate_list = infuse_rates, 
+                    syringe_mater_list=syringe_mater_list, 
+                    precursor_list=precursor_list,
+                    mixer=mixer, 
+                    resident_t_ratio=resident_t_ratio, 
+                    prefix=prefix, 
+                    sample=sample, 
+                    wash_tube=wash_tube, 
+                    )
+
 import sys
 sys.path.insert(0, "/home/xf28id2/src/bloptools")
 
@@ -81,6 +98,7 @@ objectives = [
 
 
 USE_AGENT = True
+agent_iterate = True
 
 agent = Agent(dofs=dofs, objectives=objectives, db=None, verbose=True)
 # agent.load_data("~/blop/data/init.h5")
@@ -216,7 +234,8 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
                     x0, y0, data_id, peak, prop = da._identify_multi_in_kafka(qepro_dic, metadata_dic, key_height=kh, distance=dis, height=hei, dummy_test=dummy_test)
                     sub_idx = sample.index(metadata_dic['sample_type'])
                     label_uid = f'{uid[0:8]}_{metadata_dic["sample_type"]}'
-                    u.plot_average_good(x0, y0, color=cmap(color_idx[sub_idx]), label=label_uid)
+                    # u.plot_average_good(x0, y0, color=cmap(color_idx[sub_idx]), label=label_uid)
+                    u.plot_average_good(x0, y0, label=label_uid)
                     
                 ## Pass peak fitting if qepro type is Absorbance
                 if qepro_dic['QEPro_spectrum_type'][0] == 3:  
@@ -268,7 +287,7 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
                                 optical_property = {'Peak': peak_emission, 'FWHM':fwhm, 'PLQY':plqy}
 
                                 data_for_agent = {'infusion_rate_1': metadata_dic["infuse_rate"][0],
-                                                  'infusion_rate_1': metadata_dic["infuse_rate"][1],
+                                                  'infusion_rate_2': metadata_dic["infuse_rate"][1],
                                                   'Peak': peak_emission, 'FWHM':fwhm, 'PLQY':plqy}
 
 
