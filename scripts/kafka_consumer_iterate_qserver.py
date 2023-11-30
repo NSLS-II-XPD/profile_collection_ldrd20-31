@@ -59,47 +59,42 @@ mixer = input_dic['mixer']
 wash_tube = input_dic['wash_tube']
 resident_t_ratio = input_dic['resident_t_ratio'][0]
 PLQY = input_dic['PLQY']
+prefix = input_dic['prefix']
 ###################################################################
 
-# import sys
-# sys.path.insert(0, "/home/xf28id2/src/bloptools")
+import sys
+sys.path.insert(0, "/home/xf28id2/src/bloptools")
 
-# from bloptools.bayesian import Agent, DOF, Objective
+from bloptools.bayesian import Agent, DOF, Objective
 
-# dofs = [
-#     DOF(description="CsPb(oleate)3", name="infusion_rate_1", limits=(10, 170)),
-#     DOF(description="TOABr", name="infusion_rate_2", limits=(10, 170)),
-#     # DOF(name="infusion_rate_3", limits=(1500, 2000)),
-# ]
+dofs = [
+    DOF(description="CsPb(oleate)3", name="infusion_rate_1", limits=(10, 170)),
+    DOF(description="TOABr", name="infusion_rate_2", limits=(10, 170)),
+    # DOF(name="infusion_rate_3", limits=(1500, 2000)),
+]
 
-# objectives = [
-#     Objective(description="Peak emission", name="Peak", target=520, weight=2),
-#     Objective(description="Peak width", name="FWHM", target="min", weight=1),
-#     Objective(description="Quantum yield", name="PLQY", target="max", weight=1e2),
-# ]
+objectives = [
+    Objective(description="Peak emission", name="Peak", target=520, weight=2),
+    Objective(description="Peak width", name="FWHM", target="min", weight=1),
+    Objective(description="Quantum yield", name="PLQY", target="max", weight=1e2),
+]
 
 
-# # objectives = [
-# #     Objective(name="Peak emission", key="peak_emission", target=525, units="nm"),
-# #     Objective(name="Peak width", key="peak_fwhm", minimize=True, units="nm"),
-# #     Objective(name="Quantum yield", key="plqy"),
-# # ]
+USE_AGENT = True
 
-# USE_AGENT = False
+agent = Agent(dofs=dofs, objectives=objectives, db=None, verbose=True)
+# agent.load_data("~/blop/data/init.h5")
 
-# agent = Agent(dofs=dofs, objectives=objectives, db=None, verbose=True)
-# #agent.load_data("~/blop/data/init.h5")
-
-# filepaths = glob.glob("/home/xf28id2/data/*.json")
-# for fp in np.array(filepaths):
-#     with open(fp, "r") as f:
-#         data = json.load(f)
-#     agent.tell(data=data)
+filepaths = glob.glob("/home/xf28id2/data/*.json")
+for fp in np.array(filepaths):
+    with open(fp, "r") as f:
+        data = json.load(f)
+    agent.tell(data=data)
 
 def print_kafka_messages(beamline_acronym, csv_path=csv_path, 
                          key_height=key_height, height=height, distance=distance, 
                          pump_list=pump_list, sample=sample, precursor_list=precursor_list, 
-                         mixer=mixer, dummy_test=dummy_kafka, plqy=PLQY):
+                         mixer=mixer, dummy_test=dummy_kafka, plqy=PLQY, prefix=prefix):
 
     print(f"Listening for Kafka messages for {beamline_acronym}")
     print(f'Defaul parameters:\n'
@@ -166,7 +161,7 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
         if name == 'stop':
             zmq_single_request(method='queue_stop')
             print('\n*** qsever stop for data export, identification, and fitting ***\n')
-            
+
             print(f"{datetime.datetime.now().isoformat()} documents {name}\n"
                   f"contents: {pprint.pformat(message)}"
             )
@@ -273,11 +268,8 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
                                 optical_property = {'Peak': peak_emission, 'FWHM':fwhm, 'PLQY':plqy}
 
                                 data_for_agent = {'infusion_rate_1': metadata_dic["infuse_rate"][0],
-                                            'infusion_rate_1': metadata_dic["infuse_rate"][1],
-                                'Peak': peak_emission, 
-                                'FWHM':fwhm, 
-                                'PLQY':plqy}
-
+                                                  'infusion_rate_1': metadata_dic["infuse_rate"][1],
+                                                  'Peak': peak_emission, 'FWHM':fwhm, 'PLQY':plqy}
 
 
                                 agent_data = {}
@@ -291,27 +283,27 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
                                 with open(f"/home/xf28id2/data/{data_id}.json", "w") as f:
                                     json.dump(agent_data, f)
 
-                                # print("wrote to ~/data")
+                                print("\nwrote to ~/data")
 
                                 
-                                # ### Three parameters for ML: peak_emission, fwhm, plqy
-                                # # TODO: add ML agent code here
+                                ### Three parameters for ML: peak_emission, fwhm, plqy
+                                # TODO: add ML agent code here
 
-                                # data = {}
+                                data = {}
 
 
-                                # if USE_AGENT:
+                                if USE_AGENT:
 
-                                #     print(f"telling agent {data_for_agent}")
+                                    print(f"\ntelling agent {data_for_agent}")
 
-                                #     agent.tell(data=data_for_agent, append=True)
+                                    agent.tell(data=data_for_agent, append=True)
 
-                                    # if len(agent.table) < 2:
-                                    #     acq_func = "qr"
-                                    # else:
-                                    #     acq_func = "qei"
+                                    if len(agent.table) < 2:
+                                        acq_func = "qr"
+                                    else:
+                                        acq_func = "qei"
 
-                                    # new_points, _ = agent.ask(acq_func, n=1)
+                                    new_points, _ = agent.ask(acq_func, n=1)
 
 
                                 # ...
@@ -381,6 +373,16 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
                     print(f'After event: good_data = {good_data}\n')
                     print(f'After event: finished sample = {finished}\n')
                     zmq_single_request(method='queue_start')
+            
+            elif stream_name == 'fluorescence' and agent_iterate:
+                print('*** Add new points from agent to the fron of qsever ***\n')
+                print(f'*** New points from agent: {new_points} ***\n')
+
+                iterate_queue(new_points, pump_list, target_vol_list, set_target_list, 
+                              syringe_mater_list, mixer, resident_t_ratio, prefix)
+
+                zmq_single_request(method='queue_start')
+    
             else:
                 zmq_single_request(method='queue_start')
 
@@ -404,6 +406,146 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
     except KeyboardInterrupt:
         print('\nExiting Kafka consumer')
         return()
+
+
+
+def iterate_queue(new_points, pump_list, target_vol_list, set_target_list, syringe_mater_list, mixer, resident_t_ratio, prefix):
+    num_iteration = new_points[0].shape[0]
+    set_target_list = [0 for i in range(new_points[0].shape[1])]
+    infuse_rates = new_points[0]
+    sample = de._auto_name_sample(new_points[0], prefix=prefix):
+    for i in range(len(num_iteration)):
+    # for i in range(2): 
+        ## 1. Set i infuese rates
+        for sl, pl, ir, tvl, stl, sml in zip(syringe_list, pump_list, infuse_rates[i], target_vol_list, set_target_list[i], syringe_mater_list):
+            zmq_single_request(method='queue_item_add', 
+                            params={
+                                    'item':{"name":"set_group_infuse2", 
+                                            "args": [[sl], [pl]], 
+                                            "kwargs": {"rate_list":[ir], "target_vol_list":[tvl], "set_target_list":[stl], "syringe_mater_list":[sml]}, 
+                                            "item_type":"plan"
+                                            }, 'user_group':'primary', 'user':'chlin'})
+
+
+        ## 2. Start infuese
+        zmq_single_request(method='queue_item_add', 
+                        params={
+                                'item':{"name":"start_group_infuse", 
+                                        "args": [pump_list, infuse_rates[i]],  
+                                        "item_type":"plan"
+                                        }, 'user_group':'primary', 'user':'chlin'})
+
+
+        ## 3. Wait for equilibrium
+        if dummy_qserver:
+            zmq_single_request(method='queue_item_add', 
+                            params={
+                                    'item':{"name":"sleep_sec_q", 
+                                                "args":[5], 
+                                                "item_type":"plan"
+                                                }, 'user_group':'primary', 'user':'chlin'}) 
+        
+        else:
+            zmq_single_request(method='queue_item_add', 
+                            params={
+                                    'item':{"name":"wait_equilibrium", 
+                                            "args": [pump_list, mixer], 
+                                            "kwargs": {"ratio":resident_t_ratio}, 
+                                            "item_type":"plan"
+                                            }, 'user_group':'primary', 'user':'chlin'})
+
+    
+
+
+        ## 4. Take a fluorescence peak to check reaction
+        zmq_single_request(method='queue_item_add', 
+                        params={
+                                'item':{"name":"take_a_uvvis_csv_q",  
+                                        "kwargs": {'sample_type':sample[i], 
+                                                    'spectrum_type':'Corrected Sample', 'correction_type':'Dark', 
+                                                    'pump_list':pump_list, 'precursor_list':precursor_list, 
+                                                    'mixer':mixer}, 
+                                        "item_type":"plan"
+                                        }, 'user_group':'primary', 'user':'chlin'})
+
+        #### Kafka check data here.
+
+        ## 5. Sleep for 5 seconds for Kafak to check good/bad data
+        zmq_single_request(method='queue_item_add', 
+                        params={
+                                'item':{"name":"sleep_sec_q", 
+                                        "args":[2], 
+                                        "item_type":"plan"
+                                        }, 'user_group':'primary', 'user':'chlin'})
+        
+        
+        
+        
+        
+        ## 6. Start xray_uvvis bundle plan to take real data
+        zmq_single_request(method='queue_item_add', 
+                        params={
+                                'item':{"name":"xray_uvvis_plan", 
+                                        "args":['det', 'qepro'],
+                                        "kwargs": {'num_abs':5, 'num_flu':5,
+                                                    'sample_type':sample[i], 
+                                                    'spectrum_type':'Absorbtion', 'correction_type':'Reference', 
+                                                    'pump_list':pump_list, 'precursor_list':precursor_list, 
+                                                    'mixer':mixer}, 
+                                        "item_type":"plan"
+                                        }, 'user_group':'primary', 'user':'chlin'})
+
+        
+        
+        ######  Kafka analyze data here. #######
+
+        
+        ## 7. Wash the loop and mixer
+        ### 7-1. Stop infuese
+        zmq_single_request(method='queue_item_add', 
+                        params={
+                                'item':{"name":"stop_group", 
+                                        "args": [pump_list],  
+                                        "item_type":"plan"
+                                        }, 'user_group':'primary', 'user':'chlin'})
+
+        
+        ### 7-2. Set 100 ul/min at ZnI2/ZnCl2
+        zmq_single_request(method='queue_item_add', 
+                        params={
+                                'item':{"name":"set_group_infuse2", 
+                                        "args": [[wash_tube[0]], [wash_tube[1]]], 
+                                        "kwargs": {"rate_list":[wash_tube[2]], "target_vol_list":['30 ml'], "set_target_list":[False]}, 
+                                        "item_type":"plan"
+                                        }, 'user_group':'primary', 'user':'chlin'})
+
+
+        ### 7-3. Start to infuse ZnI2/ZnCl2 to wash loop/tube
+        zmq_single_request(method='queue_item_add', 
+                    params={
+                            'item':{"name":"start_group_infuse", 
+                                    "args": [[wash_tube[1]], [wash_tube[2]]],  
+                                    "item_type":"plan"
+                                    }, 'user_group':'primary', 'user':'chlin'})
+
+
+        ### 7-4. Wash loop/tube for 300 seconds
+        zmq_single_request(method='queue_item_add', 
+                        params={
+                                'item':{"name":"sleep_sec_q", 
+                                        "args":[wash_tube[3]], 
+                                        "item_type":"plan"
+                                        }, 'user_group':'primary', 'user':'chlin'})
+
+
+        ### 7-5. stop infuese
+        zmq_single_request(method='queue_item_add', 
+                        params={
+                                'item':{"name":"stop_group", 
+                                        "args": [[wash_tube[1]]],  
+                                        "item_type":"plan"
+                                        }, 'user_group':'primary', 'user':'chlin'})
+
 
 
 if __name__ == "__main__":

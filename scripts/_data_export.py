@@ -24,6 +24,29 @@ def _read_input_xlsx(fn, sheet_name='inputs', skiprows=1, header=None, index_col
     return input_dic
 
 
+## Auto generate sample name with given prefix and infuse_rate
+## If prefix = None, 'Pre00', 'Pre01', 'Pre02', ... will be used.
+def _auto_name_sample(infuse_rates, prefix=None):
+    infuse_rates = np.asarray(infuse_rates)
+
+    if len(infuse_rates.shape) == 1:
+        infuse_rates = infuse_rates.reshape(1, infuse_rates.shape[0])
+
+    if prefix == None:
+        prefix_list = [f'Pre{i:02d}' for i in range(infuse_rates.shape[1])]
+    else:
+        prefix_list = prefix
+
+    sample = []
+    for i in range(infuse_rates.shape[0]):
+        name = ''
+        for j in range(infuse_rates.shape[1]):
+            int_rate = int(round(infuse_rates[i][j], 0))
+            name += f'{prefix_list[j]}_{int_rate:03d}_'
+        sample.append(name[:-1])
+    
+    return sample
+
 
 def _readable_time(unix_time):
     from datetime import datetime
