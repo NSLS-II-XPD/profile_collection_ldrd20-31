@@ -51,8 +51,15 @@ def set_group_infuse(syringe_list, pump_list, target_vol_list=['50 ml', '50 ml']
                                 infuse_unit = rate_unit, syringe_material=m)
 
 
-def set_group_infuse2(syringe_list, pump_list, set_target_list=[True, True], target_vol_list=['50 ml', '50 ml'], 
-                     rate_list = ['100 ul/min', '100 ul/min'], syringe_mater_list=['steel', 'steel']):
+def set_group_infuse2(
+                    syringe_list, 
+                    pump_list, 
+                    set_target_list=[True, True], 
+                    target_vol_list=['50 ml', '50 ml'], 
+                    rate_list = ['100 ul/min', '100 ul/min'], 
+                    syringe_mater_list=['steel', 'steel'], 
+                    rate_unit='ul/min'):
+    
     # print(*pump_list, sep = '\n')
     print('\n')
     for i, j, k, l, m, n in zip(pump_list, target_vol_list, rate_list, syringe_list, syringe_mater_list, set_target_list):
@@ -66,8 +73,18 @@ def set_group_infuse2(syringe_list, pump_list, set_target_list=[True, True], tar
 
         vol = float(j.split(' ')[0])
         vol_unit = j.split(' ')[1]
-        rate = float(k.split(' ')[0])
-        rate_unit = k.split(' ')[1]        
+
+        ## When rate_list[i] is string, in the form of '100 ul/min', get rate unit from spliting str
+        if type(k)==str:
+            rate_unit = k.split(' ')[1]
+            ruc = rate_unit_converter(r0 = rate_unit, r1 = 'ul/min')
+            rate = float(k.split(' ')[0]) * ruc
+        
+        ## When rate_list[i] is float or int, get rate unit from rate_unit
+        elif type(k)==float or type(k)==int:
+            # rate_unit = rate_unit
+            ruc = rate_unit_converter(r0 = rate_unit, r1 = 'ul/min')
+            rate = k * ruc     
         
         if rate == 0.0:
             pass

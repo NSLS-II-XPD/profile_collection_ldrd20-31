@@ -2154,6 +2154,11 @@ existing_plans:
         name: POSITIONAL_OR_KEYWORD
         value: 1
       name: syringe_mater_list
+    - default: '''ul/min'''
+      kind:
+        name: POSITIONAL_OR_KEYWORD
+        value: 1
+      name: rate_unit
     properties:
       is_generator: true
   set_group_withdraw:

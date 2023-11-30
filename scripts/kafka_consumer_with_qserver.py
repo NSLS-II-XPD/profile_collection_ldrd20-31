@@ -60,6 +60,7 @@ wash_tube = input_dic['wash_tube']
 resident_t_ratio = input_dic['resident_t_ratio'][0]
 PLQY = input_dic['PLQY']
 prefix = input_dic['prefix']
+num_uvvis = input_dic['num_uvvis']
 ###################################################################
 ## Add tasks into Qsever
 import _synthesis_queue as sq
@@ -73,9 +74,12 @@ sq.synthesis_queue(
                     precursor_list=precursor_list,
                     mixer=mixer, 
                     resident_t_ratio=resident_t_ratio, 
-                    prefix=prefix, 
+                    prefix=prefix[1:], 
                     sample=sample, 
                     wash_tube=wash_tube, 
+                    name_by_prefix=bool(prefix[0]),  
+					num_abs=num_uvvis[0], 
+					num_flu=num_uvvis[1], 
                     )
 
 # import sys
@@ -133,7 +137,10 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
     import palettable.colorbrewer.diverging as pld
     palette = pld.RdYlGn_4_r
     cmap = palette.mpl_colormap
-    color_idx = np.linspace(0, 1, len(sample))
+    try:
+        color_idx = np.linspace(0, 1, len(prefix))
+    except (IndexError, ValueError):
+        color_idx = np.linspace(0, 1, len(sample))
 
     # plt.figure()
     # def print_message(name, doc):
@@ -289,8 +296,12 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
                                 
                                 optical_property = {'Peak': peak_emission, 'FWHM':fwhm, 'PLQY':plqy}
 
-                                data_for_agent = {'infusion_rate_1': metadata_dic["infuse_rate"][0],
-                                                  'infusion_rate_2': metadata_dic["infuse_rate"][1],
+                                ## Unify the unit of infuse rate as 'ul/min'
+                                ruc_1 = sq.rate_unit_converter(r0 = metadata_dic["infuse_rate_unit"][0], r1 = 'ul/min')
+                                ruc_2 = sq.rate_unit_converter(r0 = metadata_dic["infuse_rate_unit"][1], r1 = 'ul/min')
+                                
+                                data_for_agent = {'infusion_rate_1': metadata_dic["infuse_rate"][0]*ruc_1,
+                                                  'infusion_rate_2': metadata_dic["infuse_rate"][1]*ruc_2,
                                                   'Peak': peak_emission, 'FWHM':fwhm, 'PLQY':plqy}
 
                                 agent_data = {}
@@ -368,22 +379,23 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
                 elif len(good_data) <= 5:
                     print('*** Add another fluorescence scan to the fron of qsever ***\n')
                     
-                    # zmq_single_request(method='queue_item_add', 
-                    #                 params={
-                    #                         'item':{"name":"sleep_sec_q", 
-                    #                                     "args":[2], 
-                    #                                     "item_type":"plan"
-                    #                                 }, 'pos':'front', 'user_group':'primary', 'user':'chlin'})
+                    zmq_single_request(
+                        method='queue_item_add', 
+                        params={
+                            'item':{
+                                "name":"take_a_uvvis_csv_q",  
+                                "kwargs": {
+                                    'sample_type':metadata_dic['sample_type'], 
+                                    'spectrum_type':'Corrected Sample', 
+                                    'correction_type':'Dark', 
+                                    'pump_list':pump_list, 
+                                    'precursor_list':precursor_list, 
+                                    'mixer':mixer}, 
+                                "item_type":"plan"}, 
+                            'pos':'front', 
+                            'user_group':'primary', 
+                            'user':'chlin'})
                     
-                    zmq_single_request(method='queue_item_add', 
-                                    params={
-                                            'item':{"name":"take_a_uvvis_csv_q",  
-                                                "kwargs": {'sample_type':metadata_dic['sample_type'], 
-                                                        'spectrum_type':'Corrected Sample', 'correction_type':'Dark', 
-                                                        'pump_list':pump_list, 'precursor_list':precursor_list, 
-                                                            'mixer':mixer
-                                                            }, "item_type":"plan"
-                                                    }, 'pos':'front', 'user_group':'primary', 'user':'chlin'})
                     zmq_single_request(method='queue_start')
                 
                 elif len(good_data) > 5:

@@ -60,6 +60,7 @@ wash_tube = input_dic['wash_tube']
 resident_t_ratio = input_dic['resident_t_ratio'][0]
 PLQY = input_dic['PLQY']
 prefix = input_dic['prefix']
+num_uvvis = input_dic['num_uvvis']
 ###################################################################
 
 ## Add tasks into Qsever
@@ -74,9 +75,12 @@ sq.synthesis_queue(
                     precursor_list=precursor_list,
                     mixer=mixer, 
                     resident_t_ratio=resident_t_ratio, 
-                    prefix=prefix, 
+                    prefix=prefix[1:], 
                     sample=sample, 
                     wash_tube=wash_tube, 
+                    name_by_prefix=bool(prefix[0]),  
+					num_abs=num_uvvis[0], 
+					num_flu=num_uvvis[1], 
                     )
 
 import sys
@@ -286,8 +290,12 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
                                 
                                 optical_property = {'Peak': peak_emission, 'FWHM':fwhm, 'PLQY':plqy}
 
-                                data_for_agent = {'infusion_rate_1': metadata_dic["infuse_rate"][0],
-                                                  'infusion_rate_2': metadata_dic["infuse_rate"][1],
+                                ## Unify the unit of infuse rate as 'ul/min'
+                                ruc_1 = sq.rate_unit_converter(r0 = metadata_dic["infuse_rate_unit"][0], r1 = 'ul/min')
+                                ruc_2 = sq.rate_unit_converter(r0 = metadata_dic["infuse_rate_unit"][1], r1 = 'ul/min')
+                                
+                                data_for_agent = {'infusion_rate_1': metadata_dic["infuse_rate"][0]*ruc_1,
+                                                  'infusion_rate_2': metadata_dic["infuse_rate"][1]*ruc_2,
                                                   'Peak': peak_emission, 'FWHM':fwhm, 'PLQY':plqy}
 
 
@@ -366,22 +374,23 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
                 elif len(good_data) <= 5:
                     print('*** Add another fluorescence scan to the fron of qsever ***\n')
                     
-                    # zmq_single_request(method='queue_item_add', 
-                    #                 params={
-                    #                         'item':{"name":"sleep_sec_q", 
-                    #                                     "args":[2], 
-                    #                                     "item_type":"plan"
-                    #                                 }, 'pos':'front', 'user_group':'primary', 'user':'chlin'})
+                    zmq_single_request(
+                        method='queue_item_add', 
+                        params={
+                            'item':{
+                                "name":"take_a_uvvis_csv_q",  
+                                "kwargs": {
+                                    'sample_type':metadata_dic['sample_type'], 
+                                    'spectrum_type':'Corrected Sample', 
+                                    'correction_type':'Dark', 
+                                    'pump_list':pump_list, 
+                                    'precursor_list':precursor_list, 
+                                    'mixer':mixer}, 
+                                "item_type":"plan"}, 
+                            'pos':'front', 
+                            'user_group':'primary', 
+                            'user':'chlin'})
                     
-                    zmq_single_request(method='queue_item_add', 
-                                    params={
-                                            'item':{"name":"take_a_uvvis_csv_q",  
-                                                "kwargs": {'sample_type':metadata_dic['sample_type'], 
-                                                        'spectrum_type':'Corrected Sample', 'correction_type':'Dark', 
-                                                        'pump_list':pump_list, 'precursor_list':precursor_list, 
-                                                            'mixer':mixer
-                                                            }, "item_type":"plan"
-                                                    }, 'pos':'front', 'user_group':'primary', 'user':'chlin'})
                     zmq_single_request(method='queue_start')
                 
                 elif len(good_data) > 5:
@@ -397,8 +406,23 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
                 print('*** Add new points from agent to the fron of qsever ***\n')
                 print(f'*** New points from agent: {new_points} ***\n')
 
-                iterate_queue(new_points, pump_list, target_vol_list, set_target_list, 
-                              syringe_mater_list, mixer, resident_t_ratio, prefix)
+                sq.iterate_queue(
+                                new_points=new_points, 
+                                syringe_list=syringe_list, 
+                                pump_list=pump_list, 
+                                target_vol_list=target_vol_list, 
+                                syringe_mater_list=syringe_mater_list, 
+                                precursor_list=precursor_list,
+                                mixer=mixer, 
+                                resident_t_ratio=resident_t_ratio, 
+                                prefix=prefix[1:], 
+                                wash_tube=wash_tube, 
+                                name_by_prefix=prefix[0], 
+                                num_abs=num_uvvis[0], 
+                                num_flu=num_uvvis[1],
+                                new_points_unit='ul/min', 
+                                dummy_qserver=False, 
+                                )
 
                 zmq_single_request(method='queue_start')
     
@@ -425,146 +449,6 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
     except KeyboardInterrupt:
         print('\nExiting Kafka consumer')
         return()
-
-
-
-def iterate_queue(new_points, pump_list, target_vol_list, set_target_list, syringe_mater_list, mixer, resident_t_ratio, prefix):
-    num_iteration = new_points[0].shape[0]
-    set_target_list = [0 for i in range(new_points[0].shape[1])]
-    infuse_rates = new_points[0]
-    sample = de._auto_name_sample(new_points[0], prefix=prefix):
-    for i in range(len(num_iteration)):
-    # for i in range(2): 
-        ## 1. Set i infuese rates
-        for sl, pl, ir, tvl, stl, sml in zip(syringe_list, pump_list, infuse_rates[i], target_vol_list, set_target_list[i], syringe_mater_list):
-            zmq_single_request(method='queue_item_add', 
-                            params={
-                                    'item':{"name":"set_group_infuse2", 
-                                            "args": [[sl], [pl]], 
-                                            "kwargs": {"rate_list":[ir], "target_vol_list":[tvl], "set_target_list":[stl], "syringe_mater_list":[sml]}, 
-                                            "item_type":"plan"
-                                            }, 'user_group':'primary', 'user':'chlin'})
-
-
-        ## 2. Start infuese
-        zmq_single_request(method='queue_item_add', 
-                        params={
-                                'item':{"name":"start_group_infuse", 
-                                        "args": [pump_list, infuse_rates[i]],  
-                                        "item_type":"plan"
-                                        }, 'user_group':'primary', 'user':'chlin'})
-
-
-        ## 3. Wait for equilibrium
-        if dummy_qserver:
-            zmq_single_request(method='queue_item_add', 
-                            params={
-                                    'item':{"name":"sleep_sec_q", 
-                                                "args":[5], 
-                                                "item_type":"plan"
-                                                }, 'user_group':'primary', 'user':'chlin'}) 
-        
-        else:
-            zmq_single_request(method='queue_item_add', 
-                            params={
-                                    'item':{"name":"wait_equilibrium", 
-                                            "args": [pump_list, mixer], 
-                                            "kwargs": {"ratio":resident_t_ratio}, 
-                                            "item_type":"plan"
-                                            }, 'user_group':'primary', 'user':'chlin'})
-
-    
-
-
-        ## 4. Take a fluorescence peak to check reaction
-        zmq_single_request(method='queue_item_add', 
-                        params={
-                                'item':{"name":"take_a_uvvis_csv_q",  
-                                        "kwargs": {'sample_type':sample[i], 
-                                                    'spectrum_type':'Corrected Sample', 'correction_type':'Dark', 
-                                                    'pump_list':pump_list, 'precursor_list':precursor_list, 
-                                                    'mixer':mixer}, 
-                                        "item_type":"plan"
-                                        }, 'user_group':'primary', 'user':'chlin'})
-
-        #### Kafka check data here.
-
-        ## 5. Sleep for 5 seconds for Kafak to check good/bad data
-        zmq_single_request(method='queue_item_add', 
-                        params={
-                                'item':{"name":"sleep_sec_q", 
-                                        "args":[2], 
-                                        "item_type":"plan"
-                                        }, 'user_group':'primary', 'user':'chlin'})
-        
-        
-        
-        
-        
-        ## 6. Start xray_uvvis bundle plan to take real data
-        zmq_single_request(method='queue_item_add', 
-                        params={
-                                'item':{"name":"xray_uvvis_plan", 
-                                        "args":['det', 'qepro'],
-                                        "kwargs": {'num_abs':5, 'num_flu':5,
-                                                    'sample_type':sample[i], 
-                                                    'spectrum_type':'Absorbtion', 'correction_type':'Reference', 
-                                                    'pump_list':pump_list, 'precursor_list':precursor_list, 
-                                                    'mixer':mixer}, 
-                                        "item_type":"plan"
-                                        }, 'user_group':'primary', 'user':'chlin'})
-
-        
-        
-        ######  Kafka analyze data here. #######
-
-        
-        ## 7. Wash the loop and mixer
-        ### 7-1. Stop infuese
-        zmq_single_request(method='queue_item_add', 
-                        params={
-                                'item':{"name":"stop_group", 
-                                        "args": [pump_list],  
-                                        "item_type":"plan"
-                                        }, 'user_group':'primary', 'user':'chlin'})
-
-        
-        ### 7-2. Set 100 ul/min at ZnI2/ZnCl2
-        zmq_single_request(method='queue_item_add', 
-                        params={
-                                'item':{"name":"set_group_infuse2", 
-                                        "args": [[wash_tube[0]], [wash_tube[1]]], 
-                                        "kwargs": {"rate_list":[wash_tube[2]], "target_vol_list":['30 ml'], "set_target_list":[False]}, 
-                                        "item_type":"plan"
-                                        }, 'user_group':'primary', 'user':'chlin'})
-
-
-        ### 7-3. Start to infuse ZnI2/ZnCl2 to wash loop/tube
-        zmq_single_request(method='queue_item_add', 
-                    params={
-                            'item':{"name":"start_group_infuse", 
-                                    "args": [[wash_tube[1]], [wash_tube[2]]],  
-                                    "item_type":"plan"
-                                    }, 'user_group':'primary', 'user':'chlin'})
-
-
-        ### 7-4. Wash loop/tube for 300 seconds
-        zmq_single_request(method='queue_item_add', 
-                        params={
-                                'item':{"name":"sleep_sec_q", 
-                                        "args":[wash_tube[3]], 
-                                        "item_type":"plan"
-                                        }, 'user_group':'primary', 'user':'chlin'})
-
-
-        ### 7-5. stop infuese
-        zmq_single_request(method='queue_item_add', 
-                        params={
-                                'item':{"name":"stop_group", 
-                                        "args": [[wash_tube[1]]],  
-                                        "item_type":"plan"
-                                        }, 'user_group':'primary', 'user':'chlin'})
-
 
 
 if __name__ == "__main__":
