@@ -41,7 +41,7 @@ def _auto_name_sample(infuse_rates, prefix=None):
     for i in range(infuse_rates.shape[0]):
         name = ''
         for j in range(infuse_rates.shape[1]):
-            int_rate = int(round(infuse_rates[i][j], 0))
+            int_rate = int(round(float(infuse_rates[i][j]), 0))
             name += f'{prefix_list[j]}_{int_rate:03d}_'
         sample.append(name[:-1])
     

@@ -82,6 +82,9 @@ sq.synthesis_queue(
 					num_flu=num_uvvis[1], 
                     )
 
+if bool(prefix[0]):
+    sample = sample = de._auto_name_sample(infuse_rates, prefix=prefix[1:])
+
 # import sys
 # sys.path.insert(0, "/home/xf28id2/src/bloptools")
 
@@ -137,10 +140,7 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
     import palettable.colorbrewer.diverging as pld
     palette = pld.RdYlGn_4_r
     cmap = palette.mpl_colormap
-    try:
-        color_idx = np.linspace(0, 1, len(prefix))
-    except (IndexError, ValueError):
-        color_idx = np.linspace(0, 1, len(sample))
+    color_idx = np.linspace(0, 1, len(sample))
 
     # plt.figure()
     # def print_message(name, doc):
@@ -227,6 +227,7 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
                 print(f'\n** export {stream_name} in uid: {uid[0:8]} to ../{os.path.basename(csv_path)} **\n')
                 ## Plot data in dic
                 u = plot_uvvis(qepro_dic, metadata_dic)
+                
                 if len(good_data)==0 and len(bad_data)==0:
                     clear_fig=True
                 else:

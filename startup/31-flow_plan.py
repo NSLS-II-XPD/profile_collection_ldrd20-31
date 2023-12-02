@@ -108,7 +108,8 @@ def set_group_withdraw(syringe_list, pump_list, target_vol_list=['50 ml', '50 ml
 
 def start_group_infuse(pump_list, rate_list):
     for pump, rate in zip(pump_list, rate_list):
-        if float(rate.split(' ')[0]) == 0.0:
+        # if float(rate.split(' ')[0]) == 0.0:
+        if rate == 0.0:
             pass
         else:
             yield from pump.infuse_pump2()

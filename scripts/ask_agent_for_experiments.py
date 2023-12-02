@@ -15,7 +15,7 @@ dofs = [
 ]
 
 objectives = [
-    Objective(description="Peak emission", name="Peak", target=520, weight=2),
+    Objective(description="Peak emission", name="Peak", target=516, weight=2),
     Objective(description="Peak width", name="FWHM", target="min", weight=1),
     Objective(description="Quantum yield", name="PLQY", target="max", weight=1e2),
 ]
@@ -41,4 +41,4 @@ for fp in np.array(filepaths):
     agent.tell(x=x, y=y)
 
 
-print(agent.ask("qei", n=6))
+print(agent.ask("qei", n=1))

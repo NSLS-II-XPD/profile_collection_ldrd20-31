@@ -11,6 +11,7 @@ from scipy import integrate
 import time
 import databroker
 import json
+import glob
 
 import resource
 resource.setrlimit(resource.RLIMIT_NOFILE, (65536, 65536))
@@ -62,7 +63,6 @@ PLQY = input_dic['PLQY']
 prefix = input_dic['prefix']
 num_uvvis = input_dic['num_uvvis']
 ###################################################################
-
 ## Add tasks into Qsever
 import _synthesis_queue as sq
 sq.synthesis_queue(
@@ -83,6 +83,10 @@ sq.synthesis_queue(
 					num_flu=num_uvvis[1], 
                     )
 
+if bool(prefix[0]):
+    sample = sample = de._auto_name_sample(infuse_rates, prefix=prefix[1:])
+print(f'Sample: {sample}')
+
 import sys
 sys.path.insert(0, "/home/xf28id2/src/bloptools")
 
@@ -95,7 +99,7 @@ dofs = [
 ]
 
 objectives = [
-    Objective(description="Peak emission", name="Peak", target=520, weight=2),
+    Objective(description="Peak emission", name="Peak", target=516, weight=2),
     Objective(description="Peak width", name="FWHM", target="min", weight=1),
     Objective(description="Quantum yield", name="PLQY", target="max", weight=1e2),
 ]
@@ -111,7 +115,9 @@ filepaths = glob.glob("/home/xf28id2/data/*.json")
 for fp in np.array(filepaths):
     with open(fp, "r") as f:
         data = json.load(f)
-    agent.tell(data=data)
+    x = {k:[data[k]] for k in agent.dofs.names}
+    y = {k:[data[k]] for k in agent.objectives.names}
+    agent.tell(x=x, y=y)
 
 def print_kafka_messages(beamline_acronym, csv_path=csv_path, 
                          key_height=key_height, height=height, distance=distance, 
@@ -236,9 +242,9 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
                 elif stream_name == 'fluorescence':
                     print(f'\n*** start to identify good/bad data in stream: {stream_name} ***\n')
                     x0, y0, data_id, peak, prop = da._identify_multi_in_kafka(qepro_dic, metadata_dic, key_height=kh, distance=dis, height=hei, dummy_test=dummy_test)
-                    sub_idx = sample.index(metadata_dic['sample_type'])
                     label_uid = f'{uid[0:8]}_{metadata_dic["sample_type"]}'
                     # u.plot_average_good(x0, y0, color=cmap(color_idx[sub_idx]), label=label_uid)
+                    # sub_idx = sample.index(metadata_dic['sample_type'])
                     u.plot_average_good(x0, y0, label=label_uid)
                     
                 ## Pass peak fitting if qepro type is Absorbance
@@ -330,7 +336,8 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
                                     else:
                                         acq_func = "qei"
 
-                                    new_points, _ = agent.ask(acq_func, n=1)
+                                    # new_points, _ = agent.ask(acq_func, n=1)
+                                    new_points = agent.ask(acq_func, n=1)
 
 
                                 # ...
@@ -371,7 +378,7 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
                     zmq_single_request(method='queue_stop')
                     # zmq_single_request(method='re_abort')
                     
-                elif len(good_data) <= 5:
+                elif len(good_data) <= 2:
                     print('*** Add another fluorescence scan to the fron of qsever ***\n')
                     
                     zmq_single_request(
@@ -393,7 +400,7 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
                     
                     zmq_single_request(method='queue_start')
                 
-                elif len(good_data) > 5:
+                elif len(good_data) > 2:
                     print('*** # of good data is enough so go to the next: bundle plan ***\n')
                     bad_data.clear()
                     good_data.clear()
@@ -405,24 +412,45 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
             elif stream_name == 'fluorescence' and agent_iterate:
                 print('*** Add new points from agent to the fron of qsever ***\n')
                 print(f'*** New points from agent: {new_points} ***\n')
+                
+                set_target_list = [0 for i in range(new_points[0].shape[1])]
+                sample = sq._auto_name_sample(new_points[0], prefix=prefix)
+                
+                # sq.synthesis_queue(
+                #                 new_points=new_points, 
+                #                 syringe_list=syringe_list, 
+                #                 pump_list=pump_list, 
+                #                 target_vol_list=target_vol_list, 
+                #                 syringe_mater_list=syringe_mater_list, 
+                #                 precursor_list=precursor_list,
+                #                 mixer=mixer, 
+                #                 resident_t_ratio=resident_t_ratio, 
+                #                 prefix=prefix[1:], 
+                #                 wash_tube=wash_tube, 
+                #                 name_by_prefix=prefix[0], 
+                #                 num_abs=num_uvvis[0], 
+                #                 num_flu=num_uvvis[1],
+                #                 new_points_unit='ul/min', 
+                #                 dummy_qserver=False, 
+                #                 )
 
-                sq.iterate_queue(
-                                new_points=new_points, 
-                                syringe_list=syringe_list, 
-                                pump_list=pump_list, 
-                                target_vol_list=target_vol_list, 
-                                syringe_mater_list=syringe_mater_list, 
-                                precursor_list=precursor_list,
-                                mixer=mixer, 
-                                resident_t_ratio=resident_t_ratio, 
-                                prefix=prefix[1:], 
-                                wash_tube=wash_tube, 
-                                name_by_prefix=prefix[0], 
-                                num_abs=num_uvvis[0], 
-                                num_flu=num_uvvis[1],
-                                new_points_unit='ul/min', 
-                                dummy_qserver=False, 
-                                )
+                sq.synthesis_queue(
+                    syringe_list=syringe_list, 
+                    pump_list=pump_list, 
+                    set_target_list=set_target_list, 
+                    target_vol_list=target_vol_list, 
+                    rate_list = new_points[0], 
+                    syringe_mater_list=syringe_mater_list, 
+                    precursor_list=precursor_list,
+                    mixer=mixer, 
+                    resident_t_ratio=resident_t_ratio, 
+                    prefix=prefix[1:], 
+                    sample=sample, 
+                    wash_tube=wash_tube, 
+                    name_by_prefix=bool(prefix[0]),  
+					num_abs=num_uvvis[0], 
+					num_flu=num_uvvis[1], 
+                    )
 
                 zmq_single_request(method='queue_start')
     

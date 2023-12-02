@@ -28,20 +28,20 @@ def iterate_queue(
 	
 	# num_iteration = new_points[0].shape[0]
 	set_target_list = [0 for i in range(new_points[0].shape[1])]
-	infuse_rates_float = new_points[0]
+	sample = _auto_name_sample(new_points[0], prefix=prefix)
 
-	unit_array = np.full([infuse_rates.shape[0], infuse_rates.shape[1]],' ul/min', dtype='U7')
-	infuse_rates_string = infuse_rates.astype('U25')
-	infuse_rates = np.char.add(infuse_rates_string, unit_array)
-
-	sample = de._auto_name_sample(new_points[0], prefix=prefix)
+	# infuse_rates_float = new_points[0]
+	# unit_array = np.full([infuse_rates_float.shape[0], infuse_rates_float.shape[1]],' ul/min', dtype='U7')
+	# infuse_rates_string = infuse_rates_float.astype('U25')
+	# infuse_rates = np.char.add(infuse_rates_string, unit_array)
+	
 
 	return synthesis_queue(
 						syringe_list=syringe_list, 
 						pump_list=pump_list, 
 						set_target_list=set_target_list, 
 						target_vol_list=target_vol_list, 
-						rate_list=infuse_rates, 
+						rate_list=new_points[0], 
 						syringe_mater_list=syringe_mater_list, 
 						precursor_list=precursor_list,
 						mixer=mixer, 
@@ -81,8 +81,23 @@ def synthesis_queue(
                     ):
 
 	if name_by_prefix:
-		sample = de._auto_name_sample(rate_list, prefix=prefix)
+		sample = _auto_name_sample(rate_list, prefix=prefix)
 	                                                                                 
+	rate_list = np.asarray(rate_list, dtype=np.float32)
+	if len(rate_list.shape) == 1:
+		rate_list = rate_list.reshape(1, rate_list.shape[0])
+		rate_list = rate_list.tolist()
+	else:
+		rate_list = rate_list.tolist()
+
+	set_target_list = np.asarray(set_target_list, dtype=np.int8)
+	if len(set_target_list.shape) == 1:
+		set_target_list = set_target_list.reshape(1, set_target_list.shape[0])
+		set_target_list = set_target_list.tolist()
+	else:
+		set_target_list = set_target_list.tolist()
+		
+
 	for i in range(len(rate_list)):
 		# for i in range(2): 
 		## 1. Set i infuese rates
@@ -94,6 +109,10 @@ def synthesis_queue(
 											set_target_list[i], 
 											syringe_mater_list
 											):
+			
+			# ir = float(ir)
+			# stl = int(stl)
+
 			zmq_single_request(
 				method='queue_item_add', 
 				params={
@@ -298,6 +317,33 @@ def synthesis_queue(
 			'pos': pos, 
 			'user_group':'primary', 
 			'user':'chlin'})
+
+
+
+
+## Auto generate sample name with given prefix and infuse_rate
+## If prefix = None, 'Pre00', 'Pre01', 'Pre02', ... will be used.
+def _auto_name_sample(infuse_rates, prefix=None):
+    infuse_rates = np.asarray(infuse_rates)
+
+    if len(infuse_rates.shape) == 1:
+        infuse_rates = infuse_rates.reshape(1, infuse_rates.shape[0])
+
+    if prefix == None:
+        prefix_list = [f'Pre{i:02d}' for i in range(infuse_rates.shape[1])]
+    else:
+        prefix_list = prefix
+
+    sample = []
+    for i in range(infuse_rates.shape[0]):
+        name = ''
+        for j in range(infuse_rates.shape[1]):
+            int_rate = int(round(float(infuse_rates[i][j]), 0))
+            name += f'{prefix_list[j]}_{int_rate:03d}_'
+        sample.append(name[:-1])
+    
+    return sample
+
 
 
 
