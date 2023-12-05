@@ -58,7 +58,7 @@ infuse_rates = input_dic['infuse_rates']
 sample = input_dic['sample']
 mixer = input_dic['mixer']
 wash_tube = input_dic['wash_tube']
-resident_t_ratio = input_dic['resident_t_ratio'][0]
+resident_t_ratio = input_dic['resident_t_ratio']
 PLQY = input_dic['PLQY']
 prefix = input_dic['prefix']
 num_uvvis = input_dic['num_uvvis']
@@ -144,7 +144,7 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
     # plt.figure()
     # def print_message(name, doc):
     def print_message(consumer, doctype, doc, 
-                      bad_data = [], good_data = [], finished = []):
+                      bad_data = [], good_data = [], check_abs365 = False, finished = []):
                     #   pump_list=pump_list, sample=sample, precursor_list=precursor_list, 
                     #   mixer=mixer, dummy_test=dummy_test):
         name, message = doc
@@ -238,6 +238,22 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
                     print(f'\n*** start to identify good/bad data in stream: {stream_name} ***\n')
                     x0, y0, data_id, peak, prop = da._identify_one_in_kafka(qepro_dic, metadata_dic, key_height=kh, distance=dis, height=hei, dummy_test=dummy_test)
                 
+                
+                ## Get absorbance value at 365 nm
+                elif stream_name == 'absorbance':
+                    print(f'\n*** start to check absorbance at 365b nm in stream: {stream_name} is positive or not***\n')
+                    abs_array = qepro_dic['QEPro_output'][1:].mean(axis=0)
+                    wavelength = qepro_dic['QEPro_x_axis'][0]
+                    idx_365, _ = da.find_nearest(wavelength, PLQY[2])
+                    absorbance_365 = abs_array[idx_365]
+                    ## break for loop, clear good_data, and let steam_name = 'primary' if absoebance_3655 < 0
+                    if absorbance_365 < 0:
+                        bad_data.clear()
+                        good_data.clear()
+                        stream_name = 'primary'
+                        break
+                
+                
                 ## Avergae scans in 'fluorescence' and idenfify good/bad
                 elif stream_name == 'fluorescence':
                     print(f'\n*** start to identify good/bad data in stream: {stream_name} ***\n')
@@ -247,118 +263,116 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
                     # sub_idx = sample.index(metadata_dic['sample_type'])
                     u.plot_average_good(x0, y0, label=label_uid)
                     
-                ## Pass peak fitting if qepro type is Absorbance
+                ## Skip peak fitting if qepro type is absorbance
                 if qepro_dic['QEPro_spectrum_type'][0] == 3:  
                     print(f"\n*** No need to carry out fitting for {stream_name} in uid: {uid[:8]} ***\n")
-                
+
                 else: 
-                
-                    try:
-                        data_id, peak, prop
-                        ## for a good data, type(peak) will be a np.array and type(prop) will be a dic
-                        ## fit the good data, export/plotting fitting results
-                        ## append data_id into good_data or bad_data for calculate numbers
-                        if (type(peak) is np.ndarray) and (type(prop) is dict):
-                            x, y, p, f, popt = da._fitting_in_kafka(x0, y0, data_id, peak, prop, dummy_test=dummy_test)                       
-                            
-                            if 'gauss' in f.__name__:
-                                constant = 2.355
-                            else:
-                                constant = 1
-
-                            peak_list = []
-                            fwhm_list = []
-                            for i in range(int(len(popt)/3)):
-                                peak_list.append(popt[i*3+1])
-                                fwhm_list.append(popt[i*3+2]*constant)
-                            
-                            peak_emission_id = np.argmax(np.asarray(peak_list))
-                            peak_emission = peak_list[peak_emission_id]
-                            fwhm = fwhm_list[peak_emission_id]
-
-                            ## Calculate PLQY for fluorescence stream
-                            if (stream_name == 'fluorescence') and (PLQY[0]==1):
-                                PL_integral_s = integrate.simpson(y,x)
-                                
-                                ## Find absorbance at 365 nm from absorbance stream
-                                q_dic, m_dic = de.read_qepro_by_stream(uid, stream_name='absorbance', data_agent='tiled')
-                                abs_array = q_dic['QEPro_output'][1:].mean(axis=0)
-                                wavelength = q_dic['QEPro_x_axis'][0]
-                                idx1, _ = da.find_nearest(wavelength, PLQY[2])
-                                absorbance_s = abs_array[idx1]
-
-                                if PLQY[1] == 'fluorescein':
-                                    plqy = da.plqy_fluorescein(absorbance_s, PL_integral_s, 1.506, *PLQY[3:])
-                                else:
-                                    plqy = da.plqy_quinine(absorbance_s, PL_integral_s, 1.506, *PLQY[3:])
-
-                                plqy_dic = {'PL_integral':PL_integral_s, 'Absorbance_365':absorbance_s, 'plqy': plqy}
-                                
-                                optical_property = {'Peak': peak_emission, 'FWHM':fwhm, 'PLQY':plqy}
-
-                                ## Unify the unit of infuse rate as 'ul/min'
-                                ruc_1 = sq.rate_unit_converter(r0 = metadata_dic["infuse_rate_unit"][0], r1 = 'ul/min')
-                                ruc_2 = sq.rate_unit_converter(r0 = metadata_dic["infuse_rate_unit"][1], r1 = 'ul/min')
-                                
-                                data_for_agent = {'infusion_rate_1': metadata_dic["infuse_rate"][0]*ruc_1,
-                                                  'infusion_rate_2': metadata_dic["infuse_rate"][1]*ruc_2,
-                                                  'Peak': peak_emission, 'FWHM':fwhm, 'PLQY':plqy}
-
-
-                                agent_data = {}
-
-                                agent_data.update(optical_property)
-                                agent_data.update(metadata_dic)
-
-                                agent_data["infusion_rate_1"] = metadata_dic["infuse_rate"][0]
-                                agent_data["infusion_rate_2"] = metadata_dic["infuse_rate"][1]
-
-                                with open(f"/home/xf28id2/data/{data_id}.json", "w") as f:
-                                    json.dump(agent_data, f)
-
-                                print("\nwrote to ~/data")
-
-                                
-                                ### Three parameters for ML: peak_emission, fwhm, plqy
-                                # TODO: add ML agent code here
-
-                                data = {}
-
-
-                                if USE_AGENT:
-
-                                    print(f"\ntelling agent {data_for_agent}")
-
-                                    agent.tell(data=data_for_agent, append=True)
-
-                                    if len(agent.table) < 2:
-                                        acq_func = "qr"
-                                    else:
-                                        acq_func = "qei"
-
-                                    # new_points, _ = agent.ask(acq_func, n=1)
-                                    new_points = agent.ask(acq_func, n=1)
-
-
-                                # ...
-
-                            else:
-                                plqy_dic = None
-                                optical_property = None
-                            
-                            ff={'fit_function': f, 'curve_fit': popt}
-                            de.dic_to_csv_for_stream(csv_path, qepro_dic, metadata_dic, stream_name=stream_name, fitting=ff, plqy_dic=plqy_dic)
-                            print(f'\n** export fitting results complete**\n')
-                            
-                            u.plot_peak_fit(x, y, f, popt, peak=p, fill_between=True)
-                            print(f'\n** plot fitting results complete**\n')
-                            if stream_name == 'primary':
-                                good_data.append(data_id)
+                    ## for a good data, type(peak) will be a np.array and type(prop) will be a dic
+                    ## fit the good data, export/plotting fitting results
+                    ## append data_id into good_data or bad_data for calculate numbers
+                    if (type(peak) is np.ndarray) and (type(prop) is dict):
+                        x, y, p, f_fit, popt = da._fitting_in_kafka(x0, y0, data_id, peak, prop, dummy_test=dummy_test)                       
                         
-                        elif peak==[] and prop==[]:
-                            bad_data.append(data_id)
+                        if 'gauss' in f_fit.__name__:
+                            constant = 2.355
+                        else:
+                            constant = 1
 
-                    except (NameError, TypeError):
+                        intensity_list = []
+                        peak_list = []
+                        fwhm_list = []
+                        for i in range(int(len(popt)/3)):
+                            intensity_list.append(popt[i*3+0])
+                            peak_list.append(popt[i*3+1])
+                            fwhm_list.append(popt[i*3+2]*constant)
+                        
+                        peak_emission_id = np.argmax(np.asarray(intensity_list))
+                        peak_emission = peak_list[peak_emission_id]
+                        fwhm = fwhm_list[peak_emission_id]
+
+                        ## Calculate PLQY for fluorescence stream
+                        if (stream_name == 'fluorescence') and (PLQY[0]==1):
+                            PL_integral_s = integrate.simpson(y,x)
+                            
+                            ## Find absorbance at 365 nm from absorbance stream
+                            q_dic, m_dic = de.read_qepro_by_stream(uid, stream_name='absorbance', data_agent='tiled')
+                            abs_array = q_dic['QEPro_output'][1:].mean(axis=0)
+                            wavelength = q_dic['QEPro_x_axis'][0]
+                            idx1, _ = da.find_nearest(wavelength, PLQY[2])
+                            absorbance_s = abs_array[idx1]
+
+                            if PLQY[1] == 'fluorescein':
+                                plqy = da.plqy_fluorescein(absorbance_s, PL_integral_s, 1.506, *PLQY[3:])
+                            else:
+                                plqy = da.plqy_quinine(absorbance_s, PL_integral_s, 1.506, *PLQY[3:])
+
+                            plqy_dic = {'PL_integral':PL_integral_s, 'Absorbance_365':absorbance_s, 'plqy': plqy}
+                            
+                            optical_property = {'Peak': peak_emission, 'FWHM':fwhm, 'PLQY':plqy}
+
+                            ## Unify the unit of infuse rate as 'ul/min'
+                            ruc_1 = sq.rate_unit_converter(r0 = metadata_dic["infuse_rate_unit"][0], r1 = 'ul/min')
+                            ruc_2 = sq.rate_unit_converter(r0 = metadata_dic["infuse_rate_unit"][1], r1 = 'ul/min')
+                            
+                            data_for_agent = {'infusion_rate_1': metadata_dic["infuse_rate"][0]*ruc_1,
+                                                'infusion_rate_2': metadata_dic["infuse_rate"][1]*ruc_2,
+                                                'Peak': peak_emission, 'FWHM':fwhm, 'PLQY':plqy}
+
+
+                            agent_data = {}
+
+                            agent_data.update(optical_property)
+                            agent_data.update(metadata_dic)
+
+                            agent_data["infusion_rate_1"] = metadata_dic["infuse_rate"][0]
+                            agent_data["infusion_rate_2"] = metadata_dic["infuse_rate"][1]
+
+                            with open(f"/home/xf28id2/data/{data_id}.json", "w") as f:
+                                json.dump(agent_data, f)
+
+                            print("\nwrote to ~/data")
+
+                            
+                            ### Three parameters for ML: peak_emission, fwhm, plqy
+                            # TODO: add ML agent code here
+
+                            data = {}
+
+
+                            if USE_AGENT:
+
+                                print(f"\ntelling agent {data_for_agent}")
+
+                                agent.tell(data=data_for_agent, append=True)
+
+                                if len(agent.table) < 2:
+                                    acq_func = "qr"
+                                else:
+                                    acq_func = "qei"
+
+                                # new_points, _ = agent.ask(acq_func, n=1)
+                                new_points = agent.ask(acq_func, n=1)
+
+
+                            # ...
+
+                        else:
+                            plqy_dic = None
+                            optical_property = None
+                        
+                        print(f'\nFitting function: {f_fit}\n')
+                        ff={'fit_function': f_fit, 'curve_fit': popt}
+                        de.dic_to_csv_for_stream(csv_path, qepro_dic, metadata_dic, stream_name=stream_name, fitting=ff, plqy_dic=plqy_dic)
+                        print(f'\n** export fitting results complete**\n')
+                        
+                        u.plot_peak_fit(x, y, f_fit, popt, peak=p, fill_between=True)
+                        print(f'\n** plot fitting results complete**\n')
+                        if stream_name == 'primary':
+                            good_data.append(data_id)
+                    
+                    elif peak==[] and prop==[]:
+                        bad_data.append(data_id)
                         print(f"\n*** No need to carry out fitting for {stream_name} in uid: {uid[:8]} ***\n")
                         print(f"\n*** since {stream_name} in uid: {uid[:8]} is a bad data.***\n")
             
@@ -373,14 +387,14 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
             
             ## Depend on # of good/bad data, add items into queue item or stop 
             if stream_name == 'primary':     
-                if len(bad_data) > 5:
+                if len(bad_data) > 3:
                     print('*** qsever aborted due to too many bad scans, please check setup ***\n')
                     zmq_single_request(method='queue_stop')
                     # zmq_single_request(method='re_abort')
                     
                 elif len(good_data) <= 2:
-                    print('*** Add another fluorescence scan to the fron of qsever ***\n')
-                    
+                    print('*** Add another fluorescence and absorption scan to the fron of qsever ***\n')
+
                     zmq_single_request(
                         method='queue_item_add', 
                         params={
@@ -399,7 +413,7 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
                             'user':'chlin'})
                     
                     zmq_single_request(method='queue_start')
-                
+
                 elif len(good_data) > 2:
                     print('*** # of good data is enough so go to the next: bundle plan ***\n')
                     bad_data.clear()
@@ -415,24 +429,6 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
                 
                 set_target_list = [0 for i in range(new_points[0].shape[1])]
                 sample = sq._auto_name_sample(new_points[0], prefix=prefix)
-                
-                # sq.synthesis_queue(
-                #                 new_points=new_points, 
-                #                 syringe_list=syringe_list, 
-                #                 pump_list=pump_list, 
-                #                 target_vol_list=target_vol_list, 
-                #                 syringe_mater_list=syringe_mater_list, 
-                #                 precursor_list=precursor_list,
-                #                 mixer=mixer, 
-                #                 resident_t_ratio=resident_t_ratio, 
-                #                 prefix=prefix[1:], 
-                #                 wash_tube=wash_tube, 
-                #                 name_by_prefix=prefix[0], 
-                #                 num_abs=num_uvvis[0], 
-                #                 num_flu=num_uvvis[1],
-                #                 new_points_unit='ul/min', 
-                #                 dummy_qserver=False, 
-                #                 )
 
                 sq.synthesis_queue(
                     syringe_list=syringe_list, 
@@ -450,6 +446,7 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
                     name_by_prefix=bool(prefix[0]),  
 					num_abs=num_uvvis[0], 
 					num_flu=num_uvvis[1], 
+                    is_iteration=True, 
                     )
 
                 zmq_single_request(method='queue_start')

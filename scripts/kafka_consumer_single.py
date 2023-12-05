@@ -209,6 +209,22 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
                     print(f'\n*** start to identify good/bad data in stream: {stream_name} ***\n')
                     x0, y0, data_id, peak, prop = da._identify_one_in_kafka(qepro_dic, metadata_dic, key_height=kh, distance=dis, height=hei, dummy_test=dummy_test)
                 
+                
+                ## Get absorbance value at 365 nm
+                elif stream_name == 'absorbance':
+                    print(f'\n*** start to check absorbance at 365b nm in stream: {stream_name} is positive or not***\n')
+                    abs_array = qepro_dic['QEPro_output'][1:].mean(axis=0)
+                    wavelength = qepro_dic['QEPro_x_axis'][0]
+                    idx_365, _ = da.find_nearest(wavelength, PLQY[2])
+                    absorbance_365 = abs_array[idx_365]
+                    ## break for loop, clear good_data, and let steam_name = 'primary' if absoebance_3655 < 0
+                    if absorbance_365 < 0:
+                        bad_data.clear()
+                        good_data.clear()
+                        stream_name = 'primary'
+                        break
+                         
+                
                 ## Avergae scans in 'fluorescence' and idenfify good/bad
                 elif stream_name == 'fluorescence':
                     print(f'\n*** start to identify good/bad data in stream: {stream_name} ***\n')
@@ -220,115 +236,124 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
                     # print(f'peak: {peak}\n')
                     # print(f'prop: {prop}\n')
                     
-                ## Pass peak fitting if qepro type is Absorbance
+                ## Skip peak fitting if qepro type is Absorbance
                 if qepro_dic['QEPro_spectrum_type'][0] == 3:  
                     print(f"\n*** No need to carry out fitting for {stream_name} in uid: {uid[:8]} ***\n")
+
+
+                ## break for loop, clear good_data, and let steam_name = 'primary' if absoebance_3655 < 0
+                elif absorbance_365 < 0:
+                    bad_data.clear()
+                    good_data.clear()
+                    stream_name = 'primary'
+                    break
                       
                 else: 
-                    try:
-                        data_id, peak, prop
-                        ## for a good data, type(peak) will be a np.array and type(prop) will be a dic
-                        ## fit the good data, export/plotting fitting results
-                        ## append data_id into good_data or bad_data for calculate numbers
-                        if (type(peak) is np.ndarray) and (type(prop) is dict):
-                            x, y, p, f, popt = da._fitting_in_kafka(x0, y0, data_id, peak, prop, dummy_test=dummy_test)                       
+                    ## for a good data, type(peak) will be a np.array and type(prop) will be a dic
+                    ## fit the good data, export/plotting fitting results
+                    ## append data_id into good_data or bad_data for calculate numbers
+                    if (type(peak) is np.ndarray) and (type(prop) is dict):
+                        x, y, p, f_fit, popt = da._fitting_in_kafka(x0, y0, data_id, peak, prop, dummy_test=dummy_test)                       
+                        
+                        if 'gauss' in f_fit.__name__:
+                            constant = 2.355
+                        else:
+                            constant = 1
+
+                        intensity_list = []
+                        peak_list = []
+                        fwhm_list = []
+                        for i in range(int(len(popt)/3)):
+                            intensity_list.append(popt[i*3+0])
+                            peak_list.append(popt[i*3+1])
+                            fwhm_list.append(popt[i*3+2]*constant)
+                        
+                        peak_emission_id = np.argmax(np.asarray(intensity_list))
+                        peak_emission = peak_list[peak_emission_id]
+                        fwhm = fwhm_list[peak_emission_id]
+
+                        ## Calculate PLQY for fluorescence stream
+                        if (stream_name == 'fluorescence') and (PLQY[0]==1):
+                            PL_integral_s = integrate.simpson(y,x)
                             
-                            if 'gauss' in f.__name__:
-                                constant = 2.355
+                            ## Find absorbance at 365 nm from absorbance stream
+                            q_dic, m_dic = de.read_qepro_by_stream(uid, stream_name='absorbance', data_agent='tiled')
+                            abs_array = q_dic['QEPro_output'][1:].mean(axis=0)
+                            wavelength = q_dic['QEPro_x_axis'][0]
+                            idx1, _ = da.find_nearest(wavelength, PLQY[2])
+                            absorbance_s = abs_array[idx1]
+
+                            if PLQY[1] == 'fluorescein':
+                                plqy = da.plqy_fluorescein(absorbance_s, PL_integral_s, 1.506, *PLQY[3:])
                             else:
-                                constant = 1
+                                plqy = da.plqy_quinine(absorbance_s, PL_integral_s, 1.506, *PLQY[3:])
 
-                            peak_list = []
-                            fwhm_list = []
-                            for i in range(int(len(popt)/3)):
-                                peak_list.append(popt[i*3+1])
-                                fwhm_list.append(popt[i*3+2]*constant)
+                            plqy_dic = {'PL_integral':PL_integral_s, 'Absorbance_365':absorbance_s, 'plqy': plqy}
+                            print(f'plqy_dic: {plqy_dic}\n')
+
+                            optical_property = {'Peak': peak_emission, 'FWHM':fwhm, 'PLQY':plqy}
+
+                            agent_data = {}
+
+                            agent_data.update(optical_property)
+                            agent_data.update(metadata_dic)
+
+                            agent_data["infusion_rate_1"] = metadata_dic["infuse_rate"][0]
+                            agent_data["infusion_rate_2"] = metadata_dic["infuse_rate"][1]
+
+                            with open(f"/home/xf28id2/data/{data_id}.json", "w") as f:
+                                json.dump(agent_data, f)
+
+                            print("wrote to ~/data")
+
                             
-                            peak_emission_id = np.argmax(np.asarray(peak_list))
-                            peak_emission = peak_list[peak_emission_id]
-                            fwhm = fwhm_list[peak_emission_id]
+                            ### Three parameters for ML: peak_emission, fwhm, plqy
+                            # TODO: add ML agent code here
 
-                            ## Calculate PLQY for fluorescence stream
-                            if (stream_name == 'fluorescence') and (PLQY[0]==1):
-                                PL_integral_s = integrate.simpson(y,x)
+
+                            if USE_AGENT:
+
+                                table = pd.DataFrame(index=[0])
+
+                                # DOFs
+                                table.loc[0, "infusion_rate_1"] = metadata_dic["infuse_rate"][0]
+                                table.loc[0, "infusion_rate_2"] = metadata_dic["infuse_rate"][1]
+                                # table.loc[0, "infusion_rate_3"] = metadata_dic["infuse_rate"][2]
+
+
+                                # Objectives
+                                table.loc[0, "peak_emission"] = peak_emission
+                                table.loc[0, "peak_fwhm"] = fwhm
+                                table.loc[0, "plqy"] = plqy
                                 
-                                ## Find absorbance at 365 nm from absorbance stream
-                                q_dic, m_dic = de.read_qepro_by_stream(uid, stream_name='absorbance', data_agent='tiled')
-                                abs_array = q_dic['QEPro_output'][1:].mean(axis=0)
-                                wavelength = q_dic['QEPro_x_axis'][0]
-                                idx1, _ = da.find_nearest(wavelength, PLQY[2])
-                                absorbance_s = abs_array[idx1]
 
-                                if PLQY[1] == 'fluorescein':
-                                    plqy = da.plqy_fluorescein(absorbance_s, PL_integral_s, 1.506, *PLQY[3:])
+                                agent.tell(table, append=True)
+
+                                if len(agent.table) < 2:
+                                    acq_func = "qr"
                                 else:
-                                    plqy = da.plqy_quinine(absorbance_s, PL_integral_s, 1.506, *PLQY[3:])
+                                    acq_func = "qei"
 
-                                plqy_dic = {'PL_integral':PL_integral_s, 'Absorbance_365':absorbance_s, 'plqy': plqy}
-                                print(f'plqy_dic: {plqy_dic}\n')
-
-                                optical_property = {'Peak': peak_emission, 'FWHM':fwhm, 'PLQY':plqy}
-
-                                agent_data = {}
-
-                                agent_data.update(optical_property)
-                                agent_data.update(metadata_dic)
-
-                                agent_data["infusion_rate_1"] = metadata_dic["infuse_rate"][0]
-                                agent_data["infusion_rate_2"] = metadata_dic["infuse_rate"][1]
-
-                                with open(f"/home/xf28id2/data/{data_id}.json", "w") as f:
-                                    json.dump(agent_data, f)
-
-                                print("wrote to ~/data")
-
-                                
-                                ### Three parameters for ML: peak_emission, fwhm, plqy
-                                # TODO: add ML agent code here
-
-
-                                if USE_AGENT:
-
-                                    table = pd.DataFrame(index=[0])
-
-                                    # DOFs
-                                    table.loc[0, "infusion_rate_1"] = metadata_dic["infuse_rate"][0]
-                                    table.loc[0, "infusion_rate_2"] = metadata_dic["infuse_rate"][1]
-                                    # table.loc[0, "infusion_rate_3"] = metadata_dic["infuse_rate"][2]
-
-
-                                    # Objectives
-                                    table.loc[0, "peak_emission"] = peak_emission
-                                    table.loc[0, "peak_fwhm"] = fwhm
-                                    table.loc[0, "plqy"] = plqy
-                                    
-
-                                    agent.tell(table, append=True)
-
-                                    if len(agent.table) < 2:
-                                        acq_func = "qr"
-                                    else:
-                                        acq_func = "qei"
-
-                                    new_points, _ = agent.ask(acq_func, n=1)
+                                new_points, _ = agent.ask(acq_func, n=1)
 
 
 
 
-                                # ...
+                            # ...
 
-                            else:
-                                plqy_dic = None
-                                optical_property = None
-                            
-                            ff={'fit_function': f, 'curve_fit': popt}
-                            de.dic_to_csv_for_stream(csv_path, qepro_dic, metadata_dic, stream_name=stream_name, fitting=ff, plqy_dic=plqy_dic)
-                            print(f'\n** export fitting results complete**\n')
-                            
-                            u.plot_peak_fit(x, y, f, popt, peak=p, fill_between=True)
-                            print(f'\n** plot fitting results complete**\n')
+                        else:
+                            plqy_dic = None
+                            optical_property = None
+                        
+                        print(f'\nFitting function: {f_fit}\n')
+                        ff={'fit_function': f_fit, 'curve_fit': popt}
+                        de.dic_to_csv_for_stream(csv_path, qepro_dic, metadata_dic, stream_name=stream_name, fitting=ff, plqy_dic=plqy_dic)
+                        print(f'\n** export fitting results complete**\n')
+                        if stream_name == 'primary':
+                            good_data.append(data_id)
                     
-                    except (NameError, TypeError):
+                    elif peak==[] and prop==[]:
+                        bad_data.append(data_id)
                         print(f"\n*** No need to carry out fitting for {stream_name} in uid: {uid[:8]} ***\n")
                         print(f"\n*** since {stream_name} in uid: {uid[:8]} is a bad data.***\n")
             
