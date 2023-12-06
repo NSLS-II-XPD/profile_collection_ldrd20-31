@@ -253,7 +253,12 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
                     ## fit the good data, export/plotting fitting results
                     ## append data_id into good_data or bad_data for calculate numbers
                     if (type(peak) is np.ndarray) and (type(prop) is dict):
-                        x, y, p, f_fit, popt = da._fitting_in_kafka(x0, y0, data_id, peak, prop, dummy_test=dummy_test)                       
+                        x, y, p, f_fit, popt = da._fitting_in_kafka(x0, y0, data_id, peak, prop, dummy_test=dummy_test)     
+
+                        fitted_y = f_fit(x, *popt)
+                        r_2 = da.r_square(x, y, fitted_y)               
+
+                        metadata_dic["r_2"] = r_2                  
                         
                         if 'gauss' in f_fit.__name__:
                             constant = 2.355

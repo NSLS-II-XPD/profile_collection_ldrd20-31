@@ -15,9 +15,9 @@ dofs = [
 ]
 
 objectives = [
-    Objective(description="Peak emission", name="Peak", target=516, weight=2),
-    Objective(description="Peak width", name="FWHM", target="min", weight=1),
-    Objective(description="Quantum yield", name="PLQY", target="max", weight=1e2),
+    Objective(description="Peak emission", name="Peak", target=516, weight=2, min_snr=2),
+    Objective(description="Peak width", name="FWHM", target="min", weight=1, min_snr=2),
+    Objective(description="Quantum yield", name="PLQY", target="max", weight=1e2, min_snr=2),
 ]
 
 
@@ -32,13 +32,19 @@ USE_AGENT = False
 agent = Agent(dofs=dofs, objectives=objectives, db=None, verbose=True)
 #agent.load_data("~/blop/data/init.h5")
 
+metadata_keys = ["time", "uid", "r_2"]
+
 filepaths = glob.glob("/home/xf28id2/data/*.json")
 for fp in np.array(filepaths):
     with open(fp, "r") as f:
         data = json.load(f)
+
+
     x = {k:[data[k]] for k in agent.dofs.names}
     y = {k:[data[k]] for k in agent.objectives.names}
-    agent.tell(x=x, y=y)
+    metadata = {k:[data.get(k, None)] for k in metadata_keys}
+    agent.tell(x=x, y=y, metadata=metadata)
 
+agent._construct_models()
 
 print(agent.ask("qei", n=1))

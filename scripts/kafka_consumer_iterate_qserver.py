@@ -95,13 +95,13 @@ from bloptools.bayesian import Agent, DOF, Objective
 dofs = [
     DOF(description="CsPb(oleate)3", name="infusion_rate_1", limits=(10, 170)),
     DOF(description="TOABr", name="infusion_rate_2", limits=(10, 170)),
-    # DOF(name="infusion_rate_3", limits=(1500, 2000)),
+    # DOF(description="ZnI2", name="infusion_rate_3", limits=(10, 170)),
 ]
 
 objectives = [
-    Objective(description="Peak emission", name="Peak", target=516, weight=2),
-    Objective(description="Peak width", name="FWHM", target="min", weight=1),
-    Objective(description="Quantum yield", name="PLQY", target="max", weight=1e2),
+    Objective(description="Peak emission", name="Peak", target=516, min_snr=2, weight=1e-1),
+    Objective(description="Peak width", name="FWHM", target="min", min_snr=2, weight=1, log=True),
+    Objective(description="Quantum yield", name="PLQY", target="max", min_snr=2, weight=1, log=True),
 ]
 
 
@@ -109,15 +109,24 @@ USE_AGENT = True
 agent_iterate = True
 
 agent = Agent(dofs=dofs, objectives=objectives, db=None, verbose=True)
-# agent.load_data("~/blop/data/init.h5")
+
+metadata_keys = ["time", "uid", "r_2"]
 
 filepaths = glob.glob("/home/xf28id2/data/*.json")
 for fp in np.array(filepaths):
     with open(fp, "r") as f:
         data = json.load(f)
+
+    if not data.get("r_2", 0) > 0.9:
+        continue
+
     x = {k:[data[k]] for k in agent.dofs.names}
     y = {k:[data[k]] for k in agent.objectives.names}
-    agent.tell(x=x, y=y)
+    metadata = {k:[data.get(k, None)] for k in metadata_keys}
+    agent.tell(x=x, y=y, metadata=metadata)
+
+agent._construct_models()
+
 
 def print_kafka_messages(beamline_acronym, csv_path=csv_path, 
                          key_height=key_height, height=height, distance=distance, 
@@ -246,12 +255,13 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
                     wavelength = qepro_dic['QEPro_x_axis'][0]
                     idx_365, _ = da.find_nearest(wavelength, PLQY[2])
                     absorbance_365 = abs_array[idx_365]
-                    ## break for loop, clear good_data, and let steam_name = 'primary' if absoebance_3655 < 0
-                    if absorbance_365 < 0:
-                        bad_data.clear()
-                        good_data.clear()
-                        stream_name = 'primary'
-                        break
+                    # ## break for loop, clear good_data, and let steam_name = 'primary' if absoebance_3655 < 0
+                    # if absorbance_365 < 0:
+                    #     bad_data.clear()
+                    #     good_data.clear()
+                    #     new_points = agent.ask("qei", n=1)
+                    #     stream_name = 'fluorescence'
+                    #     break
                 
                 
                 ## Avergae scans in 'fluorescence' and idenfify good/bad
@@ -272,7 +282,13 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
                     ## fit the good data, export/plotting fitting results
                     ## append data_id into good_data or bad_data for calculate numbers
                     if (type(peak) is np.ndarray) and (type(prop) is dict):
-                        x, y, p, f_fit, popt = da._fitting_in_kafka(x0, y0, data_id, peak, prop, dummy_test=dummy_test)                       
+                        x, y, p, f_fit, popt = da._fitting_in_kafka(x0, y0, data_id, peak, prop, dummy_test=dummy_test)    
+
+                        
+                        fitted_y = f_fit(x, *popt)
+                        r_2 = da.r_square(x, y, fitted_y)               
+
+                        metadata_dic["r_2"] = r_2                                   
                         
                         if 'gauss' in f_fit.__name__:
                             constant = 2.355
@@ -307,26 +323,31 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
                             else:
                                 plqy = da.plqy_quinine(absorbance_s, PL_integral_s, 1.506, *PLQY[3:])
 
+                            if absorbance_s < 0:
+                                plqy = 0.000001
+                            
                             plqy_dic = {'PL_integral':PL_integral_s, 'Absorbance_365':absorbance_s, 'plqy': plqy}
                             
                             optical_property = {'Peak': peak_emission, 'FWHM':fwhm, 'PLQY':plqy}
 
                             ## Unify the unit of infuse rate as 'ul/min'
-                            ruc_1 = sq.rate_unit_converter(r0 = metadata_dic["infuse_rate_unit"][0], r1 = 'ul/min')
-                            ruc_2 = sq.rate_unit_converter(r0 = metadata_dic["infuse_rate_unit"][1], r1 = 'ul/min')
+                            ruc_0 = sq.rate_unit_converter(r0 = metadata_dic["infuse_rate_unit"][0], r1 = 'ul/min')
+                            ruc_1 = sq.rate_unit_converter(r0 = metadata_dic["infuse_rate_unit"][1], r1 = 'ul/min')
+                            # ruc_2 = sq.rate_unit_converter(r0 = metadata_dic["infuse_rate_unit"][2], r1 = 'ul/min')
                             
-                            data_for_agent = {'infusion_rate_1': metadata_dic["infuse_rate"][0]*ruc_1,
-                                                'infusion_rate_2': metadata_dic["infuse_rate"][1]*ruc_2,
-                                                'Peak': peak_emission, 'FWHM':fwhm, 'PLQY':plqy}
-
+                            # data_for_agent = {'infusion_rate_1': metadata_dic["infuse_rate"][0]*ruc_0,
+                            #                     'infusion_rate_2': metadata_dic["infuse_rate"][1]*ruc_1, 
+                            #                     'infusion_rate_3': metadata_dic["infuse_rate"][2]*ruc_2,
+                            #                     'Peak': peak_emission, 'FWHM':fwhm, 'PLQY':plqy}
 
                             agent_data = {}
 
                             agent_data.update(optical_property)
-                            agent_data.update(metadata_dic)
+                            agent_data.update({k:v for k, v in metadata_dic.items() if len(np.atleast_1d(v)) == 1})
 
-                            agent_data["infusion_rate_1"] = metadata_dic["infuse_rate"][0]
-                            agent_data["infusion_rate_2"] = metadata_dic["infuse_rate"][1]
+                            agent_data["infusion_rate_1"] = metadata_dic["infuse_rate"][0]*ruc_0
+                            agent_data["infusion_rate_2"] = metadata_dic["infuse_rate"][1]*ruc_1
+                            # agent_data["infusion_rate_3"] = metadata_dic["infuse_rate"][2]*ruc_2
 
                             with open(f"/home/xf28id2/data/{data_id}.json", "w") as f:
                                 json.dump(agent_data, f)
@@ -342,9 +363,9 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
 
                             if USE_AGENT:
 
-                                print(f"\ntelling agent {data_for_agent}")
+                                print(f"\ntelling agent {agent_data}")
 
-                                agent.tell(data=data_for_agent, append=True)
+                                agent.tell(data=agent_data, append=True)
 
                                 if len(agent.table) < 2:
                                     acq_func = "qr"

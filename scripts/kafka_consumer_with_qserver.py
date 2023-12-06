@@ -84,6 +84,7 @@ sq.synthesis_queue(
 
 if bool(prefix[0]):
     sample = sample = de._auto_name_sample(infuse_rates, prefix=prefix[1:])
+print(f'Sample: {sample}')
 
 # import sys
 # sys.path.insert(0, "/home/xf28id2/src/bloptools")
@@ -271,7 +272,10 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
                     ## fit the good data, export/plotting fitting results
                     ## append data_id into good_data or bad_data for calculate numbers
                     if (type(peak) is np.ndarray) and (type(prop) is dict):
-                        x, y, p, f_fit, popt = da._fitting_in_kafka(x0, y0, data_id, peak, prop, dummy_test=dummy_test)                       
+                        x, y, p, f_fit, popt = da._fitting_in_kafka(x0, y0, data_id, peak, prop, dummy_test=dummy_test)
+
+                        fitted_y = f_fit(x, *popt)
+                        r_2 = da.r_square(x, y, fitted_y)  
                         
                         if 'gauss' in f_fit.__name__:
                             constant = 2.355
@@ -311,25 +315,28 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
                             optical_property = {'Peak': peak_emission, 'FWHM':fwhm, 'PLQY':plqy}
 
                             ## Unify the unit of infuse rate as 'ul/min'
-                            ruc_1 = sq.rate_unit_converter(r0 = metadata_dic["infuse_rate_unit"][0], r1 = 'ul/min')
-                            ruc_2 = sq.rate_unit_converter(r0 = metadata_dic["infuse_rate_unit"][1], r1 = 'ul/min')
+                            ruc_0 = sq.rate_unit_converter(r0 = metadata_dic["infuse_rate_unit"][0], r1 = 'ul/min')
+                            ruc_1 = sq.rate_unit_converter(r0 = metadata_dic["infuse_rate_unit"][1], r1 = 'ul/min')
+                            # ruc_2 = sq.rate_unit_converter(r0 = metadata_dic["infuse_rate_unit"][2], r1 = 'ul/min')
                             
-                            data_for_agent = {'infusion_rate_1': metadata_dic["infuse_rate"][0]*ruc_1,
-                                                'infusion_rate_2': metadata_dic["infuse_rate"][1]*ruc_2,
-                                                'Peak': peak_emission, 'FWHM':fwhm, 'PLQY':plqy}
+                            # data_for_agent = {'infusion_rate_1': metadata_dic["infuse_rate"][0]*ruc_0,
+                            #                     'infusion_rate_2': metadata_dic["infuse_rate"][1]*ruc_1, 
+                            #                     'infusion_rate_3': metadata_dic["infuse_rate"][2]*ruc_2,
+                            #                     'Peak': peak_emission, 'FWHM':fwhm, 'PLQY':plqy}
 
                             agent_data = {}
 
                             agent_data.update(optical_property)
                             agent_data.update(metadata_dic)
 
-                            agent_data["infusion_rate_1"] = metadata_dic["infuse_rate"][0]
-                            agent_data["infusion_rate_2"] = metadata_dic["infuse_rate"][1]
+                            agent_data["infusion_rate_1"] = metadata_dic["infuse_rate"][0]*ruc_0
+                            agent_data["infusion_rate_2"] = metadata_dic["infuse_rate"][1]*ruc_1
+                            # agent_data["infusion_rate_3"] = metadata_dic["infuse_rate"][2]*ruc_2
 
-                            with open(f"/home/xf28id2/data/{data_id}.json", "w") as f:
+                            with open(f"/home/xf28id2/data_ZnI2/{data_id}.json", "w") as f:
                                 json.dump(agent_data, f)
 
-                            # print("wrote to ~/data")
+                            print("wrote to ~/data_ZnI2")
 
                             
                             # ### Three parameters for ML: peak_emission, fwhm, plqy
