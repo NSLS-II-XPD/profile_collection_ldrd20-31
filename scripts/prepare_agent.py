@@ -8,14 +8,16 @@ sys.path.insert(0, "/home/xf28id2/src/bloptools")
 
 from bloptools.bayesian import Agent, DOF, Objective
 
+data_path = '/home/xf28id2/data_ZnI2'
+
 dofs = [
     DOF(description="CsPb(oleate)3", name="infusion_rate_1", limits=(10, 170)),
     DOF(description="TOABr", name="infusion_rate_2", limits=(10, 170)),
-    # DOF(name="infusion_rate_3", limits=(1500, 2000)),
+    DOF(description="ZnI2", name="infusion_rate_3", limits=(8, 120)),
 ]
 
 objectives = [
-    Objective(description="Peak emission", name="Peak", target=516, weight=2, min_snr=2),
+    Objective(description="Peak emission", name="Peak", target=650, weight=10, min_snr=2),
     Objective(description="Peak width", name="FWHM", target="min", weight=1, min_snr=2),
     Objective(description="Quantum yield", name="PLQY", target="max", weight=1e2, min_snr=2),
 ]
@@ -34,7 +36,7 @@ agent = Agent(dofs=dofs, objectives=objectives, db=None, verbose=True)
 
 metadata_keys = ["time", "uid", "r_2"]
 
-filepaths = glob.glob("/home/xf28id2/data/*.json")
+filepaths = glob.glob(f"{data_path}/*.json")
 for fp in np.array(filepaths):
     with open(fp, "r") as f:
         data = json.load(f)

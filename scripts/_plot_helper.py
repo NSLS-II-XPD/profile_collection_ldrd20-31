@@ -135,10 +135,11 @@ class plot_uvvis(open_figures):
         except (IndexError):
             f = plt.figure(self.fig[-1])
         
-        ax = f.gca()
-        
+        ax = f.gca()      
         if len(list(ax.lines)) > clf_limit:
             plt.clf()
+
+        ax = f.gca()
 
         if label == None:
             label = self.time + '_' + self.uid[:8]
@@ -152,6 +153,31 @@ class plot_uvvis(open_figures):
         ax.set_xlabel('Wavelength (nm)', fontdict={'size': 14})
         ax.set_ylabel(y_label, fontdict={'size': 14})
         # ax.set_title(f'{self.date}-{self.time}_{self.uid[0:8]}_{self.stream_name}_{fit_function.__name__}')
+        ax.legend()
+        f.canvas.manager.show()
+        f.canvas.flush_events()
+
+
+    
+    def plot_offfset(self, x, fit_function, popt):        
+        
+        # import palettable.colorbrewer.diverging as pld
+        # palette = pld.RdYlGn_4_r
+        # cmap = palette.mpl_colormap
+        
+        try: 
+            f = plt.figure(self.fig[2])
+        except (IndexError): 
+            f = plt.figure('bundle_absorbance')
+        
+        ax = f.gca()
+
+        ax.plot(x, fit_function(x, *popt), label=f'check baseline: {fit_function.__name__}\ny={popt[0]:.4f}x+{popt[1]:.4f}')
+
+        # # ax.set_facecolor((0.95, 0.95, 0.95))
+        # ax.set_xlabel('Wavelength (nm)', fontdict={'size': 14})
+        # ax.set_ylabel(y_label, fontdict={'size': 14})
+        # # ax.set_title(f'{self.date}-{self.time}_{self.uid[0:8]}_{self.stream_name}_{fit_function.__name__}')
         ax.legend()
         f.canvas.manager.show()
         f.canvas.flush_events()

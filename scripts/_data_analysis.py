@@ -347,29 +347,38 @@ def _identify_multi_in_kafka(qepro_dic, metadata_dic, key_height=200, distance=1
 
     
     
-def _fitting_in_kafka(x0, y0, data_id, peak, prop, dummy_test=False):
+def _fitting_in_kafka(x0, y0, data_id, peak, prop, is_one_peak=True, dummy_test=False):
     print(f'\n** Average of {data_id} has peaks at {peak}**\n')
     
     print(f'\n** start to do peak fitting by Gaussian**\n')
-    if len(peak) == 1:
-        f = _1gauss
-        popt, _, x, y = _1peak_fit_good_PL(x0, y0, f, peak=peak, raw_data=True, dummy_test=dummy_test)
-    elif len(peak) == 2:
-        try:
-            f = _2gauss
-            popt, _, x, y = _2peak_fit_good_PL(x0, y0, f, peak=peak, raw_data=True)
-        except RuntimeError:
-            f = _1gauss
-            M = max(prop['peak_heights'])
-            M_idx, _ = find_nearest(prop['peak_heights'], M)
-            peak = np.asarray([peak[M_idx]])
-            popt, _, x, y = _1peak_fit_good_PL(x0, y0, f, peak=peak, raw_data=True, dummy_test=dummy_test)
-    else:
+    
+    if is_one_peak:
         f = _1gauss
         M = max(prop['peak_heights'])
         M_idx, _ = find_nearest(prop['peak_heights'], M)
         peak = np.asarray([peak[M_idx]])
         popt, _, x, y = _1peak_fit_good_PL(x0, y0, f, peak=peak, raw_data=True, dummy_test=dummy_test)
+
+    else:    
+        if len(peak) == 1:
+            f = _1gauss
+            popt, _, x, y = _1peak_fit_good_PL(x0, y0, f, peak=peak, raw_data=True, dummy_test=dummy_test)
+        elif len(peak) == 2:
+            try:
+                f = _2gauss
+                popt, _, x, y = _2peak_fit_good_PL(x0, y0, f, peak=peak, raw_data=True)
+            except RuntimeError:
+                f = _1gauss
+                M = max(prop['peak_heights'])
+                M_idx, _ = find_nearest(prop['peak_heights'], M)
+                peak = np.asarray([peak[M_idx]])
+                popt, _, x, y = _1peak_fit_good_PL(x0, y0, f, peak=peak, raw_data=True, dummy_test=dummy_test)
+        else:
+            f = _1gauss
+            M = max(prop['peak_heights'])
+            M_idx, _ = find_nearest(prop['peak_heights'], M)
+            peak = np.asarray([peak[M_idx]])
+            popt, _, x, y = _1peak_fit_good_PL(x0, y0, f, peak=peak, raw_data=True, dummy_test=dummy_test)
 
     shift, _ = find_nearest(x0, x[0])
 
@@ -412,6 +421,48 @@ def plqy_quinine(absorbance_sample, PL_integral_sample, refractive_index_solvent
 
     plqy = plqy_reference * integral_ratio * absorbance_ratio * refractive_index_ratio
     return plqy
+
+
+
+### Functions doing line fitting for baseline correction / offset of absorption spectra
+def line_2D(x, slope, y_intercept):
+    y = x*slope + y_intercept
+    return y
+
+def fit_line_2D(x, y, fit_function, x_range=[600, 900], maxfev=10000, plot=False):
+    x = np.asarray(x)
+    y = np.asarray(y)
+    y = np.nan_to_num(y, nan=0)
+    
+    try:        
+        idx0, _ = find_nearest(x, x_range[0])
+        idx1, _ = find_nearest(x, x_range[1])
+    except (TypeError, IndexError):
+        idx0 = 0
+        idx1 = -1
+    
+    slope = (y[idx1]-y[idx0]) / (x[idx1]-x[idx0])
+    y_intercept = np.mean(y[idx0:idx1])
+    
+    try:
+        initial_guess = [slope, y_intercept]
+    except (TypeError, IndexError):
+        initial_guess = [0.01, 0]
+    
+    try:
+        popt, pcov = curve_fit(fit_function, x[idx0:idx1], y[idx0:idx1], p0=initial_guess, maxfev=maxfev)
+    except RuntimeError:
+        maxfev=1000000
+        popt, pcov = curve_fit(fit_function, x[idx0:idx1], y[idx0:idx1], p0=initial_guess, maxfev=maxfev)
+        
+    if plot:
+        plt.figure()
+        plt.plot(x, y, label='data')
+        plt.plot(x, fit_function(x, popt[0], popt[1]), label=f'y={popt[0]:.4f}x+{popt[1]:.4f}')
+        plt.legend()
+    
+    return popt, pcov
+
 
 
 

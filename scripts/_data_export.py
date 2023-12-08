@@ -330,7 +330,7 @@ def dic_to_csv_for_stream(csv_path, qepro_dic, metadata_dic, stream_name='primar
         if stream_name == 'primary':
             fout = f'{csv_path}/{sample_type}_PL_{date}-{time}_{full_uid[0:8]}_fitted.csv'
         
-        elif stream_name == 'fluorescence':
+        elif stream_name == 'fluorescence' or stream_name == 'absorbance':
             new_dir = f'{csv_path}/{date}{time}_{full_uid[0:8]}_{stream_name}'
             os.makedirs(new_dir, exist_ok=True)
             fout = f'{new_dir}/{sample_type}_{date}-{time}_{full_uid[0:8]}_fitted.csv'
@@ -371,9 +371,20 @@ def dic_to_csv_for_stream(csv_path, qepro_dic, metadata_dic, stream_name='primar
             except (TypeError, KeyError):
                 pass
 
-            fp.write('Wavelength,Dark,Sample,Fluorescence_mean,Fitting\n')
+            # fp.write('Wavelength,Dark,Sample,Fluorescence_mean,Fitting\n')
+            # for i in range(x_axis_data.shape[1]):
+            #     fp.write(f'{x_axis_data[-1,i]},{dark_data[-1,i]},{sample_data[-1,i]},{output_mean[i]},{fitted_y[i]}\n')
+
+            if spectrum_type[0] == 3:
+                fp.write('Wavelength,Dark,Reference,Sample,Absorbance_mean,Offset\n')
+            else:
+                fp.write('Wavelength,Dark,Sample,Fluorescence_mean,Fitting\n')
+
             for i in range(x_axis_data.shape[1]):
-                fp.write(f'{x_axis_data[-1,i]},{dark_data[-1,i]},{sample_data[-1,i]},{output_mean[i]},{fitted_y[i]}\n')
+                if spectrum_type[0] == 3:
+                    fp.write(f'{x_axis_data[-1,i]},{dark_data[-1,i]},{reference_data[-1,i]},{sample_data[-1,i]},{output_mean[i]},{output_mean[i]-fitted_y[i]}\n')
+                else:
+                    fp.write(f'{x_axis_data[-1,i]},{dark_data[-1,i]},{sample_data[-1,i]},{output_mean[i]},{fitted_y[i]}\n')
 
         
 
