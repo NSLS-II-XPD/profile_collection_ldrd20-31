@@ -84,7 +84,7 @@ sq.synthesis_queue(
                     )
 
 if bool(prefix[0]):
-    sample = sample = de._auto_name_sample(infuse_rates, prefix=prefix[1:])
+    sample = de._auto_name_sample(infuse_rates, prefix=prefix[1:])
 print(f'Sample: {sample}')
 
 import sys
@@ -93,21 +93,22 @@ sys.path.insert(0, "/home/xf28id2/src/bloptools")
 from bloptools.bayesian import Agent, DOF, Objective
 
 agent_data_path = '/home/xf28id2/data_ZnI2'
+# agent_data_path = '/home/xf28id2/data'
 
 dofs = [
-    DOF(description="CsPb(oleate)3", name="infusion_rate_1", limits=(10, 170)),
-    DOF(description="TOABr", name="infusion_rate_2", limits=(10, 170)),
-    DOF(description="ZnI2", name="infusion_rate_3", limits=(8, 120)),
+    DOF(description="CsPb(oleate)3", name="infusion_rate_1", units="uL/min", limits=(10, 170)),
+    DOF(description="TOABr", name="infusion_rate_2", units="uL/min", limits=(10, 170)),
+    DOF(description="ZnI2", name="infusion_rate_3", units="uL/min", limits=(10, 170)),
 ]
 
 objectives = [
-    Objective(description="Peak emission", name="Peak", target=650, weight=10, min_snr=2),
-    Objective(description="Peak width", name="FWHM", target="min", weight=1, min_snr=2),
-    Objective(description="Quantum yield", name="PLQY", target="max", weight=1e2, min_snr=2),
+    Objective(description="Peak emission", name="Peak", target=590, weight=10, min_snr=2),
+    Objective(description="Peak width", name="FWHM", target="min", log=True, weight=2., min_snr=2),
+    Objective(description="Quantum yield", name="PLQY", target="max", log=True, weight=1., min_snr=2),
 ]
 
-USE_AGENT = True
-agent_iterate = True
+USE_AGENT = False
+agent_iterate = False
 
 if USE_AGENT:
     agent = Agent(dofs=dofs, objectives=objectives, db=None, verbose=True)
@@ -256,7 +257,7 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
                     abs_array = qepro_dic['QEPro_output'][1:].mean(axis=0)
                     wavelength = qepro_dic['QEPro_x_axis'][0]
 
-                    popt_abs, _ = da.fit_line_2D(wavelength, abs_array, da.line_2D, x_range=[700, 900], plot=False)
+                    popt_abs, _ = da.fit_line_2D(wavelength, abs_array, da.line_2D, x_range=[750, 950], plot=False)
                     abs_array_offset = abs_array - da.line_2D(wavelength, *popt_abs)
 
                     print(f'\nFitting function for baseline offset: {da.line_2D}\n')
@@ -371,9 +372,11 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
                                     acq_func = "qr"
                                 else:
                                     acq_func = "qei"
-
+                                
+                                agent._construct_models()
                                 # new_points, _ = agent.ask(acq_func, n=1)
                                 new_points = agent.ask(acq_func, n=1)
+                                # new_points = agent.ask("qem", n=1)
 
 
                             # ...

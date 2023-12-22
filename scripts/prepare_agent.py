@@ -9,17 +9,18 @@ sys.path.insert(0, "/home/xf28id2/src/bloptools")
 from bloptools.bayesian import Agent, DOF, Objective
 
 data_path = '/home/xf28id2/data_ZnI2'
+#data_path = '/home/xf28id2/data'
 
 dofs = [
-    DOF(description="CsPb(oleate)3", name="infusion_rate_1", limits=(10, 170)),
-    DOF(description="TOABr", name="infusion_rate_2", limits=(10, 170)),
-    DOF(description="ZnI2", name="infusion_rate_3", limits=(8, 120)),
+    DOF(description="CsPb(oleate)3", name="infusion_rate_1", units="uL/min", limits=(10, 170)),
+    DOF(description="TOABr", name="infusion_rate_2", units="uL/min", limits=(10, 170)),
+    DOF(description="ZnI2", name="infusion_rate_3", units="uL/min", limits=(10, 170)),
 ]
 
 objectives = [
-    Objective(description="Peak emission", name="Peak", target=650, weight=10, min_snr=2),
-    Objective(description="Peak width", name="FWHM", target="min", weight=1, min_snr=2),
-    Objective(description="Quantum yield", name="PLQY", target="max", weight=1e2, min_snr=2),
+    Objective(description="Peak emission", name="Peak", target=630, weight=10, min_snr=2),
+    Objective(description="Peak width", name="FWHM", target="min", log=True, weight=2., min_snr=2),
+    Objective(description="Quantum yield", name="PLQY", target="max", log=True, weight=1., min_snr=2),
 ]
 
 
@@ -49,4 +50,5 @@ for fp in np.array(filepaths):
 
 agent._construct_models()
 
-print(agent.ask("qei", n=1))
+# print(agent.ask("qei", n=1))
+print(agent.ask("qem", n=1))
