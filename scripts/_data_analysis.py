@@ -207,11 +207,12 @@ def _1peak_fit_good_PL(x0, y0, fit_function, peak=False, maxfev=100000, fit_boun
     except (TypeError, IndexError):
         initial_guess = [max(y), mean, sigma]
     
-    bnd = ((0,200,0),(y.max()*1.15,1000, np.inf))
 
     try:
+        bnd = ((0,200,0),(y.max()*1.15,1000, np.inf))
         popt, pcov = curve_fit(fit_function, x, y, p0=initial_guess, bounds=bnd, maxfev=maxfev)
-    except RuntimeError:
+    except (RuntimeError, ValueError):
+        bnd = (-np.inf, np.inf)
         maxfev=1000000
         popt, pcov = curve_fit(fit_function, x, y, p0=initial_guess, bounds=bnd, maxfev=maxfev)
     
@@ -263,11 +264,12 @@ def _2peak_fit_good_PL(x0, y0, fit_function, peak=False, maxfev=100000, fit_boun
     except (TypeError, IndexError):
         initial_guess = [y0[peak[0]], x0[peak[0]], sigma, y0[peak[-1]], x0[peak[-1]], sigma]
     
-    bnd = ((0,200,0,0,200,0),(y.max()*1.15,1000, np.inf, y.max()*1.15,1000, np.inf))
     
     try:
+        bnd = ((0,200,0,0,200,0),(y.max()*1.15,1000, np.inf, y.max()*1.15,1000, np.inf))
         popt, pcov = curve_fit(fit_function, x, y, p0=initial_guess, bounds=bnd, maxfev=maxfev)
-    except RuntimeError:
+    except (RuntimeError, ValueError):
+        bnd = (-np.inf, np.inf)
         maxfev=1000000
         popt, pcov = curve_fit(fit_function, x, y, p0=initial_guess, bounds=bnd, maxfev=maxfev)
    
