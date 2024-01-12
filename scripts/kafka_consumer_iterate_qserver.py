@@ -12,6 +12,7 @@ import time
 import databroker
 import json
 import glob
+from tqdm import tqdm
 
 import resource
 resource.setrlimit(resource.RLIMIT_NOFILE, (65536, 65536))
@@ -92,23 +93,25 @@ sys.path.insert(0, "/home/xf28id2/src/bloptools")
 
 from bloptools.bayesian import Agent, DOF, Objective
 
-agent_data_path = '/home/xf28id2/data_ZnCl2'
+# agent_data_path = '/home/xf28id2/data_ZnCl2'
 # agent_data_path = '/home/xf28id2/data'
+agent_data_path = '/home/xf28id2/data_halide'
 
 dofs = [
-    DOF(description="CsPb(oleate)3", name="infusion_rate_1", units="uL/min", limits=(10, 170)),
-    DOF(description="TOABr", name="infusion_rate_2", units="uL/min", limits=(10, 170)),
-    DOF(description="ZnCl2", name="infusion_rate_3", units="uL/min", limits=(10, 170)),
+    DOF(description="CsPb(oleate)3", name="infusion_rate_CsPb", units="uL/min", limits=(10, 110)),
+    DOF(description="TOABr", name="infusion_rate_Br", units="uL/min", limits=(70, 170)),
+    DOF(description="ZnCl2", name="infusion_rate_Cl", units="uL/min", limits=(0, 110)),
+    DOF(description="ZnI2", name="infusion_rate_I2", units="uL/min", limits=(0, 110)),
 ]
 
 objectives = [
-    Objective(description="Peak emission", name="Peak", target=480, weight=10, min_snr=2),
+    Objective(description="Peak emission", name="Peak", target=427.53, weight=10, min_snr=2),
     Objective(description="Peak width", name="FWHM", target="min", log=True, weight=2., min_snr=2),
     Objective(description="Quantum yield", name="PLQY", target="max", log=True, weight=1., min_snr=2),
 ]
 
-USE_AGENT = False
-agent_iterate = False
+USE_AGENT = True
+agent_iterate = True
 
 if USE_AGENT:
     agent = Agent(dofs=dofs, objectives=objectives, db=None, verbose=True)
@@ -117,15 +120,22 @@ if USE_AGENT:
     metadata_keys = ["time", "uid", "r_2"]
 
     filepaths = glob.glob(f"{agent_data_path}/*.json")
-    for fp in np.array(filepaths):
+    for fp in tqdm(filepaths):
         with open(fp, "r") as f:
             data = json.load(f)
 
-
-        x = {k:[data[k]] for k in agent.dofs.names}
-        y = {k:[data[k]] for k in agent.objectives.names}
-        metadata = {k:[data.get(k, None)] for k in metadata_keys}
-        agent.tell(x=x, y=y, metadata=metadata)
+        r_2_min = 0.93
+        try: 
+            if data['r_2'] < r_2_min:
+                print(f'Skip because "r_2" of {os.path.basename(fp)} is {data["r_2"]:.2f} < {r_2_min}.')
+            else: 
+                x = {k:[data[k]] for k in agent.dofs.names}
+                y = {k:[data[k]] for k in agent.objectives.names}
+                metadata = {k:[data.get(k, None)] for k in metadata_keys}
+                agent.tell(x=x, y=y, metadata=metadata)
+        
+        except (KeyError):
+            print(f'{os.path.basename(fp)} has no "r_2".')
 
     agent._construct_models()
 
@@ -288,7 +298,9 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
                         x, y, p, f_fit, popt = da._fitting_in_kafka(x0, y0, data_id, peak, prop, dummy_test=dummy_test)    
 
                         fitted_y = f_fit(x, *popt)
-                        r_2 = da.r_square(x, y, fitted_y)               
+                        r2_idx1, _ = da.find_nearest(x, popt[1] - 3*popt[2])
+                        r2_idx2, _ = da.find_nearest(x, popt[1] + 3*popt[2])
+                        r_2 = da.r_square(x[r2_idx1:r2_idx2], y[r2_idx1:r2_idx2], fitted_y[r2_idx1:r2_idx2], y_low_limit=0)               
 
                         metadata_dic["r_2"] = r_2                                   
                         

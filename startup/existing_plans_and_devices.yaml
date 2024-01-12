@@ -2408,6 +2408,26 @@ existing_plans:
       name: tubing_ID_mm
     properties:
       is_generator: true
+  wait_equilibrium2:
+    module: startup_script
+    name: wait_equilibrium2
+    parameters:
+    - kind:
+        name: POSITIONAL_OR_KEYWORD
+        value: 1
+      name: mixer_pump_list
+    - default: '1'
+      kind:
+        name: POSITIONAL_OR_KEYWORD
+        value: 1
+      name: ratio
+    - default: '1.016'
+      kind:
+        name: POSITIONAL_OR_KEYWORD
+        value: 1
+      name: tubing_ID_mm
+    properties:
+      is_generator: true
   xray_uvvis_plan:
     module: startup_script
     name: xray_uvvis_plan

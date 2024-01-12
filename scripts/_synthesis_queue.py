@@ -91,6 +91,15 @@ def synthesis_queue(
 
 
 		## 3. Wait for equilibrium
+		
+		# mixer_pump_list = []
+		# for i in range(len(mixer)):
+		# 	mixer_pump = [mixer[i], pump]
+		if len(mixer) == 1:
+			mixer_pump_list = [[mixer[0], *pump_list]]
+		elif len(mixer) == 2:
+			mixer_pump_list = [[mixer[0], *pump_list[:2]], [mixer[1], *pump_list]]
+		
 		if dummy_qserver:
 			zmq_single_request(
 				method='queue_item_add', 
@@ -118,8 +127,8 @@ def synthesis_queue(
 				method='queue_item_add', 
 				params={
 					'item':{
-						"name":"wait_equilibrium", 
-						"args": [pump_list, mixer], 
+						"name":"wait_equilibrium2", 
+						"args": [mixer_pump_list], 
 						"kwargs": {"ratio":rest_time}, 
 						"item_type":"plan"}, 
 					'pos': pos, 

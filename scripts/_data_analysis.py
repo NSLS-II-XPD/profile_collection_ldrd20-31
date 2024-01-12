@@ -318,8 +318,8 @@ def _2peak_fit_good_PL(x0, y0, fit_function, peak=False, maxfev=100000, fit_boun
 
 
 def _identify_one_in_kafka(qepro_dic, metadata_dic, key_height=200, distance=100, height=50, dummy_test=False):
-    _, time1 = de._readable_time(metadata_dic['time'])
-    data_id = time1 + '_' + metadata_dic['uid'][:8]
+    t0 = de._readable_time(metadata_dic['time'])
+    data_id = f'{t0[0]}_{t0[1]}_{metadata_dic["uid"][:8]}'
     x0 = qepro_dic['QEPro_x_axis'][0]
     y0 = qepro_dic['QEPro_output'][0]
     peak, prop = good_bad_data(x0, y0, key_height=key_height, data_id = f'{data_id}', distance=distance, height=height, dummy_test=dummy_test)
@@ -329,8 +329,8 @@ def _identify_one_in_kafka(qepro_dic, metadata_dic, key_height=200, distance=100
 
 
 def _identify_multi_in_kafka(qepro_dic, metadata_dic, key_height=200, distance=100, height=50, dummy_test=False):
-    _, time1 = de._readable_time(metadata_dic['time'])
-    data_id = time1 + '_' + metadata_dic['uid'][:8]
+    t0 = de._readable_time(metadata_dic['time'])
+    data_id = f'{t0[0]}_{t0[1]}_{metadata_dic["uid"][:8]}'
     _for_average = pd.DataFrame()
     for i in range(qepro_dic['QEPro_spectrum_type'].shape[0]):
         x_i = qepro_dic['QEPro_x_axis'][i]
@@ -465,6 +465,46 @@ def fit_line_2D(x, y, fit_function, x_range=[600, 900], maxfev=10000, plot=False
     
     return popt, pcov
 
+
+
+
+# def l_unit_converter(l0 = 'm', l1 = 'm'):
+#     l_unit = ['mm', 'cm', 'm']
+#     l_frame = pd.DataFrame(data={'mm': np.array([1, 10, 1000]), 
+#                                  'cm': np.array([0.1, 1, 100]), 
+#                                  'm' : np.array([0.001, 0.01, 1])}, index=l_unit)
+#     return l_frame.loc[l0, l1]
+
+
+
+
+def cal_equili_from_list(rate_list, mixer, rate_unit = 'ul/min', ratio=1, tubing_ID_mm=1.016):
+
+    if type(mixer) != list:
+        raise TypeError('Type of mixer must be a list.')
+
+    total_rate = 0
+    for i in range(len(rate_list)):
+        rate = rate_list[i]
+        unit = rate_unit
+        unit_const = vol_unit_converter(v0=unit[:2], v1='ul')/t_unit_converter(t0=unit[3:], t1='min')
+        total_rate += rate*unit_const
+
+    l = []
+    for i in mixer:
+        ll = float(i.split(' ')[0])
+        l.append(ll)
+    mixer_length = sum(l)
+    
+    mixer_unit = mixer[-1].split(' ')[1]
+    l_unit_const = l_unit_converter(l0=mixer_unit, l1='m')
+    mixer_meter = mixer_length * l_unit_const
+    mixer_vol_mm3 = np.pi*((tubing_ID_mm/2)**2)*mixer_meter*1000
+    res_time_sec = 60*mixer_vol_mm3/total_rate
+    
+    print(f'Reaction resident time is {res_time_sec:.2f} seconds.')
+    print(f'Wait for {ratio} times of resident time, in total of {res_time_sec*ratio:.2f} seconds.')
+    # yield from bps.sleep(res_time_sec*ratio)
 
 
 

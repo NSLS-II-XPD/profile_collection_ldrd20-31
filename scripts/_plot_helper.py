@@ -90,10 +90,13 @@ class plot_uvvis(open_figures):
         ax = f.gca()
         
         fitted_y = fit_function(x, *popt)
-        r_2 = da.r_square(x, y, fitted_y)
+        r2_idx1, _ = da.find_nearest(x, popt[1] - 3*popt[2])
+        r2_idx2, _ = da.find_nearest(x, popt[1] + 3*popt[2])
+        r_2 = da.r_square(x[r2_idx1:r2_idx2], y[r2_idx1:r2_idx2], fitted_y[r2_idx1:r2_idx2], y_low_limit=0)  
+        # r_2 = da.r_square(x, y, fitted_y)
         r2 = f'R\u00b2={r_2:.2f}'
         ax.plot(x,y,'b+:',label='data')
-        ax.plot(x,fitted_y,'r--',label='Total fit\n'+r2)
+        ax.plot(x[r2_idx1:r2_idx2], fitted_y[r2_idx1:r2_idx2],'r--',label='Total fit\n'+r2)
         
         try:
             for i in range(len(peak)):
@@ -107,7 +110,7 @@ class plot_uvvis(open_figures):
                 for i in range(int(len(popt)/3)):
                     pars_i = popt[0+3*i:3+3*i]
                     peak_i = f1(x, *pars_i)
-                    ax.plot(x, peak_i, label=f'peak {i+1}')
+                    ax.plot(x[r2_idx1:r2_idx2], peak_i[r2_idx1:r2_idx2], label=f'peak {i+1}')
                     ax.fill_between(x, peak_i.min(), peak_i, alpha=0.3)
             else:
                 print(f'\n** Plot fill_between for {fit_function.__name__} is not supported. ** \n')

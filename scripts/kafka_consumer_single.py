@@ -73,40 +73,42 @@ sys.path.insert(0, "/home/xf28id2/src/bloptools")
 
 from bloptools.bayesian import Agent, DOF, Objective
 
-agent_data_path = '/home/xf28id2/data_ZnI2'
+agent_data_path = '/home/xf28id2/data_temp'
 
 dofs = [
-    DOF(description="CsPb(oleate)3", name="infusion_rate_1", limits=(10, 170)),
-    DOF(description="TOABr", name="infusion_rate_2", limits=(10, 170)),
-    DOF(description="ZnI2", name="infusion_rate_3", limits=(8, 120)),
+    DOF(description="CsPb(oleate)3", name="infusion_rate_CsPb", units="uL/min", limits=(10, 110)),
+    DOF(description="TOABr", name="infusion_rate_Br", units="uL/min", limits=(70, 170)),
+    DOF(description="ZnCl2", name="infusion_rate_Cl", units="uL/min", limits=(0, 110)),
+    DOF(description="ZnI2", name="infusion_rate_I2", units="uL/min", limits=(0, 110)),
 ]
 
 objectives = [
-    Objective(description="Peak emission", name="Peak", target=650, weight=10, min_snr=2),
-    Objective(description="Peak width", name="FWHM", target="min", weight=1, min_snr=2),
-    Objective(description="Quantum yield", name="PLQY", target="max", weight=1e2, min_snr=2),
+    Objective(description="Peak emission", name="Peak", target=480, weight=10, min_snr=2),
+    Objective(description="Peak width", name="FWHM", target="min", log=True, weight=2., min_snr=2),
+    Objective(description="Quantum yield", name="PLQY", target="max", log=True, weight=1., min_snr=2),
 ]
 
 USE_AGENT = False
-agent_iterate = True
+agent_iterate = False
 
-agent = Agent(dofs=dofs, objectives=objectives, db=None, verbose=True)
-#agent.load_data("~/blop/data/init.h5")
+if USE_AGENT:
+    agent = Agent(dofs=dofs, objectives=objectives, db=None, verbose=True)
+    #agent.load_data("~/blop/data/init.h5")
 
-metadata_keys = ["time", "uid", "r_2"]
+    metadata_keys = ["time", "uid", "r_2"]
 
-# filepaths = glob.glob(f"{agent_data_path}/*.json")
-# for fp in np.array(filepaths):
-#     with open(fp, "r") as f:
-#         data = json.load(f)
+    filepaths = glob.glob(f"{agent_data_path}/*.json")
+    for fp in np.array(filepaths):
+        with open(fp, "r") as f:
+            data = json.load(f)
 
 
-#     x = {k:[data[k]] for k in agent.dofs.names}
-#     y = {k:[data[k]] for k in agent.objectives.names}
-#     metadata = {k:[data.get(k, None)] for k in metadata_keys}
-#     agent.tell(x=x, y=y, metadata=metadata)
+        x = {k:[data[k]] for k in agent.dofs.names}
+        y = {k:[data[k]] for k in agent.objectives.names}
+        metadata = {k:[data.get(k, None)] for k in metadata_keys}
+        agent.tell(x=x, y=y, metadata=metadata)
 
-agent._construct_models()
+    agent._construct_models()
 
 
 def print_kafka_messages(beamline_acronym, csv_path=csv_path, 
@@ -269,7 +271,9 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
                         x, y, p, f_fit, popt = da._fitting_in_kafka(x0, y0, data_id, peak, prop, dummy_test=dummy_test)     
 
                         fitted_y = f_fit(x, *popt)
-                        r_2 = da.r_square(x, y, fitted_y)               
+                        r2_idx1, _ = da.find_nearest(x, popt[1] - 3*popt[2])
+                        r2_idx2, _ = da.find_nearest(x, popt[1] + 3*popt[2])
+                        r_2 = da.r_square(x[r2_idx1:r2_idx2], y[r2_idx1:r2_idx2], fitted_y[r2_idx1:r2_idx2], y_low_limit=0)               
 
                         metadata_dic["r_2"] = r_2        
                         
@@ -313,9 +317,13 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
                             optical_property = {'Peak': peak_emission, 'FWHM':fwhm, 'PLQY':plqy}
 
                             ## Unify the unit of infuse rate as 'ul/min'
-                            ruc_0 = sq.rate_unit_converter(r0 = metadata_dic["infuse_rate_unit"][0], r1 = 'ul/min')
-                            ruc_1 = sq.rate_unit_converter(r0 = metadata_dic["infuse_rate_unit"][1], r1 = 'ul/min')
-                            ruc_2 = sq.rate_unit_converter(r0 = metadata_dic["infuse_rate_unit"][2], r1 = 'ul/min')
+                            try:
+                                ruc_0 = sq.rate_unit_converter(r0 = metadata_dic["infuse_rate_unit"][0], r1 = 'ul/min')
+                                ruc_1 = sq.rate_unit_converter(r0 = metadata_dic["infuse_rate_unit"][1], r1 = 'ul/min')
+                                ruc_2 = sq.rate_unit_converter(r0 = metadata_dic["infuse_rate_unit"][2], r1 = 'ul/min')
+                                ruc_3 = sq.rate_unit_converter(r0 = metadata_dic["infuse_rate_unit"][3], r1 = 'ul/min')
+                            except (KeyError, IndexError):
+                                pass
                             
                             # data_for_agent = {'infusion_rate_1': metadata_dic["infuse_rate"][0]*ruc_0,
                             #                     'infusion_rate_2': metadata_dic["infuse_rate"][1]*ruc_1, 
@@ -325,11 +333,15 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
                             agent_data = {}
 
                             agent_data.update(optical_property)
-                            agent_data.update({k:v for k, v in metadata_dic.items() if len(np.atleast_1d(v)) == 1})
+                            # agent_data.update({k:v for k, v in metadata_dic.items() if len(np.atleast_1d(v)) == 1})
+                            agent_data.update({k:v for k, v in metadata_dic.items()})
 
-                            agent_data["infusion_rate_1"] = metadata_dic["infuse_rate"][0]*ruc_0
-                            agent_data["infusion_rate_2"] = metadata_dic["infuse_rate"][1]*ruc_1
-                            agent_data["infusion_rate_3"] = metadata_dic["infuse_rate"][2]*ruc_2
+                            agent_data["infusion_rate_CsPb"] = metadata_dic["infuse_rate"][0]*ruc_0
+                            agent_data["infusion_rate_Br"] = metadata_dic["infuse_rate"][1]*ruc_1
+                            agent_data["infusion_rate_Cl"] = 0.0
+                            # agent_data["infusion_rate_I2"] = 0.0
+                            # agent_data["infusion_rate_Cl"] = metadata_dic["infuse_rate"][2]*ruc_2
+                            agent_data["infusion_rate_I2"] = metadata_dic["infuse_rate"][2]*ruc_2
 
                             with open(f"{agent_data_path}/{data_id}.json", "w") as f:
                                 json.dump(agent_data, f)
