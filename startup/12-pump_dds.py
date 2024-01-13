@@ -100,7 +100,7 @@ class syrng_DDS_ax(Device):
         self.set_infuse_range.put(1, wait=True)
         self.set_withdraw_range.put(1, wait=True)
         #min_vol= {'2.264nl/min': 2.5, '8.728nl/min': 8, '35.21nl/min': 20, '78.69nl/min': 50}
-        min_vol = _vol_rate_table(syringe_material=syringe_material)[0]
+        min_vol = _dds_vol_rate_table(syringe_material=syringe_material)[0]
         #return dia_vol[f'{self.diameter.get()}mm']
         a = (min_vol[f'{self.read_min_infuse.get()}nl/min'] == input_size)
         return a, min_vol[f'{self.read_min_infuse.get()}nl/min']
@@ -200,7 +200,7 @@ class syrng_DDS_ax(Device):
 
     #     def _syringe_size(input_size, syringe_material):
     #         #yield from bps.mv(self.set_infuse_range, 1, self.set_withdraw_range, 1)
-    #         min_vol = _vol_rate_table(syringe_material=syringe_material)[0]
+    #         min_vol = _dds_vol_rate_table(syringe_material=syringe_material)[0]
     #         a = (min_vol[f'{self.read_min_infuse.get()}nl/min'] == input_size)
     #         return a, min_vol[f'{self.read_min_infuse.get()}nl/min']
         
@@ -214,8 +214,8 @@ class syrng_DDS_ax(Device):
         
     #     min_unit = 'nl/min'
     #     max_unit = 'ml/min'
-    #     min_in_theory = _vol_rate_table(syringe_material=syringe_material)[1][size][0]
-    #     max_in_theory = _vol_rate_table(syringe_material=syringe_material)[1][size][1]
+    #     min_in_theory = _dds_vol_rate_table(syringe_material=syringe_material)[1][size][0]
+    #     max_in_theory = _dds_vol_rate_table(syringe_material=syringe_material)[1][size][1]
 
     #     const1_max = vol_unit_converter(v0=infuse_unit[:2], v1=max_unit[:2])/t_unit_converter(t0=infuse_unit[3:], t1=max_unit[3:])
     #     const1_min = vol_unit_converter(v0=infuse_unit[:2], v1=min_unit[:2])/t_unit_converter(t0=infuse_unit[3:], t1=min_unit[3:])
@@ -248,7 +248,7 @@ class syrng_DDS_ax(Device):
 
         def _syringe_size(input_size, syringe_material):
             #yield from bps.mv(self.set_infuse_range, 1, self.set_withdraw_range, 1)
-            min_vol = _vol_rate_table(syringe_material=syringe_material)[0]
+            min_vol = _dds_vol_rate_table(syringe_material=syringe_material)[0]
             a = (min_vol[f'{self.read_min_infuse.get()}nl/min'] == input_size)
             return a, min_vol[f'{self.read_min_infuse.get()}nl/min']
         
@@ -267,8 +267,8 @@ class syrng_DDS_ax(Device):
         
         min_unit = 'nl/min'
         max_unit = 'ml/min'
-        min_in_device = _vol_rate_table(syringe_material=syringe_material)[1][size][0]
-        max_in_device = _vol_rate_table(syringe_material=syringe_material)[1][size][1]
+        min_in_device = _dds_vol_rate_table(syringe_material=syringe_material)[1][size][0]
+        max_in_device = _dds_vol_rate_table(syringe_material=syringe_material)[1][size][1]
 
         # const1_max = vol_unit_converter(v0=infuse_unit[:2], v1=max_unit[:2])/t_unit_converter(t0=infuse_unit[3:], t1=max_unit[3:])
         # const1_min = vol_unit_converter(v0=infuse_unit[:2], v1=min_unit[:2])/t_unit_converter(t0=infuse_unit[3:], t1=min_unit[3:])      
@@ -299,7 +299,7 @@ class syrng_DDS_ax(Device):
 
         def _syringe_size(input_size, syringe_material):
             #yield from bps.mv(self.set_infuse_range, 1, self.set_withdraw_range, 1)
-            min_vol = _vol_rate_table(syringe_material=syringe_material)[0]
+            min_vol = _dds_vol_rate_table(syringe_material=syringe_material)[0]
             a = (min_vol[f'{self.read_min_infuse.get()}nl/min'] == input_size)
             return a, min_vol[f'{self.read_min_infuse.get()}nl/min']
         
@@ -313,8 +313,8 @@ class syrng_DDS_ax(Device):
         
         min_unit = 'nl/min'
         max_unit = 'ml/min'
-        min_in_theory = _vol_rate_table(syringe_material=syringe_material)[1][size][0]
-        max_in_theory = _vol_rate_table(syringe_material=syringe_material)[1][size][1]
+        min_in_theory = _dds_vol_rate_table(syringe_material=syringe_material)[1][size][0]
+        max_in_theory = _dds_vol_rate_table(syringe_material=syringe_material)[1][size][1]
 
         const1_max = vol_unit_converter(v0=withdraw_unit[:2], v1=max_unit[:2])/t_unit_converter(t0=withdraw_unit[3:], t1=max_unit[3:])
         const1_min = vol_unit_converter(v0=withdraw_unit[:2], v1=min_unit[:2])/t_unit_converter(t0=withdraw_unit[3:], t1=min_unit[3:])
@@ -423,7 +423,7 @@ class syrng_DDS_ax(Device):
     
     
 
-def _vol_rate_table(syringe_material='steel'):
+def _dds_vol_rate_table(syringe_material='steel'):
     min_unit = 'nl/min'
     max_unit = 'ml/min'
     

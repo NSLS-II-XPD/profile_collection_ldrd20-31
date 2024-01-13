@@ -307,7 +307,39 @@ class syrng_ultra(Device):
         print('I am unstaging.')
         super().unstage()
     
+
+
+
+
+def _ultra_vol_rate_table(syringe_material='steel'):
+    min_unit = 'nl/min'
+    max_unit = 'ml/min'
     
+    if syringe_material == 'steel':
+        min_vol= {'3.39588nl/min': 2.5, '13.0924nl/min': 8, '52.8105nl/min': 20, 
+                  '118.038nl/min': 50, '175.769nl/min': 100}
+        _range = {2.5: [3.39588, 3.5265], 8: [13.0924, 13.596], 20: [52.8105, 54.8417], 
+                  50: [118.038, 122.578], 100: [175.769, 182.529]}
+   
+    elif syringe_material == 'glass_H1000': # Hamilton 1000 Series
+        min_vol= {'3.06414nl/min': 1, '3.82884nl/min': 1.25, '7.65858nl/min': 2.5, 
+                  '15.3096nl/min': 5, '30.6218nl/min': 10, '76.5582nl/min': 25, 
+                  '153.111nl/min': 50, '153.111nl/min': 100}
+        _range = {1: [3.06414, 3.18204], 1.25: [3.82884, 3.97616], 2.5: [7.65858, 7.95317], 5: [15.3096, 15.8985], 
+                  10: [30.6218, 31.7996], 25: [76.5582, 79.5028], 50: [153.111, 159.0], 100: [153.111, 159.0]}
+    
+    elif syringe_material == 'plastic_BD': # Becton Dickinson
+        min_vol= {'3.18636nl/min': 1, '10.6358,nl/min': 3, '20.7422nl/min': 5, 
+                  '30.036nl/min': 10, '52.3697nl/min': 20, '67.2661nl/min': 30, 
+                  '102.061nl/min': 50, '102.061nl/min': 60}
+        _range = {1: [3.18636, 3.30896], 3: [10.6358, 11.0449], 5: [20.7422, 21.5401], 10: [30.036, 31.1913], 
+                  20: [52.3697, 54.384], 30: [67.2661, 69.8532], 50: [102.061, 105.986], 60: [102.061, 105.986]}
+    
+    else:
+        raise ValueError(f'Size of {syringe_material} syringe could nor been found.')
+    return min_vol, _range
+
+
 
     
 def vol_unit_converter(v0 = 'ul', v1 = 'ml'):
