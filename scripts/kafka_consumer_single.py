@@ -297,6 +297,8 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
                         ## Calculate PLQY for fluorescence stream
                         if (stream_name == 'fluorescence') and (PLQY[0]==1):
                             PL_integral_s = integrate.simpson(y,x)
+                            label_uid = f'{uid[0:8]}_{metadata_dic["sample_type"]}'
+                            u.plot_CsPbX3(x, y, peak_emission, label=label_uid, clf_limit=10)
                             
                             ## Find absorbance at 365 nm from absorbance stream
                             # q_dic, m_dic = de.read_qepro_by_stream(uid, stream_name='absorbance', data_agent='tiled')
@@ -325,28 +327,33 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
                             except (KeyError, IndexError):
                                 pass
                             
-                            # data_for_agent = {'infusion_rate_1': metadata_dic["infuse_rate"][0]*ruc_0,
-                            #                     'infusion_rate_2': metadata_dic["infuse_rate"][1]*ruc_1, 
-                            #                     'infusion_rate_3': metadata_dic["infuse_rate"][2]*ruc_2,
-                            #                     'Peak': peak_emission, 'FWHM':fwhm, 'PLQY':plqy}
 
-                            agent_data = {}
+                            ## Check if pump is Infusing or Idle
+                            is_infusing = []
+                            for pump_status in metadata_dic['pump_status']:
+                                if pump_status == 'Infusing':
+                                    is_infusing.append(1)
+                                elif pump_status == 'Idle':
+                                    is_infusing.append(0)
 
-                            agent_data.update(optical_property)
-                            # agent_data.update({k:v for k, v in metadata_dic.items() if len(np.atleast_1d(v)) == 1})
-                            agent_data.update({k:v for k, v in metadata_dic.items()})
 
-                            agent_data["infusion_rate_CsPb"] = metadata_dic["infuse_rate"][0]*ruc_0
-                            agent_data["infusion_rate_Br"] = metadata_dic["infuse_rate"][1]*ruc_1
-                            agent_data["infusion_rate_Cl"] = 0.0
-                            # agent_data["infusion_rate_I2"] = 0.0
-                            # agent_data["infusion_rate_Cl"] = metadata_dic["infuse_rate"][2]*ruc_2
-                            agent_data["infusion_rate_I2"] = metadata_dic["infuse_rate"][2]*ruc_2
+                            # agent_data = {}
 
-                            with open(f"{agent_data_path}/{data_id}.json", "w") as f:
-                                json.dump(agent_data, f)
+                            # agent_data.update(optical_property)
+                            # # agent_data.update({k:v for k, v in metadata_dic.items() if len(np.atleast_1d(v)) == 1})
+                            # agent_data.update({k:v for k, v in metadata_dic.items()})
 
-                            print(f"\nwrote to {agent_data_path}")
+                            # agent_data["infusion_rate_CsPb"] = metadata_dic["infuse_rate"][0]*ruc_0*is_infusing[0]
+                            # agent_data["infusion_rate_Br"] = metadata_dic["infuse_rate"][1]*ruc_1*is_infusing[1]
+                            # agent_data["infusion_rate_Cl"] = 0.0
+                            # # agent_data["infusion_rate_I2"] = 0.0
+                            # # agent_data["infusion_rate_Cl"] = metadata_dic["infuse_rate"][2]*ruc_2*is_infusing[2]
+                            # agent_data["infusion_rate_I2"] = metadata_dic["infuse_rate"][2]*ruc_2**is_infusing[2]
+
+                            # with open(f"{agent_data_path}/{data_id}.json", "w") as f:
+                            #     json.dump(agent_data, f)
+
+                            # print(f"\nwrote to {agent_data_path}")
 
                             
                             ### Three parameters for ML: peak_emission, fwhm, plqy

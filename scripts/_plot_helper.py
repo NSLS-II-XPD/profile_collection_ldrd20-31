@@ -1,5 +1,5 @@
 import matplotlib.pyplot as plt
-import numpy
+import numpy as np
 from _data_export import _readable_time
 import _data_analysis as da
 
@@ -15,7 +15,7 @@ class plot_uvvis(open_figures):
     def __init__(self, qepro_dic, metadata_dic, 
                  figure_labels = ['primary_absorbance', 'primary_fluorescence', 
                                   'bundle_absorbance', 'bundle_fluorescence',
-                                  'peak fitting', 'Spectra Evolution']):
+                                  'peak fitting', 'Spectra Evolution', 'CsPbX3']):
         self.fig = figure_labels
         self.uid = metadata_dic['uid']
         self.stream_name = metadata_dic['stream_name']
@@ -151,6 +151,50 @@ class plot_uvvis(open_figures):
             ax.plot(x, y, label=label)
         else:
             ax.plot(x, y, label=label, color=color)
+
+        # ax.set_facecolor((0.95, 0.95, 0.95))
+        ax.set_xlabel('Wavelength (nm)', fontdict={'size': 14})
+        ax.set_ylabel(y_label, fontdict={'size': 14})
+        # ax.set_title(f'{self.date}-{self.time}_{self.uid[0:8]}_{self.stream_name}_{fit_function.__name__}')
+        ax.legend()
+        f.canvas.manager.show()
+        f.canvas.flush_events()
+
+
+
+
+    def plot_CsPbX3(self, x, y, wavelength, wavelength_range=[420, 660], label=None, clf_limit=10):        
+        
+        # import palettable.colorbrewer.diverging as pld
+        # palette = pld.RdYlGn_4_r
+        # cmap = palette.mpl_colormap
+
+        y_label = 'Fluorescence'
+        
+        try:
+            f = plt.figure(self.fig[6])
+        except (IndexError):
+            f = plt.figure(self.fig[-1])
+        
+        ax = f.gca()      
+        if len(list(ax.lines)) > clf_limit:
+            plt.clf()
+
+        ax = f.gca()
+
+        if label == None:
+            label = self.time + '_' + self.uid[:8]
+
+
+        # cmap = palette.mpl_colormap
+        cmap = plt.get_cmap('jet')
+        w1 = wavelength_range[0]  ## in nm
+        w2 = wavelength_range[1]  ## in nm
+        w_steps = abs(int(2*(w2-w1)))
+        w_array = np.linspace(w1, w2, w_steps)
+        color_array = np.linspace(0, 1, w_steps)
+        idx, _ = da.find_nearest(w_array, wavelength)
+        ax.plot(x, y, label=label, color=cmap(color_array[idx]))
 
         # ax.set_facecolor((0.95, 0.95, 0.95))
         ax.set_xlabel('Wavelength (nm)', fontdict={'size': 14})

@@ -344,23 +344,36 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
                             optical_property = {'Peak': peak_emission, 'FWHM':fwhm, 'PLQY':plqy}
 
                             ## Unify the unit of infuse rate as 'ul/min'
-                            ruc_0 = sq.rate_unit_converter(r0 = metadata_dic["infuse_rate_unit"][0], r1 = 'ul/min')
-                            ruc_1 = sq.rate_unit_converter(r0 = metadata_dic["infuse_rate_unit"][1], r1 = 'ul/min')
-                            ruc_2 = sq.rate_unit_converter(r0 = metadata_dic["infuse_rate_unit"][2], r1 = 'ul/min')
+                            try:
+                                ruc_0 = sq.rate_unit_converter(r0 = metadata_dic["infuse_rate_unit"][0], r1 = 'ul/min')
+                                ruc_1 = sq.rate_unit_converter(r0 = metadata_dic["infuse_rate_unit"][1], r1 = 'ul/min')
+                                ruc_2 = sq.rate_unit_converter(r0 = metadata_dic["infuse_rate_unit"][2], r1 = 'ul/min')
+                                ruc_3 = sq.rate_unit_converter(r0 = metadata_dic["infuse_rate_unit"][3], r1 = 'ul/min')
+                            except (KeyError, IndexError):
+                                pass
                             
-                            # data_for_agent = {'infusion_rate_1': metadata_dic["infuse_rate"][0]*ruc_0,
-                            #                     'infusion_rate_2': metadata_dic["infuse_rate"][1]*ruc_1, 
-                            #                     'infusion_rate_3': metadata_dic["infuse_rate"][2]*ruc_2,
-                            #                     'Peak': peak_emission, 'FWHM':fwhm, 'PLQY':plqy}
+
+                            ## Check if pump is Infusing or Idle
+                            is_infusing = []
+                            for pump_status in metadata_dic['pump_status']:
+                                if pump_status == 'Infusing':
+                                    is_infusing.append(1)
+                                elif pump_status == 'Idle':
+                                    is_infusing.append(0)
+
 
                             agent_data = {}
 
                             agent_data.update(optical_property)
-                            agent_data.update({k:v for k, v in metadata_dic.items() if len(np.atleast_1d(v)) == 1})
+                            # agent_data.update({k:v for k, v in metadata_dic.items() if len(np.atleast_1d(v)) == 1})
+                            agent_data.update({k:v for k, v in metadata_dic.items()})
 
-                            agent_data["infusion_rate_1"] = metadata_dic["infuse_rate"][0]*ruc_0
-                            agent_data["infusion_rate_2"] = metadata_dic["infuse_rate"][1]*ruc_1
-                            agent_data["infusion_rate_3"] = metadata_dic["infuse_rate"][2]*ruc_2
+                            agent_data["infusion_rate_CsPb"] = metadata_dic["infuse_rate"][0]*ruc_0*is_infusing[0]
+                            agent_data["infusion_rate_Br"] = metadata_dic["infuse_rate"][1]*ruc_1*is_infusing[1]
+                            agent_data["infusion_rate_Cl"] = 0.0
+                            # agent_data["infusion_rate_I2"] = 0.0
+                            # agent_data["infusion_rate_Cl"] = metadata_dic["infuse_rate"][2]*ruc_2*is_infusing[2]
+                            agent_data["infusion_rate_I2"] = metadata_dic["infuse_rate"][2]*ruc_2**is_infusing[2]
 
                             with open(f"{agent_data_path}/{data_id}.json", "w") as f:
                                 json.dump(agent_data, f)
