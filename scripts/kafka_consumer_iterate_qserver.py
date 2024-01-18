@@ -110,8 +110,8 @@ objectives = [
     Objective(description="Quantum yield", name="PLQY", target="max", log=True, weight=1., min_snr=2),
 ]
 
-USE_AGENT = True
-agent_iterate = True
+USE_AGENT = False
+agent_iterate = False
 
 if USE_AGENT:
     agent = Agent(dofs=dofs, objectives=objectives, db=None, verbose=True)
@@ -324,6 +324,8 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
                         ## Calculate PLQY for fluorescence stream
                         if (stream_name == 'fluorescence') and (PLQY[0]==1):
                             PL_integral_s = integrate.simpson(y,x)
+                            label_uid = f'{uid[0:8]}_{metadata_dic["sample_type"]}'
+                            u.plot_CsPbX3(x, y, peak_emission, label=label_uid, clf_limit=10)
                             
                             ## Find absorbance at 365 nm from absorbance stream
                             # q_dic, m_dic = de.read_qepro_by_stream(uid, stream_name='absorbance', data_agent='tiled')
@@ -370,10 +372,10 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
 
                             agent_data["infusion_rate_CsPb"] = metadata_dic["infuse_rate"][0]*ruc_0*is_infusing[0]
                             agent_data["infusion_rate_Br"] = metadata_dic["infuse_rate"][1]*ruc_1*is_infusing[1]
-                            agent_data["infusion_rate_Cl"] = 0.0
+                            # agent_data["infusion_rate_Cl"] = 0.0
                             # agent_data["infusion_rate_I2"] = 0.0
-                            # agent_data["infusion_rate_Cl"] = metadata_dic["infuse_rate"][2]*ruc_2*is_infusing[2]
-                            agent_data["infusion_rate_I2"] = metadata_dic["infuse_rate"][2]*ruc_2**is_infusing[2]
+                            agent_data["infusion_rate_Cl"] = metadata_dic["infuse_rate"][2]*ruc_2*is_infusing[2]
+                            agent_data["infusion_rate_I2"] = metadata_dic["infuse_rate"][3]*ruc_2*is_infusing[3]
 
                             with open(f"{agent_data_path}/{data_id}.json", "w") as f:
                                 json.dump(agent_data, f)
@@ -426,7 +428,11 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
                         print(f"\n*** since {stream_name} in uid: {uid[:8]} is a bad data.***\n")
             
                     print('\n*** export, identify good/bad, fitting complete ***\n')
-                    print(f"\n*** {sample_type} of uid: {uid[:8]} has: {optical_property}.***\n")
+                    
+                    try :
+                        print(f"\n*** {sample_type} of uid: {uid[:8]} has: {optical_property}.***\n")
+                    except (UnboundLocalError):
+                        pass
 
             print(f'*** Accumulated num of good data: {len(good_data)} ***\n')
             print(f'good_data = {good_data}\n')

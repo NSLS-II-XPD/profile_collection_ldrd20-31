@@ -232,7 +232,8 @@ class syrng_ultra(Device):
             # yield from bps.abs_set(self.clear_infused, 1, wait=True)
             # yield from bps.abs_set(self.clear_withdrawn, 1, wait=True)
         
-        yield from bps.mv(self.set_infuse_range, 1, self.set_withdraw_range, 1)
+        if self.communication.get() == 'Disabled':
+            yield from bps.mv(self.communication, 0, self.update_pump, 6)
 
         def _syringe_size(input_size, syringe_material):
             #yield from bps.mv(self.set_infuse_range, 1, self.set_withdraw_range, 1)
@@ -240,11 +241,13 @@ class syrng_ultra(Device):
             a = (min_vol[f'{self.read_min_infuse.get()}nl/min'] == input_size)
             return a, min_vol[f'{self.read_min_infuse.get()}nl/min']
         
-        if _syringe_size(input_size, syringe_material)[0]:
-            size = _syringe_size(input_size, syringe_material)[1]
-        else:
-            #size = input_size
-            raise ValueError('Input size could not been found. Check selected syringe type & size.')
+        # if _syringe_size(input_size, syringe_material)[0]:
+        #     size = _syringe_size(input_size, syringe_material)[1]
+        # else:
+        #     #size = input_size
+        #     raise ValueError('Input size could not been found. Check selected syringe type & size.')
+        
+        size = input_size
         
         if set_target:
             c = vol_unit_converter(v0=target_unit, v1='ml')
@@ -367,7 +370,7 @@ class syrng_ultra(Device):
         return self.status.get()
     
     def stop_pump2(self, clear = False):
-        yield from bsp.abs_set(self.pump_stop, 1, wait=True)
+        yield from bps.abs_set(self.pump_stop, 1, wait=True)
         if clear == True:
             yield from bps.abs_set(self.clear_infused, 1, wait=True)
             yield from bps.abs_set(self.clear_withdrawn, 1, wait=True)

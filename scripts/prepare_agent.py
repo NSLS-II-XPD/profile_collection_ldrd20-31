@@ -14,14 +14,14 @@ from bloptools.bayesian import Agent, DOF, Objective
 agent_data_path = '/home/xf28id2/data_halide'
 
 dofs = [
-    DOF(description="CsPb(oleate)3", name="infusion_rate_CsPb", units="uL/min", limits=(100, 300)),
-    DOF(description="TOABr", name="infusion_rate_Br", units="uL/min", limits=(200, 500)),
-    DOF(description="ZnCl2", name="infusion_rate_Cl", units="uL/min", limits=(0, 300)),
-    DOF(description="ZnI2", name="infusion_rate_I2", units="uL/min", limits=(0, 300)),
+    DOF(description="CsPb(oleate)3", name="infusion_rate_CsPb", units="uL/min", limits=(10, 110)),
+    DOF(description="TOABr", name="infusion_rate_Br", units="uL/min", limits=(70, 170)),
+    DOF(description="ZnCl2", name="infusion_rate_Cl", units="uL/min", limits=(0, 110)),
+    DOF(description="ZnI2", name="infusion_rate_I2", units="uL/min", limits=(0, 110)),
 ]
 
 objectives = [
-    Objective(description="Peak emission", name="Peak", target=600, weight=10, min_snr=2),
+    Objective(description="Peak emission", name="Peak", target=640, weight=10, min_snr=2),
     Objective(description="Peak width", name="FWHM", target="min", log=True, weight=2., min_snr=2),
     Objective(description="Quantum yield", name="PLQY", target="max", log=True, weight=1., min_snr=2),
 ]
