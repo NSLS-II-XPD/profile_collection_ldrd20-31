@@ -88,29 +88,30 @@ if bool(prefix[0]):
     sample = de._auto_name_sample(infuse_rates, prefix=prefix[1:])
 print(f'Sample: {sample}')
 
-import sys
-sys.path.insert(0, "/home/xf28id2/src/bloptools")
+# import sys
+# sys.path.insert(0, "/home/xf28id2/src/blop/blop")
+# from bloptools.bayesian import Agent, DOF, Objective
 
-from bloptools.bayesian import Agent, DOF, Objective
+from blop import Agent, DOF, Objective
 
 # agent_data_path = '/home/xf28id2/data_ZnCl2'
 # agent_data_path = '/home/xf28id2/data'
 agent_data_path = '/home/xf28id2/data_halide'
 
 dofs = [
-    DOF(description="CsPb(oleate)3", name="infusion_rate_CsPb", units="uL/min", limits=(10, 110)),
-    DOF(description="TOABr", name="infusion_rate_Br", units="uL/min", limits=(70, 170)),
-    DOF(description="ZnCl2", name="infusion_rate_Cl", units="uL/min", limits=(0, 110)),
-    DOF(description="ZnI2", name="infusion_rate_I2", units="uL/min", limits=(0, 110)),
+    DOF(description="CsPb(oleate)3", name="infusion_rate_CsPb", units="uL/min", search_bounds=(5, 110)),
+    DOF(description="TOABr", name="infusion_rate_Br", units="uL/min", search_bounds=(70, 170)),
+    DOF(description="ZnCl2", name="infusion_rate_Cl", units="uL/min", search_bounds=(0, 150)),
+    DOF(description="ZnI2", name="infusion_rate_I2", units="uL/min", search_bounds=(0, 150)),
 ]
 
 objectives = [
-    Objective(description="Peak emission", name="Peak", target=427.53, weight=10, min_snr=2),
-    Objective(description="Peak width", name="FWHM", target="min", log=True, weight=2., min_snr=2),
-    Objective(description="Quantum yield", name="PLQY", target="max", log=True, weight=1., min_snr=2),
+    Objective(description="Peak emission", name="Peak", target=660, weight=10, max_noise=0.25),
+    Objective(description="Peak width", name="FWHM", target="min", log=True, weight=2., max_noise=0.25),
+    Objective(description="Quantum yield", name="PLQY", target="max", log=True, weight=1., max_noise=0.25),
 ]
 
-USE_AGENT = False
+USE_AGENT = True
 agent_iterate = False
 
 if USE_AGENT:
@@ -119,25 +120,33 @@ if USE_AGENT:
 
     metadata_keys = ["time", "uid", "r_2"]
 
-    filepaths = glob.glob(f"{agent_data_path}/*.json")
-    for fp in tqdm(filepaths):
-        with open(fp, "r") as f:
-            data = json.load(f)
+    init_file = "/home/xf28id2/data_halide/init_240122.h5"
 
-        r_2_min = 0.93
-        try: 
-            if data['r_2'] < r_2_min:
-                print(f'Skip because "r_2" of {os.path.basename(fp)} is {data["r_2"]:.2f} < {r_2_min}.')
-            else: 
-                x = {k:[data[k]] for k in agent.dofs.names}
-                y = {k:[data[k]] for k in agent.objectives.names}
-                metadata = {k:[data.get(k, None)] for k in metadata_keys}
-                agent.tell(x=x, y=y, metadata=metadata)
-        
-        except (KeyError):
-            print(f'{os.path.basename(fp)} has no "r_2".')
+    if os.path.exists(init_file):
+        agent.load_data(init_file)
 
-    agent._construct_models()
+    else:
+        filepaths = glob.glob(f"{agent_data_path}/*.json")
+        for fp in tqdm(filepaths):
+            with open(fp, "r") as f:
+                data = json.load(f)
+
+            r_2_min = 0.6
+            try: 
+                if data['r_2'] < r_2_min:
+                    print(f'Skip because "r_2" of {os.path.basename(fp)} is {data["r_2"]:.2f} < {r_2_min}.')
+                else: 
+                    x = {k:[data[k]] for k in agent.dofs.names}
+                    y = {k:[data[k]] for k in agent.objectives.names}
+                    metadata = {k:[data.get(k, None)] for k in metadata_keys}
+                    agent.tell(x=x, y=y, metadata=metadata, train=False)
+            
+            except (KeyError):
+                print(f'{os.path.basename(fp)} has no "r_2".')
+
+    agent._construct_all_models()
+    agent._train_all_models()
+
 
 
 def print_kafka_messages(beamline_acronym, csv_path=csv_path, 
@@ -367,8 +376,8 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
                             agent_data = {}
 
                             agent_data.update(optical_property)
-                            # agent_data.update({k:v for k, v in metadata_dic.items() if len(np.atleast_1d(v)) == 1})
-                            agent_data.update({k:v for k, v in metadata_dic.items()})
+                            agent_data.update({k:v for k, v in metadata_dic.items() if len(np.atleast_1d(v)) == 1})
+                            # agent_data.update({k:v for k, v in metadata_dic.items()})
 
                             agent_data["infusion_rate_CsPb"] = metadata_dic["infuse_rate"][0]*ruc_0*is_infusing[0]
                             agent_data["infusion_rate_Br"] = metadata_dic["infuse_rate"][1]*ruc_1*is_infusing[1]
@@ -400,10 +409,13 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
                                 else:
                                     acq_func = "qei"
                                 
-                                agent._construct_models()
+                                agent._construct_all_models()
+                                agent._train_all_models()
                                 # new_points, _ = agent.ask(acq_func, n=1)
                                 new_points = agent.ask(acq_func, n=1)
                                 # new_points = agent.ask("qem", n=1)
+                                
+                                agent.save_data(filepath="/home/xf28id2/data_halide/init_240122_01.h5")
 
 
                             # ...
@@ -482,15 +494,15 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
                 print('*** Add new points from agent to the fron of qsever ***\n')
                 print(f'*** New points from agent: {new_points} ***\n')
                 
-                set_target_list = [0 for i in range(new_points[0].shape[1])]
-                sample = sq._auto_name_sample(new_points[0], prefix=prefix)
+                set_target_list = [0 for i in range(new_points['points'].shape[1])]
+                sample = sq._auto_name_sample(new_points['points'], prefix=prefix)
 
                 sq.synthesis_queue(
                     syringe_list=syringe_list, 
                     pump_list=pump_list, 
                     set_target_list=set_target_list, 
                     target_vol_list=target_vol_list, 
-                    rate_list = new_points[0], 
+                    rate_list = new_points['points'], 
                     syringe_mater_list=syringe_mater_list, 
                     precursor_list=precursor_list,
                     mixer=mixer, 
