@@ -95,7 +95,7 @@ print(f'Sample: {sample}')
 from blop import Agent, DOF, Objective
 
 # agent_data_path = '/home/xf28id2/data_ZnCl2'
-# agent_data_path = '/home/xf28id2/data'
+# agent_data_path = '/home/xf28id2/data_ZnI2_60mM'
 agent_data_path = '/home/xf28id2/data_halide'
 
 dofs = [
@@ -111,7 +111,7 @@ objectives = [
     Objective(description="Quantum yield", name="PLQY", target="max", log=True, weight=1., max_noise=0.25),
 ]
 
-USE_AGENT = True
+USE_AGENT = False
 agent_iterate = False
 
 if USE_AGENT:
@@ -293,7 +293,7 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
                     label_uid = f'{uid[0:8]}_{metadata_dic["sample_type"]}'
                     # u.plot_average_good(x0, y0, color=cmap(color_idx[sub_idx]), label=label_uid)
                     # sub_idx = sample.index(metadata_dic['sample_type'])
-                    u.plot_average_good(x0, y0, label=label_uid)
+                    u.plot_average_good(x0, y0, label=label_uid, clf_limit=9)
                     
                 ## Skip peak fitting if qepro type is absorbance
                 if qepro_dic['QEPro_spectrum_type'][0] == 3:  
@@ -334,7 +334,7 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
                         if (stream_name == 'fluorescence') and (PLQY[0]==1):
                             PL_integral_s = integrate.simpson(y,x)
                             label_uid = f'{uid[0:8]}_{metadata_dic["sample_type"]}'
-                            u.plot_CsPbX3(x, y, peak_emission, label=label_uid, clf_limit=10)
+                            u.plot_CsPbX3(x, y, peak_emission, label=label_uid, clf_limit=9)
                             
                             ## Find absorbance at 365 nm from absorbance stream
                             # q_dic, m_dic = de.read_qepro_by_stream(uid, stream_name='absorbance', data_agent='tiled')
@@ -456,6 +456,56 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
             if stream_name == 'primary':     
                 if len(bad_data) > 3:
                     print('*** qsever aborted due to too many bad scans, please check setup ***\n')
+
+                    ### Stop all infusing pumps
+                    zmq_single_request(
+                        method='queue_item_add', 
+                        params={
+                            'item':{
+                                "name":"stop_group", 
+                                "args": [pump_list],  
+                                "item_type":"plan"}, 
+                            'pos': 'front', 
+                            'user_group':'primary', 
+                            'user':'chlin'})
+
+                    ### Set up washing tube/loop
+                    zmq_single_request(
+                        method='queue_item_add', 
+                        params={
+                            'item':{
+                                "name":"start_group_infuse", 
+                                "args": [[wash_tube[1]], [wash_tube[2]]],  
+                                "item_type":"plan"}, 
+                            'pos': pos, 
+                            'user_group':'primary', 
+                            'user':'chlin'})
+
+                    ### Wash loop/tube for xxx seconds
+                    zmq_single_request(
+                        method='queue_item_add', 
+                        params={
+                            'item':{
+                                "name":"sleep_sec_q", 
+                                "args":[wash_tube[3]], 
+                                "item_type":"plan"}, 
+                            'pos': pos, 
+                            'user_group':'primary', 
+                            'user':'chlin'})
+
+
+                    ### Stop washing
+                    zmq_single_request(
+                        method='queue_item_add', 
+                        params={
+                            'item':{
+                                "name":"stop_group", 
+                                "args": [[wash_tube[1]]],  
+                                "item_type":"plan"}, 
+                            'pos': pos, 
+                            'user_group':'primary', 
+                            'user':'chlin'})
+                   
                     zmq_single_request(method='queue_stop')
                     # zmq_single_request(method='re_abort')
                     
