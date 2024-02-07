@@ -17,33 +17,29 @@ def build_agen(peak_target=660, peak_tolerance=5):
 
 
     if peak_target > 525:
-        dofs = [
-            DOF(description="CsPb(oleate)3", name="infusion_rate_CsPb", units="uL/min", search_bounds=(10, 110)),
-            DOF(description="TOABr", name="infusion_rate_Br", units="uL/min", search_bounds=(70, 170)),
-            DOF(description="ZnCl2", name="infusion_rate_Cl", units="uL/min", search_bounds=(0, 0)),
-            DOF(description="ZnI2", name="infusion_rate_I2", units="uL/min", search_bounds=(0, 170)),
-        ]
+        I_up_limit = 170
+        Cl_up_limit = 0
 
     elif peak_target < 515:
-        dofs = [
-            DOF(description="CsPb(oleate)3", name="infusion_rate_CsPb", units="uL/min", search_bounds=(10, 110)),
-            DOF(description="TOABr", name="infusion_rate_Br", units="uL/min", search_bounds=(70, 170)),
-            DOF(description="ZnCl2", name="infusion_rate_Cl", units="uL/min", search_bounds=(0, 170)),
-            DOF(description="ZnI2", name="infusion_rate_I2", units="uL/min", search_bounds=(0, 0)),
-        ]  
+        I_up_limit = 0
+        Cl_up_limit = 170
 
     else:
-        dofs = [
-            DOF(description="CsPb(oleate)3", name="infusion_rate_CsPb", units="uL/min", search_bounds=(10, 110)),
-            DOF(description="TOABr", name="infusion_rate_Br", units="uL/min", search_bounds=(70, 170)),
-            DOF(description="ZnCl2", name="infusion_rate_Cl", units="uL/min", search_bounds=(0, 0)),
-            DOF(description="ZnI2", name="infusion_rate_I2", units="uL/min", search_bounds=(0, 0)),
-        ]  
+        I_up_limit = 0
+        Cl_up_limit = 0
 
 
+    dofs = [
+        DOF(description="CsPb(oleate)3", name="infusion_rate_CsPb", units="uL/min", search_bounds=(10, 110)),
+        DOF(description="TOABr", name="infusion_rate_Br", units="uL/min", search_bounds=(70, 170)),
+        DOF(description="ZnCl2", name="infusion_rate_Cl", units="uL/min", search_bounds=(0, Cl_up_limit)),
+        DOF(description="ZnI2", name="infusion_rate_I2", units="uL/min", search_bounds=(0, I_up_limit)),
+    ]      
+    
+    
     objectives = [
-        Objective(description="Peak emission", name="Peak", target=(peak_target-peak_tolerance, peak_target+peak_tolerance), max_noise=0.25),
-        Objective(description="Peak width", name="FWHM", target="min", log=True, weight=1., max_noise=0.25),
+        Objective(description="Peak emission", name="Peak", target=(peak_target-peak_tolerance, peak_target+peak_tolerance), weight=100, max_noise=0.25),
+        Objective(description="Peak width", name="FWHM", target="min", log=True, weight=5., max_noise=0.25),
         Objective(description="Quantum yield", name="PLQY", target="max", log=True, weight=1., max_noise=0.25),
     ]
 
@@ -90,6 +86,8 @@ def build_agen(peak_target=660, peak_tolerance=5):
 
     agent._construct_all_models()
     agent._train_all_models()
+
+    print(f'The target of the emission peak is {peak_target} nm.')
 
     return agent
 

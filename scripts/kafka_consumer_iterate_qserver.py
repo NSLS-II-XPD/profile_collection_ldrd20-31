@@ -94,58 +94,64 @@ print(f'Sample: {sample}')
 
 from blop import Agent, DOF, Objective
 
+
+
 # agent_data_path = '/home/xf28id2/data_ZnCl2'
 # agent_data_path = '/home/xf28id2/data_ZnI2_60mM'
 agent_data_path = '/home/xf28id2/data_halide'
 
-dofs = [
-    DOF(description="CsPb(oleate)3", name="infusion_rate_CsPb", units="uL/min", search_bounds=(5, 110)),
-    DOF(description="TOABr", name="infusion_rate_Br", units="uL/min", search_bounds=(70, 170)),
-    DOF(description="ZnCl2", name="infusion_rate_Cl", units="uL/min", search_bounds=(0, 150)),
-    DOF(description="ZnI2", name="infusion_rate_I2", units="uL/min", search_bounds=(0, 150)),
-]
+# dofs = [
+#     DOF(description="CsPb(oleate)3", name="infusion_rate_CsPb", units="uL/min", search_bounds=(5, 110)),
+#     DOF(description="TOABr", name="infusion_rate_Br", units="uL/min", search_bounds=(70, 170)),
+#     DOF(description="ZnCl2", name="infusion_rate_Cl", units="uL/min", search_bounds=(0, 150)),
+#     DOF(description="ZnI2", name="infusion_rate_I2", units="uL/min", search_bounds=(0, 150)),
+# ]
 
-objectives = [
-    Objective(description="Peak emission", name="Peak", target=660, weight=10, max_noise=0.25),
-    Objective(description="Peak width", name="FWHM", target="min", log=True, weight=2., max_noise=0.25),
-    Objective(description="Quantum yield", name="PLQY", target="max", log=True, weight=1., max_noise=0.25),
-]
+# objectives = [
+#     Objective(description="Peak emission", name="Peak", target=660, weight=10, max_noise=0.25),
+#     Objective(description="Peak width", name="FWHM", target="min", log=True, weight=2., max_noise=0.25),
+#     Objective(description="Quantum yield", name="PLQY", target="max", log=True, weight=1., max_noise=0.25),
+# ]
 
-USE_AGENT = False
-agent_iterate = False
+USE_AGENT_iterate = True
+peak_target = 550
 
-if USE_AGENT:
-    agent = Agent(dofs=dofs, objectives=objectives, db=None, verbose=True)
-    #agent.load_data("~/blop/data/init.h5")
+if USE_AGENT_iterate:
 
-    metadata_keys = ["time", "uid", "r_2"]
+    from prepare_agent import build_agen
+    agent = build_agen(peak_target=peak_target)
 
-    init_file = "/home/xf28id2/data_halide/init_240122.h5"
+    # agent = Agent(dofs=dofs, objectives=objectives, db=None, verbose=True)
+    # #agent.load_data("~/blop/data/init.h5")
 
-    if os.path.exists(init_file):
-        agent.load_data(init_file)
+    # metadata_keys = ["time", "uid", "r_2"]
 
-    else:
-        filepaths = glob.glob(f"{agent_data_path}/*.json")
-        for fp in tqdm(filepaths):
-            with open(fp, "r") as f:
-                data = json.load(f)
+    # init_file = "/home/xf28id2/data_halide/init_240122.h5"
 
-            r_2_min = 0.6
-            try: 
-                if data['r_2'] < r_2_min:
-                    print(f'Skip because "r_2" of {os.path.basename(fp)} is {data["r_2"]:.2f} < {r_2_min}.')
-                else: 
-                    x = {k:[data[k]] for k in agent.dofs.names}
-                    y = {k:[data[k]] for k in agent.objectives.names}
-                    metadata = {k:[data.get(k, None)] for k in metadata_keys}
-                    agent.tell(x=x, y=y, metadata=metadata, train=False)
+    # if os.path.exists(init_file):
+    #     agent.load_data(init_file)
+
+    # else:
+    #     filepaths = glob.glob(f"{agent_data_path}/*.json")
+    #     for fp in tqdm(filepaths):
+    #         with open(fp, "r") as f:
+    #             data = json.load(f)
+
+    #         r_2_min = 0.6
+    #         try: 
+    #             if data['r_2'] < r_2_min:
+    #                 print(f'Skip because "r_2" of {os.path.basename(fp)} is {data["r_2"]:.2f} < {r_2_min}.')
+    #             else: 
+    #                 x = {k:[data[k]] for k in agent.dofs.names}
+    #                 y = {k:[data[k]] for k in agent.objectives.names}
+    #                 metadata = {k:[data.get(k, None)] for k in metadata_keys}
+    #                 agent.tell(x=x, y=y, metadata=metadata, train=False)
             
-            except (KeyError):
-                print(f'{os.path.basename(fp)} has no "r_2".')
+    #         except (KeyError):
+    #             print(f'{os.path.basename(fp)} has no "r_2".')
 
-    agent._construct_all_models()
-    agent._train_all_models()
+    # agent._construct_all_models()
+    # agent._train_all_models()
 
 
 
@@ -153,7 +159,7 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
                          key_height=key_height, height=height, distance=distance, 
                          pump_list=pump_list, sample=sample, precursor_list=precursor_list, 
                          mixer=mixer, dummy_test=dummy_kafka, plqy=PLQY, prefix=prefix, 
-                         agent_data_path=agent_data_path):
+                         agent_data_path=agent_data_path, peak_target=peak_target):
 
     print(f"Listening for Kafka messages for {beamline_acronym}")
     print(f'Defaul parameters:\n'
@@ -175,7 +181,8 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
     # plt.figure()
     # def print_message(name, doc):
     def print_message(consumer, doctype, doc, 
-                      bad_data = [], good_data = [], check_abs365 = False, finished = []):
+                      bad_data = [], good_data = [], check_abs365 = False, finished = [], 
+                      agent_iteration = [], ):
                     #   pump_list=pump_list, sample=sample, precursor_list=precursor_list, 
                     #   mixer=mixer, dummy_test=dummy_test):
         name, message = doc
@@ -398,27 +405,86 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
                             data = {}
 
 
-                            if USE_AGENT:
+                            if USE_AGENT_iterate:
 
-                                print(f"\ntelling agent {agent_data}")
+                                # print(f"\ntelling agent {agent_data}")
+                                # agent.tell(data=agent_data, append=True)
 
-                                agent.tell(data=agent_data, append=True)
+                                agent = build_agen(peak_target=peak_target)
 
                                 if len(agent.table) < 2:
                                     acq_func = "qr"
                                 else:
                                     acq_func = "qei"
                                 
-                                agent._construct_all_models()
-                                agent._train_all_models()
+                                # agent._construct_all_models()
+                                # agent._train_all_models()
                                 # new_points, _ = agent.ask(acq_func, n=1)
                                 new_points = agent.ask(acq_func, n=1)
                                 # new_points = agent.ask("qem", n=1)
+                                # agent.save_data(filepath="/home/xf28id2/data_halide/init_240122_01.h5")
+
+                                peak_diff = peak_emission - peak_target
+
+                                if (peak_diff <= 3) and (peak_diff >=-3):
+                                    print(f'\nTarget peak: {peak_target} nm vs. Current peak: {peak_emission} nm\n')
+                                    print(f'\nReach the target, stop iteration, stop all pumps, and wash the loop.\n')
+
+                                    ### Stop all infusing pumps
+                                    zmq_single_request(
+                                        method='queue_item_add', 
+                                        params={
+                                            'item':{
+                                                "name":"stop_group", 
+                                                "args": [pump_list],  
+                                                "item_type":"plan"}, 
+                                            'pos': 'front', 
+                                            'user_group':'primary', 
+                                            'user':'chlin'})
+
+                                    ### Set up washing tube/loop
+                                    zmq_single_request(
+                                        method='queue_item_add', 
+                                        params={
+                                            'item':{
+                                                "name":"start_group_infuse", 
+                                                "args": [[wash_tube[1]], [wash_tube[2]]],  
+                                                "item_type":"plan"}, 
+                                            'pos': pos, 
+                                            'user_group':'primary', 
+                                            'user':'chlin'})
+
+                                    ### Wash loop/tube for xxx seconds
+                                    zmq_single_request(
+                                        method='queue_item_add', 
+                                        params={
+                                            'item':{
+                                                "name":"sleep_sec_q", 
+                                                "args":[wash_tube[3]], 
+                                                "item_type":"plan"}, 
+                                            'pos': pos, 
+                                            'user_group':'primary', 
+                                            'user':'chlin'})
+
+
+                                    ### Stop washing
+                                    zmq_single_request(
+                                        method='queue_item_add', 
+                                        params={
+                                            'item':{
+                                                "name":"stop_group", 
+                                                "args": [[wash_tube[1]]],  
+                                                "item_type":"plan"}, 
+                                            'pos': pos, 
+                                            'user_group':'primary', 
+                                            'user':'chlin'})
                                 
-                                agent.save_data(filepath="/home/xf28id2/data_halide/init_240122_01.h5")
-
-
-                            # ...
+                                    zmq_single_request(method='queue_stop')
+                                    # zmq_single_request(method='re_abort')
+                                    agent_iteration.append(False)
+                                
+                                else:
+                                    agent_iteration.append(True)
 
                         else:
                             plqy_dic = None
@@ -540,7 +606,7 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
                     print(f'After event: finished sample = {finished}\n')
                     zmq_single_request(method='queue_start')
             
-            elif stream_name == 'fluorescence' and agent_iterate:
+            elif stream_name == 'fluorescence' and USE_AGENT_iterate and agent_iteration[-1]:
                 print('*** Add new points from agent to the fron of qsever ***\n')
                 print(f'*** New points from agent: {new_points} ***\n')
                 

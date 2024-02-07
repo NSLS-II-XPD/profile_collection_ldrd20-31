@@ -185,16 +185,17 @@ class plot_uvvis(open_figures):
         if label == None:
             label = self.time + '_' + self.uid[:8]
 
-
         # cmap = palette.mpl_colormap
-        cmap = plt.get_cmap('jet')
-        w1 = wavelength_range[0]  ## in nm
-        w2 = wavelength_range[1]  ## in nm
-        w_steps = abs(int(2*(w2-w1)))
-        w_array = np.linspace(w1, w2, w_steps)
-        color_array = np.linspace(0, 1, w_steps)
-        idx, _ = da.find_nearest(w_array, wavelength)
-        ax.plot(x, y, label=label, color=cmap(color_array[idx]))
+        # cmap = plt.get_cmap('jet')
+        # w1 = wavelength_range[0]  ## in nm
+        # w2 = wavelength_range[1]  ## in nm
+        # w_steps = abs(int(2*(w2-w1)))
+        # w_array = np.linspace(w1, w2, w_steps)
+        # color_array = np.linspace(0, 1, w_steps)
+        # idx, _ = da.find_nearest(w_array, wavelength)
+        # ax.plot(x, y, label=label, color=cmap(color_array[idx]))
+
+        ax.plot(x, y, label=label, color=color_idx_map_halides(wavelength))
 
         # ax.set_facecolor((0.95, 0.95, 0.95))
         ax.set_xlabel('Wavelength (nm)', fontdict={'size': 14})
@@ -267,4 +268,50 @@ class multipeak_fitting(open_subfigures):
             
             self.ax[i].legend()
             
+
+
+
+
+
+def color_idx_map_halides(peak_wavelength, halide_w_range=[420, 520, 660]):
+    
+    from matplotlib.colors import LinearSegmentedColormap
+    colors = [
+        # (0.25098039215686274, 0.0, 0.29411764705882354), 
+        (0.4627450980392157, 0.16470588235294117, 0.5137254901960784),
+        (0.3686274509803922, 0.30980392156862746, 0.6352941176470588), 
+        (0.19607843137254902, 0.5333333333333333, 0.7411764705882353), 
+        (0.4, 0.7607843137254902, 0.6470588235294118),
+     # (0.6705882352941176, 0.8666666666666667, 0.6431372549019608),
+     # (0.6509803921568628, 0.8509803921568627, 0.41568627450980394),
+     # (0.10196078431372549, 0.5882352941176471, 0.2549019607843137), 
+             ]
+    BlGn = LinearSegmentedColormap.from_list('BlGn', colors, N=100)
+
+
+    import palettable
+    palette2 = palettable.colorbrewer.diverging.RdYlGn_4_r
+    RdYlGn_4_r = palette2.mpl_colormap
+    
+    if  peak_wavelength >= halide_w_range[0] and peak_wavelength < halide_w_range[1]:
+        wavelength_range=[halide_w_range[0], halide_w_range[1]]
+        cmap = BlGn
+    elif peak_wavelength >= halide_w_range[1] and peak_wavelength <= halide_w_range[2]:
+        wavelength_range=[halide_w_range[1], halide_w_range[2]]
+        cmap = RdYlGn_4_r
         
+    else:
+        raise ValueError(f'Peak at {peak_wavelength} nm is not in the range of {halide_w_range} nm.')
+    
+    w1 = wavelength_range[0]  ## in nm
+    w2 = wavelength_range[1]  ## in nm
+    w_steps = abs(int(2*(w2-w1)))
+    w_array = np.linspace(w1, w2, w_steps)
+    color_array = np.linspace(0, 1, w_steps)
+    idx, _ = da.find_nearest(w_array, peak_wavelength)
+    # ax.plot(x, y, label=label, color=cmap(color_array[idx]))
+    
+    color = cmap(color_array[idx])
+    
+    return color
+
