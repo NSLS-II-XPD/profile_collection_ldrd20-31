@@ -17,12 +17,12 @@ def build_agen(peak_target=660, peak_tolerance=5):
 
 
     if peak_target > 525:
-        I_up_limit = 170
+        I_up_limit = 200
         Cl_up_limit = 0
 
     elif peak_target < 515:
         I_up_limit = 0
-        Cl_up_limit = 170
+        Cl_up_limit = 200
 
     else:
         I_up_limit = 0
@@ -31,7 +31,7 @@ def build_agen(peak_target=660, peak_tolerance=5):
 
     dofs = [
         DOF(description="CsPb(oleate)3", name="infusion_rate_CsPb", units="uL/min", search_bounds=(10, 110)),
-        DOF(description="TOABr", name="infusion_rate_Br", units="uL/min", search_bounds=(70, 170)),
+        DOF(description="TOABr", name="infusion_rate_Br", units="uL/min", search_bounds=(50, 200)),
         DOF(description="ZnCl2", name="infusion_rate_Cl", units="uL/min", search_bounds=(0, Cl_up_limit)),
         DOF(description="ZnI2", name="infusion_rate_I2", units="uL/min", search_bounds=(0, I_up_limit)),
     ]      

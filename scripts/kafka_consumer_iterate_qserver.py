@@ -114,7 +114,7 @@ agent_data_path = '/home/xf28id2/data_halide'
 # ]
 
 USE_AGENT_iterate = True
-peak_target = 550
+peak_target = 590
 
 if USE_AGENT_iterate:
 
@@ -450,7 +450,7 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
                                                 "name":"start_group_infuse", 
                                                 "args": [[wash_tube[1]], [wash_tube[2]]],  
                                                 "item_type":"plan"}, 
-                                            'pos': pos, 
+                                            'pos': 1, 
                                             'user_group':'primary', 
                                             'user':'chlin'})
 
@@ -462,7 +462,7 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
                                                 "name":"sleep_sec_q", 
                                                 "args":[wash_tube[3]], 
                                                 "item_type":"plan"}, 
-                                            'pos': pos, 
+                                            'pos': 2, 
                                             'user_group':'primary', 
                                             'user':'chlin'})
 
@@ -475,7 +475,7 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
                                                 "name":"stop_group", 
                                                 "args": [[wash_tube[1]]],  
                                                 "item_type":"plan"}, 
-                                            'pos': pos, 
+                                            'pos': 3, 
                                             'user_group':'primary', 
                                             'user':'chlin'})
                                 
@@ -543,7 +543,7 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
                                 "name":"start_group_infuse", 
                                 "args": [[wash_tube[1]], [wash_tube[2]]],  
                                 "item_type":"plan"}, 
-                            'pos': pos, 
+                            'pos': 1, 
                             'user_group':'primary', 
                             'user':'chlin'})
 
@@ -555,7 +555,7 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
                                 "name":"sleep_sec_q", 
                                 "args":[wash_tube[3]], 
                                 "item_type":"plan"}, 
-                            'pos': pos, 
+                            'pos': 2, 
                             'user_group':'primary', 
                             'user':'chlin'})
 
@@ -568,7 +568,7 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
                                 "name":"stop_group", 
                                 "args": [[wash_tube[1]]],  
                                 "item_type":"plan"}, 
-                            'pos': pos, 
+                            'pos': 3, 
                             'user_group':'primary', 
                             'user':'chlin'})
                    
