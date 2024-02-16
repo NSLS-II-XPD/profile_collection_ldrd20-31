@@ -98,7 +98,8 @@ from blop import Agent, DOF, Objective
 
 # agent_data_path = '/home/xf28id2/data_ZnCl2'
 # agent_data_path = '/home/xf28id2/data_ZnI2_60mM'
-agent_data_path = '/home/xf28id2/data_halide'
+# agent_data_path = '/home/xf28id2/data_halide'
+agent_data_path = '/home/xf28id2/data_dilute_halide'
 
 # dofs = [
 #     DOF(description="CsPb(oleate)3", name="infusion_rate_CsPb", units="uL/min", search_bounds=(5, 110)),
@@ -113,7 +114,8 @@ agent_data_path = '/home/xf28id2/data_halide'
 #     Objective(description="Quantum yield", name="PLQY", target="max", log=True, weight=1., max_noise=0.25),
 # ]
 
-USE_AGENT_iterate = True
+use_good_bad = True
+USE_AGENT_iterate = False
 peak_target = 590
 
 if USE_AGENT_iterate:
@@ -388,10 +390,12 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
 
                             agent_data["infusion_rate_CsPb"] = metadata_dic["infuse_rate"][0]*ruc_0*is_infusing[0]
                             agent_data["infusion_rate_Br"] = metadata_dic["infuse_rate"][1]*ruc_1*is_infusing[1]
-                            # agent_data["infusion_rate_Cl"] = 0.0
+                            agent_data["infusion_rate_Cl"] = 0.0
                             # agent_data["infusion_rate_I2"] = 0.0
-                            agent_data["infusion_rate_Cl"] = metadata_dic["infuse_rate"][2]*ruc_2*is_infusing[2]
-                            agent_data["infusion_rate_I2"] = metadata_dic["infuse_rate"][3]*ruc_2*is_infusing[3]
+                            # agent_data["infusion_rate_Cl"] = metadata_dic["infuse_rate"][2]*ruc_2*is_infusing[2]
+                            # agent_data["infusion_rate_I2"] = metadata_dic["infuse_rate"][3]*ruc_2*is_infusing[3]
+                            agent_data["infusion_rate_I2"] = metadata_dic["infuse_rate"][2]*ruc_2*is_infusing[2]
+                            agent_data["infusion_rate_Tol"] = metadata_dic["infuse_rate"][3]*ruc_2*is_infusing[3]
 
                             with open(f"{agent_data_path}/{data_id}.json", "w") as f:
                                 json.dump(agent_data, f)
@@ -519,7 +523,7 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
             
             
             ## Depend on # of good/bad data, add items into queue item or stop 
-            if stream_name == 'primary':     
+            if stream_name == 'primary' and use_good_bad:     
                 if len(bad_data) > 3:
                     print('*** qsever aborted due to too many bad scans, please check setup ***\n')
 
@@ -575,7 +579,7 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
                     zmq_single_request(method='queue_stop')
                     # zmq_single_request(method='re_abort')
                     
-                elif len(good_data) <= 2:
+                elif len(good_data) <= 2 and use_good_bad:
                     print('*** Add another fluorescence and absorption scan to the fron of qsever ***\n')
 
                     zmq_single_request(
@@ -597,7 +601,7 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
                     
                     zmq_single_request(method='queue_start')
 
-                elif len(good_data) > 2:
+                elif len(good_data) > 2 and use_good_bad:
                     print('*** # of good data is enough so go to the next: bundle plan ***\n')
                     bad_data.clear()
                     good_data.clear()
@@ -634,6 +638,7 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
 
                 zmq_single_request(method='queue_start')
     
+            # elif use_good_bad:
             else:
                 zmq_single_request(method='queue_start')
 

@@ -5,6 +5,7 @@ import numpy as np
 import pandas as pd
 import os
 import _data_analysis as da
+import _synthesis_queue as sq
 
 
 
@@ -42,7 +43,50 @@ def _auto_name_sample(infuse_rates, prefix=None):
         name = ''
         for j in range(infuse_rates.shape[1]):
             int_rate = int(round(float(infuse_rates[i][j]), 0))
-            name += f'{prefix_list[j]}_{int_rate:03d}_'
+            name += f'{prefix_list[j]}_{int_rate:04d}_'
+        sample.append(name[:-1])
+    
+    return sample
+
+
+
+## Auto generate sample name with given prefix and directly reading pump rates
+## If prefix = None, 'Pre00', 'Pre01', 'Pre02', ... will be used.
+def _auto_name_sample2(pump_list, prefix=None):
+    
+    if type(pump_list[0]) == str:
+        pump_list = [eval(pump) for pump in pump_list]
+    else:
+        pass
+
+    get_rate = [pump.read_infuse_rate.get() for pump in pump_list]
+    get_unit = [pump.read_infuse_rate_unit.get() for pump in pump_list]
+    ruc_list = [sq.rate_unit_converter(r0 = unit, r1 = 'ul/min') for unit in get_unit]
+    get_status = [pump.status.get() for pump in pump_list]
+
+    is_infusing = []
+    for pump_status in get_status:
+        if pump_status == 'Infusing':
+            is_infusing.append(1)
+        else:
+            is_infusing.append(0)
+
+    infuse_rates = np.asarray(get_rate) * np.asarray(ruc_list) * np.asarray(is_infusing)
+
+    if len(infuse_rates.shape) == 1:
+        infuse_rates = infuse_rates.reshape(1, infuse_rates.shape[0])
+
+    if prefix == None:
+        prefix_list = [f'Pre{i:02d}' for i in range(infuse_rates.shape[1])]
+    else:
+        prefix_list = prefix
+
+    sample = []
+    for i in range(infuse_rates.shape[0]):
+        name = ''
+        for j in range(infuse_rates.shape[1]):
+            int_rate = int(round(float(infuse_rates[i][j]), 0))
+            name += f'{prefix_list[j]}_{int_rate:04d}_'
         sample.append(name[:-1])
     
     return sample
