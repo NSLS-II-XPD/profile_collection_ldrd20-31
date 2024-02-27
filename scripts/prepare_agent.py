@@ -66,6 +66,7 @@ def build_agen(peak_target=660, peak_tolerance=5):
 
     # else:
     filepaths = glob.glob(f"{agent_data_path}/*.json")
+    filepaths.sort()
     for fp in tqdm(filepaths):
         with open(fp, "r") as f:
             data = json.load(f)

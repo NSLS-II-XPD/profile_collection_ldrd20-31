@@ -118,6 +118,10 @@ use_good_bad = True
 USE_AGENT_iterate = False
 peak_target = 590
 
+write_agent_data = True
+rate_label = ['infusion_rate_CsPb', 'infusion_rate_Br', 'infusion_rate_Cl', 'infusion_rate_I2']
+# rate_label = ['infusion_rate_CsPb', 'infusion_rate_Br', 'infusion_rate_I2', 'infusion_rate_Cl']
+
 if USE_AGENT_iterate:
 
     from prepare_agent import build_agen
@@ -161,7 +165,8 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
                          key_height=key_height, height=height, distance=distance, 
                          pump_list=pump_list, sample=sample, precursor_list=precursor_list, 
                          mixer=mixer, dummy_test=dummy_kafka, plqy=PLQY, prefix=prefix, 
-                         agent_data_path=agent_data_path, peak_target=peak_target):
+                         agent_data_path=agent_data_path, peak_target=peak_target, 
+                         rate_label=rate_label):
 
     print(f"Listening for Kafka messages for {beamline_acronym}")
     print(f'Defaul parameters:\n'
@@ -362,15 +367,6 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
                             plqy_dic = {'PL_integral':PL_integral_s, 'Absorbance_365':absorbance_s, 'plqy': plqy}
                             
                             optical_property = {'Peak': peak_emission, 'FWHM':fwhm, 'PLQY':plqy}
-
-                            ## Unify the unit of infuse rate as 'ul/min'
-                            try:
-                                ruc_0 = sq.rate_unit_converter(r0 = metadata_dic["infuse_rate_unit"][0], r1 = 'ul/min')
-                                ruc_1 = sq.rate_unit_converter(r0 = metadata_dic["infuse_rate_unit"][1], r1 = 'ul/min')
-                                ruc_2 = sq.rate_unit_converter(r0 = metadata_dic["infuse_rate_unit"][2], r1 = 'ul/min')
-                                ruc_3 = sq.rate_unit_converter(r0 = metadata_dic["infuse_rate_unit"][3], r1 = 'ul/min')
-                            except (KeyError, IndexError):
-                                pass
                             
 
                             ## Check if pump is Infusing or Idle
@@ -381,32 +377,28 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
                                 elif pump_status == 'Idle':
                                     is_infusing.append(0)
 
+                            if write_agent_data:
+                                agent_data = {}
 
-                            agent_data = {}
+                                agent_data.update(optical_property)
+                                agent_data.update({k:v for k, v in metadata_dic.items() if len(np.atleast_1d(v)) == 1})
+                                # agent_data.update({k:v for k, v in metadata_dic.items()})
 
-                            agent_data.update(optical_property)
-                            agent_data.update({k:v for k, v in metadata_dic.items() if len(np.atleast_1d(v)) == 1})
-                            # agent_data.update({k:v for k, v in metadata_dic.items()})
+                                for i in range(len(rate_label)):
+                                    try:
+                                        ruc = sq.rate_unit_converter(r0 = metadata_dic["infuse_rate_unit"][i], r1 = 'ul/min')
+                                        agent_data[rate_label[i]] = metadata_dic["infuse_rate"][i]*ruc*is_infusing[i]
+                                    except IndexError:
+                                        agent_data[rate_label[i]] = 0.0
 
-                            agent_data["infusion_rate_CsPb"] = metadata_dic["infuse_rate"][0]*ruc_0*is_infusing[0]
-                            agent_data["infusion_rate_Br"] = metadata_dic["infuse_rate"][1]*ruc_1*is_infusing[1]
-                            agent_data["infusion_rate_Cl"] = 0.0
-                            # agent_data["infusion_rate_I2"] = 0.0
-                            # agent_data["infusion_rate_Cl"] = metadata_dic["infuse_rate"][2]*ruc_2*is_infusing[2]
-                            # agent_data["infusion_rate_I2"] = metadata_dic["infuse_rate"][3]*ruc_2*is_infusing[3]
-                            agent_data["infusion_rate_I2"] = metadata_dic["infuse_rate"][2]*ruc_2*is_infusing[2]
-                            agent_data["infusion_rate_Tol"] = metadata_dic["infuse_rate"][3]*ruc_2*is_infusing[3]
+                                with open(f"{agent_data_path}/{data_id}.json", "w") as f:
+                                    json.dump(agent_data, f)
 
-                            with open(f"{agent_data_path}/{data_id}.json", "w") as f:
-                                json.dump(agent_data, f)
-
-                            print(f"\nwrote to {agent_data_path}")
+                                print(f"\nwrote to {agent_data_path}")
 
                             
                             ### Three parameters for ML: peak_emission, fwhm, plqy
                             # TODO: add ML agent code here
-
-                            data = {}
 
 
                             if USE_AGENT_iterate:
