@@ -331,36 +331,6 @@ def _auto_name_sample(infuse_rates, prefix=None):
 
 
 
-def vol_unit_converter(v0 = 'ul', v1 = 'ml'):
-    vol_unit = ['pl', 'nl', 'ul', 'ml']
-    vol_frame = pd.DataFrame(data={'pl': np.geomspace(1, 1E9, num=4), 'nl': np.geomspace(1E-3, 1E6, num=4),
-                                   'ul': np.geomspace(1E-6, 1E3, num=4), 'ml': np.geomspace(1E-9, 1, num=4)}, index=vol_unit)
-    return vol_frame.loc[v0, v1]
-
-
-def t_unit_converter(t0 = 'min', t1 = 'min'):
-    t_unit = ['sec', 'min', 'hr']
-    t_frame = pd.DataFrame(data={'sec': np.geomspace(1, 3600, num=3), 
-                                 'min': np.geomspace(1/60, 60, num=3), 
-                                 'hr' : np.geomspace(1/3600, 1, num=3)}, index=t_unit)
-    return t_frame.loc[t0, t1]
-
-
-def rate_unit_converter(r0 = 'ul/min', r1 = 'ul/min'):
-    
-    v0 = r0.split('/')[0]
-    t0 = r0.split('/')[1]
-    v1 = r1.split('/')[0]
-    t1 = r1.split('/')[1]
-
-    ## ruc = rate_unit_converter
-    ruc = vol_unit_converter(v0=v0, v1=v1) / t_unit_converter(t0=t0, t1=t1)
-    return ruc
-
-
-
-
-
 '''
  'plans_allowed': {'count': '{...}',
                    'scan': '{...}',

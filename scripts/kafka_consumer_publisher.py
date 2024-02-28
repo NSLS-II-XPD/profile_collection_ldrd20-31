@@ -20,7 +20,6 @@ resource.setrlimit(resource.RLIMIT_NOFILE, (65536, 65536))
 import _data_export as de
 from _plot_helper import plot_uvvis
 import _data_analysis as da
-import _synthesis_queue as sq
 
 from bluesky_queueserver.manager.comms import zmq_single_request
 
@@ -72,7 +71,7 @@ from blop import Agent, DOF, Objective
 # agent_data_path = '/home/xf28id2/data_halide'
 agent_data_path = '/home/xf28id2/data_halide'
 
-write_agent_data = True
+write_agent_data = False
 # rate_label = ['infusion_rate_CsPb', 'infusion_rate_Br', 'infusion_rate_Cl', 'infusion_rate_I2']
 rate_label = ['infusion_rate_CsPb', 'infusion_rate_Br', 'infusion_rate_I2', 'infusion_rate_Cl']
 
@@ -204,7 +203,13 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
                     abs_array = qepro_dic['QEPro_output'][1:].mean(axis=0)
                     wavelength = qepro_dic['QEPro_x_axis'][0]
 
-                    popt_abs, _ = da.fit_line_2D(wavelength, abs_array, da.line_2D, x_range=[750, 950], plot=False)
+                    popt_abs01, _ = da.fit_line_2D(wavelength, abs_array, da.line_2D, x_range=[205, 240], plot=False)
+                    popt_abs02, _ = da.fit_line_2D(wavelength, abs_array, da.line_2D, x_range=[750, 950], plot=False)
+                    if abs(popt_abs01[0]) >= abs(popt_abs02[0]):
+                        popt_abs = popt_abs02
+                    elif abs(popt_abs01[0]) <= abs(popt_abs02[0]):
+                        popt_abs = popt_abs01
+
                     abs_array_offset = abs_array - da.line_2D(wavelength, *popt_abs)
 
                     print(f'\nFitting function for baseline offset: {da.line_2D}\n')
@@ -300,7 +305,7 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
 
                                 for i in range(len(rate_label)):
                                     try:
-                                        ruc = sq.rate_unit_converter(r0 = metadata_dic["infuse_rate_unit"][i], r1 = 'ul/min')
+                                        ruc = da.rate_unit_converter(r0 = metadata_dic["infuse_rate_unit"][i], r1 = 'ul/min')
                                         agent_data[rate_label[i]] = metadata_dic["infuse_rate"][i]*ruc*is_infusing[i]
                                     except IndexError:
                                         agent_data[rate_label[i]] = 0.0
