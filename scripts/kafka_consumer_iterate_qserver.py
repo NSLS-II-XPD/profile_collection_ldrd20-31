@@ -98,8 +98,8 @@ from blop import Agent, DOF, Objective
 
 # agent_data_path = '/home/xf28id2/data_ZnCl2'
 # agent_data_path = '/home/xf28id2/data_ZnI2_60mM'
-# agent_data_path = '/home/xf28id2/data_halide'
-agent_data_path = '/home/xf28id2/data_dilute_halide'
+agent_data_path = '/home/xf28id2/data_halide'
+# agent_data_path = '/home/xf28id2/data_dilute_halide'
 
 # dofs = [
 #     DOF(description="CsPb(oleate)3", name="infusion_rate_CsPb", units="uL/min", search_bounds=(5, 110)),
@@ -115,12 +115,12 @@ agent_data_path = '/home/xf28id2/data_dilute_halide'
 # ]
 
 use_good_bad = True
-USE_AGENT_iterate = False
-peak_target = 590
+USE_AGENT_iterate = True
+peak_target = 580
 
 write_agent_data = True
-rate_label = ['infusion_rate_CsPb', 'infusion_rate_Br', 'infusion_rate_Cl', 'infusion_rate_I2']
-# rate_label = ['infusion_rate_CsPb', 'infusion_rate_Br', 'infusion_rate_I2', 'infusion_rate_Cl']
+# rate_label = ['infusion_rate_CsPb', 'infusion_rate_Br', 'infusion_rate_Cl', 'infusion_rate_I2']
+rate_label = ['infusion_rate_CsPb', 'infusion_rate_Br', 'infusion_rate_I2', 'infusion_rate_Cl']
 
 if USE_AGENT_iterate:
 
@@ -426,9 +426,11 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
                                 # new_points = agent.ask("qem", n=1)
                                 # agent.save_data(filepath="/home/xf28id2/data_halide/init_240122_01.h5")
 
-                                peak_diff = peak_emission - peak_target
+                                # peak_diff = peak_emission - peak_target
+                                peak_diff = False
 
-                                if (peak_diff <= 3) and (peak_diff >=-3):
+                                # if (peak_diff <= 3) and (peak_diff >=-3):
+                                if peak_diff:
                                     print(f'\nTarget peak: {peak_target} nm vs. Current peak: {peak_emission} nm\n')
                                     print(f'\nReach the target, stop iteration, stop all pumps, and wash the loop.\n')
 
@@ -613,7 +615,7 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
                 print(f'*** New points from agent: {new_points} ***\n')
                 
                 set_target_list = [0 for i in range(new_points['points'].shape[1])]
-                sample = sq._auto_name_sample(new_points['points'], prefix=prefix)
+                sample = de._auto_name_sample(new_points['points'], prefix=prefix[1:])
 
                 sq.synthesis_queue(
                     syringe_list=syringe_list, 

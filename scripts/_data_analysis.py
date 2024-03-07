@@ -100,7 +100,7 @@ def t_unit_converter(t0 = 'min', t1 = 'min'):
     return t_frame.loc[t0, t1]
 
 
-def rate_uncit_converter(r0 = 'ul/min', r1 = 'ul/min'):
+def rate_unit_converter(r0 = 'ul/min', r1 = 'ul/min'):
     
     v0 = r0.split('/')[0]
     t0 = r0.split('/')[1]

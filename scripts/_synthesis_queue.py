@@ -27,7 +27,7 @@ def synthesis_queue(
                     ):
 
 	if name_by_prefix:
-		sample = _auto_name_sample(rate_list, prefix=prefix)
+		sample = de._auto_name_sample(rate_list, prefix=prefix)
 	                                                                                 
 	rate_list = np.asarray(rate_list, dtype=np.float32)
 	if len(rate_list.shape) == 1:
@@ -306,26 +306,26 @@ def synthesis_queue(
 
 ## Auto generate sample name with given prefix and infuse_rate
 ## If prefix = None, 'Pre00', 'Pre01', 'Pre02', ... will be used.
-def _auto_name_sample(infuse_rates, prefix=None):
-    infuse_rates = np.asarray(infuse_rates)
+# def _auto_name_sample(infuse_rates, prefix=None):
+#     infuse_rates = np.asarray(infuse_rates)
 
-    if len(infuse_rates.shape) == 1:
-        infuse_rates = infuse_rates.reshape(1, infuse_rates.shape[0])
+#     if len(infuse_rates.shape) == 1:
+#         infuse_rates = infuse_rates.reshape(1, infuse_rates.shape[0])
 
-    if prefix == None:
-        prefix_list = [f'Pre{i:02d}' for i in range(infuse_rates.shape[1])]
-    else:
-        prefix_list = prefix
+#     if prefix == None:
+#         prefix_list = [f'Pre{i:02d}' for i in range(infuse_rates.shape[1])]
+#     else:
+#         prefix_list = prefix
 
-    sample = []
-    for i in range(infuse_rates.shape[0]):
-        name = ''
-        for j in range(infuse_rates.shape[1]):
-            int_rate = int(round(float(infuse_rates[i][j]), 0))
-            name += f'{prefix_list[j]}_{int_rate:03d}_'
-        sample.append(name[:-1])
+#     sample = []
+#     for i in range(infuse_rates.shape[0]):
+#         name = ''
+#         for j in range(infuse_rates.shape[1]):
+#             int_rate = int(round(float(infuse_rates[i][j]), 0))
+#             name += f'{prefix_list[j]}_{int_rate:03d}_'
+#         sample.append(name[:-1])
     
-    return sample
+#     return sample
 
 
 
