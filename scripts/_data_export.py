@@ -95,6 +95,38 @@ def _auto_name_sample2(pump_list, prefix=None):
     return sample
 
 
+
+def _exprot_rate_agent(metadata_dic, rate_label_dic, agent_data):
+    
+    is_infusing = []
+    for pump_status in metadata_dic['pump_status']:
+        if pump_status == 'Infusing':
+            is_infusing.append(1)
+        elif pump_status == 'Idle':
+            is_infusing.append(0)
+
+    for key in rate_label_dic.keys():
+        is_key_in_precursors = np.asarray([key in precursor for precursor in metadata_dic['precursors']])
+        num_idx = np.argwhere(is_key_in_precursors==True)
+        
+        if num_idx.size == 1:
+            pre_idx = num_idx[0][0]
+            try:
+                ruc = rate_unit_converter(r0 = metadata_dic["infuse_rate_unit"][pre_idx], r1 = 'ul/min')
+                agent_data[rate_label_dic[key]] = metadata_dic["infuse_rate"][pre_idx]*ruc*is_infusing[pre_idx]
+            except IndexError:
+                agent_data[rate_label_dic[key]] = 0
+
+        elif num_idx.size == 0:
+            agent_data[rate_label_dic[key]] = 0
+
+        elif num_idx.size > 1:
+            raise ValueError (f'Check key: {key} of rate_label_dic. More than one precursor was found.')    
+
+    return agent_data
+
+
+
 def _readable_time(unix_time):
     from datetime import datetime
     dt = datetime.fromtimestamp(unix_time)
@@ -132,6 +164,7 @@ def read_qepro_by_stream(uid, stream_name='primary', data_agent='tiled'):
         except NameError:
             import databroker
             catalog = databroker.catalog['xpd-ldrd20-31']
+            # catalog = databroker.catalog['xpd']
         run = catalog[uid]
         meta = run.metadata
     
@@ -141,6 +174,8 @@ def read_qepro_by_stream(uid, stream_name='primary', data_agent='tiled'):
         except NameError:
             from tiled.client import from_profile
             tiled_client = from_profile("xpd-ldrd20-31")
+            # tiled_client = from_profile("xpd")
+            
         run = tiled_client[uid]
         meta = run.metadata
    
@@ -456,7 +491,8 @@ def read_qepro_from_tiled(uid):
        from_profile
     except NameError:
         from tiled.client import from_profile
-        tiled_client = from_profile("xpd-ldrd20-31")  
+        # tiled_client = from_profile("xpd-ldrd20-31")
+        tiled_client = from_profile("xpd")  
     
     run = tiled_client[uid]
     ds = run.primary.read()
@@ -485,7 +521,8 @@ def read_qepro_from_db(uid):
         db
     except NameError:
         import databroker
-        db = databroker.Broker.named('xpd-ldrd20-31')
+        # db = databroker.Broker.named('xpd-ldrd20-31')
+        db = databroker.Broker.named('xpd')
     
     # full_uid = db[uid].start['uid']
     # unix_time = db[uid].start['time']     

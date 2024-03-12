@@ -222,9 +222,11 @@ def _1peak_fit_good_PL(x0, y0, fit_function, peak=False, maxfev=100000, fit_boun
     if dummy_test:
         x = x0[w1:w2]
         y = y0[w1:w2]
+        x_low_bnd = x0[w1]
     else:         
         x = x0[w2:w3]
         y = y0[w2:w3]
+        x_low_bnd = x0[w2]
     
     mean = sum(x * y) / sum(y)
     sigma = np.sqrt(sum(abs(y) * (x - mean) ** 2) / sum(y))
@@ -237,7 +239,7 @@ def _1peak_fit_good_PL(x0, y0, fit_function, peak=False, maxfev=100000, fit_boun
     
 
     try:
-        bnd = ((0,200,0),(y.max()*1.15,1000, np.inf))
+        bnd = ((0, x_low_bnd, 0),(y.max()*1.15, 1000, np.inf))
         popt, pcov = curve_fit(fit_function, x, y, p0=initial_guess, bounds=bnd, maxfev=maxfev)
     except (RuntimeError, ValueError):
         bnd = (-np.inf, np.inf)

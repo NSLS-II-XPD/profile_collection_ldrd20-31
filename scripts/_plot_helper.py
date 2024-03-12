@@ -163,7 +163,7 @@ class plot_uvvis(open_figures):
 
 
 
-    def plot_CsPbX3(self, x, y, wavelength, wavelength_range=[420, 660], label=None, clf_limit=10):        
+    def plot_CsPbX3(self, x, y, wavelength, label=None, clf_limit=10):        
         
         # import palettable.colorbrewer.diverging as pld
         # palette = pld.RdYlGn_4_r
@@ -273,7 +273,7 @@ class multipeak_fitting(open_subfigures):
 
 
 
-def color_idx_map_halides(peak_wavelength, halide_w_range=[420, 520, 660]):
+def color_idx_map_halides(peak_wavelength, halide_w_range=[400, 520, 660]):
     
     from matplotlib.colors import LinearSegmentedColormap
     colors = [

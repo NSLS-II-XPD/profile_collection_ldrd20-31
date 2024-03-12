@@ -116,11 +116,15 @@ agent_data_path = '/home/xf28id2/data_halide'
 
 use_good_bad = True
 USE_AGENT_iterate = True
-peak_target = 580
+peak_target = 590
 
 write_agent_data = True
 # rate_label = ['infusion_rate_CsPb', 'infusion_rate_Br', 'infusion_rate_Cl', 'infusion_rate_I2']
-rate_label = ['infusion_rate_CsPb', 'infusion_rate_Br', 'infusion_rate_I2', 'infusion_rate_Cl']
+# rate_label = ['infusion_rate_CsPb', 'infusion_rate_Br', 'infusion_rate_I2', 'infusion_rate_Cl']
+rate_label_dic =   {'CsPb':'infusion_rate_CsPb', 
+                    'Br':'infusion_rate_Br', 
+                    'ZnI':'infusion_rate_I2', 
+                    'ZnCl':'infusion_rate_Cl'}
 
 if USE_AGENT_iterate:
 
@@ -166,7 +170,7 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
                          pump_list=pump_list, sample=sample, precursor_list=precursor_list, 
                          mixer=mixer, dummy_test=dummy_kafka, plqy=PLQY, prefix=prefix, 
                          agent_data_path=agent_data_path, peak_target=peak_target, 
-                         rate_label=rate_label):
+                         rate_label_dic=rate_label_dic):
 
     print(f"Listening for Kafka messages for {beamline_acronym}")
     print(f'Defaul parameters:\n'
@@ -373,30 +377,15 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
                             plqy_dic = {'PL_integral':PL_integral_s, 'Absorbance_365':absorbance_s, 'plqy': plqy}
                             
                             optical_property = {'Peak': peak_emission, 'FWHM':fwhm, 'PLQY':plqy}
-                            
-
-                            ## Check if pump is Infusing or Idle
-                            is_infusing = []
-                            for pump_status in metadata_dic['pump_status']:
-                                if pump_status == 'Infusing':
-                                    is_infusing.append(1)
-                                elif pump_status == 'Idle':
-                                    is_infusing.append(0)
 
                             if write_agent_data:
                                 agent_data = {}
 
                                 agent_data.update(optical_property)
                                 agent_data.update({k:v for k, v in metadata_dic.items() if len(np.atleast_1d(v)) == 1})
-                                # agent_data.update({k:v for k, v in metadata_dic.items()})
 
-                                for i in range(len(rate_label)):
-                                    try:
-                                        ruc = da.rate_unit_converter(r0 = metadata_dic["infuse_rate_unit"][i], r1 = 'ul/min')
-                                        agent_data[rate_label[i]] = metadata_dic["infuse_rate"][i]*ruc*is_infusing[i]
-                                    except IndexError:
-                                        agent_data[rate_label[i]] = 0.0
-
+                                agent_data = de._exprot_rate_agent(metadata_dic, rate_label_dic, agent_data)
+                                                                
                                 with open(f"{agent_data_path}/{data_id}.json", "w") as f:
                                     json.dump(agent_data, f)
 
