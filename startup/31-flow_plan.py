@@ -349,12 +349,18 @@ def wait_equilibrium2(mixer_pump_list, ratio=1, tubing_ID_mm=1.016):
         ## Sum up all rates in each mixer
         infuse_rates = [pump.read_infuse_rate.get() for pump in mixer_pump[1:]]
         infuse_rate_unit = [pump.read_infuse_rate_unit.get() for pump in mixer_pump[1:]]
+        pump_status = [pump.status.get() for pump in mixer_pump[1:]]
         total_rate = 0
         for i in range(len(infuse_rates)):
             rate = infuse_rates[i]
             rate_unit = infuse_rate_unit[i]
             unit_const = vol_unit_converter(v0=rate_unit[:2], v1='ul')/t_unit_converter(t0=rate_unit[3:], t1='min')
-            total_rate += rate*unit_const
+            if pump_status[i] == 'Infusing':
+                _is_infusing = True
+            else:
+                _is_infusing = False
+
+            total_rate += rate*unit_const*_is_infusing
 
         res_time_sec += 60*mixer_vol_mm3/total_rate
 
@@ -418,12 +424,18 @@ def cal_equilibrium2(mixer_pump_list, ratio=1, tubing_ID_mm=1.016):
         ## Sum up all rates in each mixer
         infuse_rates = [pump.read_infuse_rate.get() for pump in mixer_pump[1:]]
         infuse_rate_unit = [pump.read_infuse_rate_unit.get() for pump in mixer_pump[1:]]
+        pump_status = [pump.status.get() for pump in mixer_pump[1:]]
         total_rate = 0
         for i in range(len(infuse_rates)):
             rate = infuse_rates[i]
             rate_unit = infuse_rate_unit[i]
             unit_const = vol_unit_converter(v0=rate_unit[:2], v1='ul')/t_unit_converter(t0=rate_unit[3:], t1='min')
-            total_rate += rate*unit_const
+            if pump_status[i] == 'Infusing':
+                _is_infusing = True
+            else:
+                _is_infusing = False
+
+            total_rate += rate*unit_const*_is_infusing
 
         res_time_sec += 60*mixer_vol_mm3/total_rate
 

@@ -39,7 +39,7 @@ plt.rcParams["figure.raise_window"] = False
 
 ## Input varaibales: read from inputs_qserver_kafka.xlsx
 xlsx = '/home/xf28id2/Documents/ChengHung/inputs_qserver_kafka_ML.xlsx'
-input_dic = de._read_input_xlsx(xlsx)
+input_dic = de._read_input_xlsx(xlsx, sheet_name='inputs_OA')
 
 ##################################################################
 # Define namespace for tasks in Qserver and Kafa
@@ -115,10 +115,10 @@ agent_data_path = '/home/xf28id2/data_halide'
 # ]
 
 use_good_bad = True
-USE_AGENT_iterate = True
+USE_AGENT_iterate = False
 peak_target = 590
 
-write_agent_data = True
+write_agent_data = False
 # rate_label = ['infusion_rate_CsPb', 'infusion_rate_Br', 'infusion_rate_Cl', 'infusion_rate_I2']
 # rate_label = ['infusion_rate_CsPb', 'infusion_rate_Br', 'infusion_rate_I2', 'infusion_rate_Cl']
 rate_label_dic =   {'CsPb':'infusion_rate_CsPb', 

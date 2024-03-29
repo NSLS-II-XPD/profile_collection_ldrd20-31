@@ -72,7 +72,7 @@ from blop import Agent, DOF, Objective
 # agent_data_path = '/home/xf28id2/data_halide'
 agent_data_path = '/home/xf28id2/data_halide'
 
-write_agent_data = True
+write_agent_data = False
 # rate_label = ['infusion_rate_CsPb', 'infusion_rate_Br', 'infusion_rate_Cl', 'infusion_rate_I2']
 rate_label_dic =   {'CsPb':'infusion_rate_CsPb', 
                     'Br':'infusion_rate_Br', 

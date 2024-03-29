@@ -98,7 +98,7 @@ def synthesis_queue(
 		if len(mixer) == 1:
 			mixer_pump_list = [[mixer[0], *pump_list]]
 		elif len(mixer) == 2:
-			mixer_pump_list = [[mixer[0], *pump_list[:2]], [mixer[1], *pump_list]]
+			mixer_pump_list = [[mixer[0], *pump_list[:3]], [mixer[1], *pump_list]]
 		
 		if dummy_qserver:
 			zmq_single_request(

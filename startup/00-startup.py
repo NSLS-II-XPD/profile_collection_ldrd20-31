@@ -37,6 +37,7 @@ from bluesky.callbacks.best_effort import BestEffortCallback
 RE = RunEngine({})
 
 db = Broker.named("xpd-ldrd20-31")
+# db = Broker.named("xpd")
 bec = BestEffortCallback()
 
 RE.subscribe(db.insert)
