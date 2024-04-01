@@ -163,8 +163,8 @@ def read_qepro_by_stream(uid, stream_name='primary', data_agent='tiled'):
             catalog
         except NameError:
             import databroker
-            catalog = databroker.catalog['xpd-ldrd20-31']
-            # catalog = databroker.catalog['xpd']
+            # catalog = databroker.catalog['xpd-ldrd20-31']
+            catalog = databroker.catalog['xpd']
         run = catalog[uid]
         meta = run.metadata
     
@@ -173,8 +173,8 @@ def read_qepro_by_stream(uid, stream_name='primary', data_agent='tiled'):
             from_profile
         except NameError:
             from tiled.client import from_profile
-            tiled_client = from_profile("xpd-ldrd20-31")
-            # tiled_client = from_profile("xpd")
+            # tiled_client = from_profile("xpd-ldrd20-31")
+            tiled_client = from_profile("xpd")
             
         run = tiled_client[uid]
         meta = run.metadata

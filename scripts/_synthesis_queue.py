@@ -24,6 +24,7 @@ def synthesis_queue(
 					pos='back',
                     dummy_qserver=False,
 					is_iteration=False, 
+					zmq_server_address=None, 
                     ):
 
 	if name_by_prefix:
@@ -60,7 +61,8 @@ def synthesis_queue(
 			# stl = int(stl)
 
 			zmq_single_request(
-				method='queue_item_add', 
+				method='queue_item_add',
+				zmq_server_address=zmq_server_address, 
 				params={
 					'item':{
 						"name":"set_group_infuse2", 
@@ -80,6 +82,7 @@ def synthesis_queue(
 		## 2. Start infuese
 		zmq_single_request(
 			method='queue_item_add', 
+			zmq_server_address=zmq_server_address, 
 			params={
 				'item':{
 					"name":"start_group_infuse", 
@@ -103,6 +106,7 @@ def synthesis_queue(
 		if dummy_qserver:
 			zmq_single_request(
 				method='queue_item_add', 
+				zmq_server_address=zmq_server_address, 
 				params={
 					'item':{
 						"name":"sleep_sec_q", 
@@ -125,6 +129,7 @@ def synthesis_queue(
 
 			zmq_single_request(
 				method='queue_item_add', 
+				zmq_server_address=zmq_server_address, 
 				params={
 					'item':{
 						"name":"wait_equilibrium2", 
@@ -140,6 +145,7 @@ def synthesis_queue(
 		## 4-1. Take a fluorescence peak to check reaction
 		zmq_single_request(
 			method='queue_item_add', 
+			zmq_server_address=zmq_server_address, 
 			params={
 				'item':{
 					"name":"take_a_uvvis_csv_q",  
@@ -178,6 +184,7 @@ def synthesis_queue(
 		## 5. Sleep for 5 seconds for Kafak to check good/bad data
 		zmq_single_request(
 			method='queue_item_add', 
+			zmq_server_address=zmq_server_address, 
 			params={
 				'item':{
 					"name":"sleep_sec_q", 
@@ -194,10 +201,11 @@ def synthesis_queue(
 		## 6. Start xray_uvvis bundle plan to take real data
 		zmq_single_request(
 			method='queue_item_add', 
+			zmq_server_address=zmq_server_address, 
 			params={
 				'item':{
 					"name":"xray_uvvis_plan", 
-					"args":['det', 'qepro'],
+					"args":['pe2c', 'qepro'],
 					"kwargs":{
 						'num_abs':num_abs, 
 						'num_flu':num_flu,
@@ -221,6 +229,7 @@ def synthesis_queue(
 		### 7-1. Stop infuese
 		zmq_single_request(
 			method='queue_item_add', 
+			zmq_server_address=zmq_server_address, 
 			params={
 				'item':{
 					"name":"stop_group", 
@@ -234,6 +243,7 @@ def synthesis_queue(
 		### 7-2. Set infuse rate for washing loop/tube
 		zmq_single_request(
 			method='queue_item_add', 
+			zmq_server_address=zmq_server_address, 
 			params={
 				'item':{
 					"name":"set_group_infuse2", 
@@ -252,6 +262,7 @@ def synthesis_queue(
 		### 7-3. Start to wash loop/tube
 		zmq_single_request(
 			method='queue_item_add', 
+			zmq_server_address=zmq_server_address, 
 			params={
 				'item':{
 					"name":"start_group_infuse", 
@@ -265,6 +276,7 @@ def synthesis_queue(
 		### 7-4. Wash loop/tube for xxx seconds
 		zmq_single_request(
 			method='queue_item_add', 
+			zmq_server_address=zmq_server_address, 
 			params={
 				'item':{
 					"name":"sleep_sec_q", 
@@ -278,6 +290,7 @@ def synthesis_queue(
 		### 7-5. stop infuese
 		zmq_single_request(
 			method='queue_item_add', 
+			zmq_server_address=zmq_server_address, 
 			params={
 				'item':{
 					"name":"stop_group", 
@@ -292,6 +305,7 @@ def synthesis_queue(
 	# 8. stop infuese for all pumps
 	zmq_single_request(
 		method='queue_item_add', 
+		zmq_server_address=zmq_server_address, 
 		params={
 			'item':{
 				"name":"stop_group", 

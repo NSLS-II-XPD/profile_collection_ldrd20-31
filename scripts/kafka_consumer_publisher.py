@@ -66,7 +66,7 @@ PLQY = input_dic['PLQY']
 # num_uvvis = input_dic['num_uvvis']
 ###################################################################
 
-from blop import Agent, DOF, Objective
+# from blop import Agent, DOF, Objective
 # agent_data_path = '/home/xf28id2/data_ZnCl2'
 # agent_data_path = '/home/xf28id2/data_ZnI2_60mM'
 # agent_data_path = '/home/xf28id2/data_halide'
