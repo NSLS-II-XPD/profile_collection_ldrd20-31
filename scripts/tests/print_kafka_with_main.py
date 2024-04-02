@@ -3,6 +3,7 @@ import pprint
 import uuid
 from bluesky_kafka import RemoteDispatcher
 from bluesky_queueserver.manager.comms import zmq_single_request
+import time
 
 try:
     from nslsii import _read_bluesky_kafka_config_file  # nslsii <0.7.0
@@ -19,10 +20,12 @@ def print_kafka_messages(beamline_acronym):
     def print_message(name, doc):
         print(
             f"{datetime.datetime.now().isoformat()} document: {name}\n"
-            f"contents: {pprint.pformat(doc)}\n"
+            # f"contents: {pprint.pformat(doc)}\n"
         )
         if name == 'stop':
+            time.sleep(2)
             print(db[doc['run_start']].table())
+            # print(doc['run_start'])
 
             # zmq_single_request(method='queue_item_add', params={'item':{"name":"insitu_test", "args": [1 ,1]
             # , "kwargs": {"sample": "quinine_qserver", "csv_path": "/home/xf28id2/Documents/ChengHung/20230403_qserver_collection", "data_agent":"tiled"}, "item_type":"plan"}, 'user_group':'primary', 'user':'chlin'})

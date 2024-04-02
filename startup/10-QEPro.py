@@ -44,7 +44,7 @@ class QEPro(Device):
 
     # Device Status
     status = Cpt(EpicsSignal, 'STATUS')
-    status_msg = Cpt(EpicsSignal, 'STATUS_MSG')
+    status_msg = Cpt(EpicsSignal, 'STATUS_MSG', string=True)
     device_connected = Cpt(EpicsSignalRO, 'CONNECTED_RBV')
 
     # Utility signal that periodically checks device temps.
@@ -135,7 +135,7 @@ class QEPro(Device):
 
     def describe(self):
         description = super().describe()
-        description[f"{self.name}_status_msg"].setdefault("dtype_str", "<i8")
+        # description[f"{self.name}_status_msg"].setdefault("dtype_str", "<i8")
         # description[f"{self.name}_output"].setdefault("dtype_str", "|O")
         return description
     

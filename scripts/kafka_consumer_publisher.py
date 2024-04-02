@@ -66,13 +66,13 @@ PLQY = input_dic['PLQY']
 # num_uvvis = input_dic['num_uvvis']
 ###################################################################
 
-from blop import Agent, DOF, Objective
+# from blop import Agent, DOF, Objective
 # agent_data_path = '/home/xf28id2/data_ZnCl2'
 # agent_data_path = '/home/xf28id2/data_ZnI2_60mM'
 # agent_data_path = '/home/xf28id2/data_halide'
 agent_data_path = '/home/xf28id2/data_halide'
 
-write_agent_data = True
+write_agent_data = False
 # rate_label = ['infusion_rate_CsPb', 'infusion_rate_Br', 'infusion_rate_Cl', 'infusion_rate_I2']
 rate_label_dic =   {'CsPb':'infusion_rate_CsPb', 
                     'Br':'infusion_rate_Br', 
@@ -181,7 +181,7 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
             ## Export, plotting, fitting, calculate # of good/bad data, add queue item
             for stream_name in stream_list:
                 ## Read data from databroker and turn into dic
-                qepro_dic, metadata_dic = de.read_qepro_by_stream(uid, stream_name=stream_name, data_agent='tiled')
+                qepro_dic, metadata_dic = de.read_qepro_by_stream(uid, stream_name=stream_name, data_agent='catalog')
                 sample_type = metadata_dic['sample_type']
                 ## Save data in dic into .csv file
                 de.dic_to_csv_for_stream(csv_path, qepro_dic, metadata_dic, stream_name=stream_name)

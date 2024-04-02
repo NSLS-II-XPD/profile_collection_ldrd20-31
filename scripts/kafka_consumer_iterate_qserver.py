@@ -39,7 +39,7 @@ plt.rcParams["figure.raise_window"] = False
 
 ## Input varaibales: read from inputs_qserver_kafka.xlsx
 xlsx = '/home/xf28id2/Documents/ChengHung/inputs_qserver_kafka_ML.xlsx'
-input_dic = de._read_input_xlsx(xlsx)
+input_dic = de._read_input_xlsx(xlsx, sheet_name='inputs_xrun')
 
 ##################################################################
 # Define namespace for tasks in Qserver and Kafa
@@ -65,7 +65,8 @@ prefix = input_dic['prefix']
 num_uvvis = input_dic['num_uvvis']
 ###################################################################
 ## Add tasks into Qsever
-import _synthesis_queue as sq
+zmq_server_address = 'tcp://xf28id2-ca2:60615'
+import _synthesis_queue_RM as sq
 sq.synthesis_queue(
                     syringe_list=syringe_list, 
                     pump_list=pump_list, 
@@ -82,6 +83,7 @@ sq.synthesis_queue(
                     name_by_prefix=bool(prefix[0]),  
 					num_abs=num_uvvis[0], 
 					num_flu=num_uvvis[1], 
+                    
                     )
 
 if bool(prefix[0]):
@@ -98,7 +100,7 @@ from blop import Agent, DOF, Objective
 
 # agent_data_path = '/home/xf28id2/data_ZnCl2'
 # agent_data_path = '/home/xf28id2/data_ZnI2_60mM'
-agent_data_path = '/home/xf28id2/data_halide'
+agent_data_path = '/home/xf28id2/data_halide/'
 # agent_data_path = '/home/xf28id2/data_dilute_halide'
 
 # dofs = [
@@ -116,9 +118,9 @@ agent_data_path = '/home/xf28id2/data_halide'
 
 use_good_bad = True
 USE_AGENT_iterate = True
-peak_target = 590
+peak_target = 470
 
-write_agent_data = True
+write_agent_data = False
 # rate_label = ['infusion_rate_CsPb', 'infusion_rate_Br', 'infusion_rate_Cl', 'infusion_rate_I2']
 # rate_label = ['infusion_rate_CsPb', 'infusion_rate_Br', 'infusion_rate_I2', 'infusion_rate_Cl']
 rate_label_dic =   {'CsPb':'infusion_rate_CsPb', 
@@ -128,40 +130,10 @@ rate_label_dic =   {'CsPb':'infusion_rate_CsPb',
 
 if USE_AGENT_iterate:
 
-    from prepare_agent import build_agen
-    agent = build_agen(peak_target=peak_target)
+    # from prepare_agent import build_agen
+    from prepare_agent_pdf import build_agen_Cl
+    agent = build_agen_Cl(peak_target=peak_target)
 
-    # agent = Agent(dofs=dofs, objectives=objectives, db=None, verbose=True)
-    # #agent.load_data("~/blop/data/init.h5")
-
-    # metadata_keys = ["time", "uid", "r_2"]
-
-    # init_file = "/home/xf28id2/data_halide/init_240122.h5"
-
-    # if os.path.exists(init_file):
-    #     agent.load_data(init_file)
-
-    # else:
-    #     filepaths = glob.glob(f"{agent_data_path}/*.json")
-    #     for fp in tqdm(filepaths):
-    #         with open(fp, "r") as f:
-    #             data = json.load(f)
-
-    #         r_2_min = 0.6
-    #         try: 
-    #             if data['r_2'] < r_2_min:
-    #                 print(f'Skip because "r_2" of {os.path.basename(fp)} is {data["r_2"]:.2f} < {r_2_min}.')
-    #             else: 
-    #                 x = {k:[data[k]] for k in agent.dofs.names}
-    #                 y = {k:[data[k]] for k in agent.objectives.names}
-    #                 metadata = {k:[data.get(k, None)] for k in metadata_keys}
-    #                 agent.tell(x=x, y=y, metadata=metadata, train=False)
-            
-    #         except (KeyError):
-    #             print(f'{os.path.basename(fp)} has no "r_2".')
-
-    # agent._construct_all_models()
-    # agent._train_all_models()
 
 
 
@@ -177,7 +149,12 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
           f'                  csv path: {csv_path}\n'
           f'                  key height: {key_height}\n'
           f'                  height: {height}\n'
-          f'                  distance: {distance}\n')
+          f'                  distance: {distance}\n'
+          f'{use_good_bad = }\n'
+          f'{USE_AGENT_iterate = }\n'
+          f'{peak_target = }\n'
+          f'{write_agent_data = }\n'
+          f'{zmq_server_address = }')
 
 
     global db, catalog
@@ -236,7 +213,7 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
                 print(f"sample type: {message['sample_type']}")
             
         if name == 'stop':
-            zmq_single_request(method='queue_stop')
+            zmq_single_request(method='queue_stop', zmq_server_address=zmq_server_address)
             print('\n*** qsever stop for data export, identification, and fitting ***\n')
 
             print(f"{datetime.datetime.now().isoformat()} documents {name}\n"
@@ -401,7 +378,7 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
                                 # print(f"\ntelling agent {agent_data}")
                                 # agent.tell(data=agent_data, append=True)
 
-                                agent = build_agen(peak_target=peak_target)
+                                agent = build_agen_Cl(peak_target=peak_target)
 
                                 if len(agent.table) < 2:
                                     acq_func = "qr"
@@ -426,6 +403,7 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
                                     ### Stop all infusing pumps
                                     zmq_single_request(
                                         method='queue_item_add', 
+                                        zmq_server_address=zmq_server_address, 
                                         params={
                                             'item':{
                                                 "name":"stop_group", 
@@ -438,6 +416,7 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
                                     ### Set up washing tube/loop
                                     zmq_single_request(
                                         method='queue_item_add', 
+                                        zmq_server_address=zmq_server_address, 
                                         params={
                                             'item':{
                                                 "name":"start_group_infuse", 
@@ -450,6 +429,7 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
                                     ### Wash loop/tube for xxx seconds
                                     zmq_single_request(
                                         method='queue_item_add', 
+                                        zmq_server_address=zmq_server_address, 
                                         params={
                                             'item':{
                                                 "name":"sleep_sec_q", 
@@ -463,6 +443,7 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
                                     ### Stop washing
                                     zmq_single_request(
                                         method='queue_item_add', 
+                                        zmq_server_address=zmq_server_address, 
                                         params={
                                             'item':{
                                                 "name":"stop_group", 
@@ -472,7 +453,7 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
                                             'user_group':'primary', 
                                             'user':'chlin'})
                                 
-                                    zmq_single_request(method='queue_stop')
+                                    zmq_single_request(method='queue_stop', zmq_server_address=zmq_server_address)
                                     # zmq_single_request(method='re_abort')
                                     agent_iteration.append(False)
                                 
@@ -519,6 +500,7 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
                     ### Stop all infusing pumps
                     zmq_single_request(
                         method='queue_item_add', 
+                        zmq_server_address=zmq_server_address, 
                         params={
                             'item':{
                                 "name":"stop_group", 
@@ -531,6 +513,7 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
                     ### Set up washing tube/loop
                     zmq_single_request(
                         method='queue_item_add', 
+                        zmq_server_address=zmq_server_address, 
                         params={
                             'item':{
                                 "name":"start_group_infuse", 
@@ -543,6 +526,7 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
                     ### Wash loop/tube for xxx seconds
                     zmq_single_request(
                         method='queue_item_add', 
+                        zmq_server_address=zmq_server_address, 
                         params={
                             'item':{
                                 "name":"sleep_sec_q", 
@@ -556,6 +540,7 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
                     ### Stop washing
                     zmq_single_request(
                         method='queue_item_add', 
+                        zmq_server_address=zmq_server_address, 
                         params={
                             'item':{
                                 "name":"stop_group", 
@@ -565,7 +550,7 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
                             'user_group':'primary', 
                             'user':'chlin'})
                    
-                    zmq_single_request(method='queue_stop')
+                    zmq_single_request(method='queue_stop', zmq_server_address=zmq_server_address)
                     # zmq_single_request(method='re_abort')
                     
                 elif len(good_data) <= 2 and use_good_bad:
@@ -573,6 +558,7 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
 
                     zmq_single_request(
                         method='queue_item_add', 
+                        zmq_server_address=zmq_server_address, 
                         params={
                             'item':{
                                 "name":"take_a_uvvis_csv_q",  
@@ -588,7 +574,7 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
                             'user_group':'primary', 
                             'user':'chlin'})
                     
-                    zmq_single_request(method='queue_start')
+                    zmq_single_request(method='queue_start', zmq_server_address=zmq_server_address)
 
                 elif len(good_data) > 2 and use_good_bad:
                     print('*** # of good data is enough so go to the next: bundle plan ***\n')
@@ -597,7 +583,7 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
                     finished.append(metadata_dic['sample_type'])
                     print(f'After event: good_data = {good_data}\n')
                     print(f'After event: finished sample = {finished}\n')
-                    zmq_single_request(method='queue_start')
+                    zmq_single_request(method='queue_start', zmq_server_address=zmq_server_address)
             
             elif stream_name == 'fluorescence' and USE_AGENT_iterate and agent_iteration[-1]:
                 print('*** Add new points from agent to the fron of qsever ***\n')
@@ -625,11 +611,11 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
                     is_iteration=True, 
                     )
 
-                zmq_single_request(method='queue_start')
+                zmq_single_request(method='queue_start', zmq_server_address=zmq_server_address)
     
             # elif use_good_bad:
             else:
-                zmq_single_request(method='queue_start')
+                zmq_single_request(method='queue_start', zmq_server_address=zmq_server_address)
 
 
     kafka_config = _read_bluesky_kafka_config_file(config_file_path="/etc/bluesky/kafka.yml")

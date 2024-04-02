@@ -4,16 +4,17 @@ import json
 import glob
 import sys
 import numpy as np
+import pandas as pd
 from tqdm import tqdm
 # sys.path.insert(0, "/home/xf28id2/src/blop")
 
 from blop import Agent, DOF, Objective
 
 
-def build_agen(peak_target=660, peak_tolerance=5):
+def build_agen_Cl(peak_target=660, peak_tolerance=5, size_target=6, ):
     # data_path = '/home/xf28id2/data_ZnCl2'
     #data_path = '/home/xf28id2/data'
-    agent_data_path = '/home/xf28id2/Documents/ChengHung/data_halide_from_Lab'
+    agent_data_path = '/home/xf28id2/Documents/ChengHung'
 
 
     if peak_target > 515:
@@ -45,10 +46,18 @@ def build_agen(peak_target=660, peak_tolerance=5):
     ]  
     
     
+    peak_up = peak_target+peak_tolerance
+    peak_down = peak_target-peak_tolerance
+    
+    ratio_up = 1-(510-peak_up)*0.99/110
+    ratio_down = 1-(510-peak_down)*0.99/110
+    
     objectives = [
-        Objective(description="Peak emission", name="Peak", target=(peak_target-peak_tolerance, peak_target+peak_tolerance), weight=100, max_noise=0.25),
+        Objective(description="Peak emission", name="Peak", target=(peak_down, peak_up), weight=100, max_noise=0.25),
         Objective(description="Peak width", name="FWHM", target="min", log=True, weight=5., max_noise=0.25),
         Objective(description="Quantum yield", name="PLQY", target="max", log=True, weight=1., max_noise=0.25),
+        Objective(description="Particle size", name="size_nm", target=(size_target-1.5, size_target+1.5), log=True, weight=0.1, max_noise=0.25),
+        Objective(description="Phase ratio", name="reduced_ratio", target=(ratio_down, ratio_up), log=True, weight=0.1, max_noise=0.25),
     ]
 
 
@@ -56,35 +65,35 @@ def build_agen(peak_target=660, peak_tolerance=5):
 
     # objectives = [
     #     Objective(name="Peak emission", key="peak_emission", target=525, units="nm"),
-    #     Objective(name="Peak width", key="peak_fwhm", minimize=True, units="nm"),
-    #     Objective(name="Quantum yield", key="plqy"),
-    # ]
-
-    USE_AGENT = False
-
+    #     Objective(name="Peafilepath
     print('Start to buid agent')
     agent = Agent(dofs=dofs, objectives=objectives, db=None, verbose=True)
     #agent.load_data("~/blop/data/init.h5")
 
     metadata_keys = ["time", "uid", "r_2"]
 
-    init_file = "/home/xf28id2/data_halide/init_240122_01.h5"
-
     # if os.path.exists(init_file):
     #     agent.load_data(init_file)
 
     # else:
-    filepaths = glob.glob(f"{agent_data_path}/*.json")
-    # print(f'{filepaths = }')
-    filepaths.sort()
-    for fp in tqdm(filepaths):
-        with open(fp, "r") as f:
-            data = json.load(f)
-
+    # filepaths = glob.glob(f"{agent_data_path}/*.json")
+    # filepaths.sort()
+    
+    fn = agent_data_path + '/' + 'agent_data_update_quinine_CsPbCl3.csv'
+    df = pd.read_csv(fn, sep=',', index_col=False)
+    
+    
+    for i in range(len(df['uid'])):
+        # with open(fp, "r") as f:
+        #     data = json.load(f)
+        data = {}
+        for key in df.keys():
+            data[key] = df[key][i]
+            
         r_2_min = 0.05
         try: 
             if data['r_2'] < r_2_min:
-                print(f'Skip because "r_2" of {os.path.basename(fp)} is {data["r_2"]:.2f} < {r_2_min}.')
+                print(f'Skip because "r_2" of {df["uid"][i]} is {data["r_2"]:.2f} < {r_2_min}.')
             else: 
                 x = {k:[data[k]] for k in agent.dofs.names}
                 y = {k:[data[k]] for k in agent.objectives.names}
