@@ -10,6 +10,8 @@ try:
 except (ImportError, AttributeError):
     from nslsii.kafka_utils import _read_bluesky_kafka_config_file  # nslsii >=0.7.0
 
+import nslsii
+print(f'nslsii version: {nslsii.__version__}')
 
 def print_kafka_messages(beamline_acronym):
     print(f"Listening for Kafka messages for {beamline_acronym}")

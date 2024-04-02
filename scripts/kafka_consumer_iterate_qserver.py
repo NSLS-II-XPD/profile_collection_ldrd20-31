@@ -66,7 +66,11 @@ num_uvvis = input_dic['num_uvvis']
 ###################################################################
 ## Add tasks into Qsever
 zmq_server_address = 'tcp://xf28id2-ca2:60615'
+<<<<<<< HEAD
 import _synthesis_queue_RM as sq
+=======
+import _synthesis_queue as sq
+>>>>>>> fecf1c505a6f10aa4bd4de859fa3e16c5689d899
 sq.synthesis_queue(
                     syringe_list=syringe_list, 
                     pump_list=pump_list, 
@@ -83,7 +87,11 @@ sq.synthesis_queue(
                     name_by_prefix=bool(prefix[0]),  
 					num_abs=num_uvvis[0], 
 					num_flu=num_uvvis[1], 
+<<<<<<< HEAD
                     
+=======
+                    zmq_server_address=zmq_server_address, 
+>>>>>>> fecf1c505a6f10aa4bd4de859fa3e16c5689d899
                     )
 
 if bool(prefix[0]):
@@ -100,21 +108,25 @@ from blop import Agent, DOF, Objective
 
 # agent_data_path = '/home/xf28id2/data_ZnCl2'
 # agent_data_path = '/home/xf28id2/data_ZnI2_60mM'
+<<<<<<< HEAD
 agent_data_path = '/home/xf28id2/data_halide/'
+=======
+agent_data_path = '/home/xf28id2/Documents/ChengHung/data_halide'
+>>>>>>> fecf1c505a6f10aa4bd4de859fa3e16c5689d899
 # agent_data_path = '/home/xf28id2/data_dilute_halide'
 
-# dofs = [
-#     DOF(description="CsPb(oleate)3", name="infusion_rate_CsPb", units="uL/min", search_bounds=(5, 110)),
-#     DOF(description="TOABr", name="infusion_rate_Br", units="uL/min", search_bounds=(70, 170)),
-#     DOF(description="ZnCl2", name="infusion_rate_Cl", units="uL/min", search_bounds=(0, 150)),
-#     DOF(description="ZnI2", name="infusion_rate_I2", units="uL/min", search_bounds=(0, 150)),
-# ]
+dofs = [
+    DOF(description="CsPb(oleate)3", name="infusion_rate_CsPb", units="uL/min", search_bounds=(5, 110)),
+    DOF(description="TOABr", name="infusion_rate_Br", units="uL/min", search_bounds=(70, 170)),
+    DOF(description="ZnCl2", name="infusion_rate_Cl", units="uL/min", search_bounds=(0, 150)),
+    DOF(description="ZnI2", name="infusion_rate_I2", units="uL/min", search_bounds=(0, 150)),
+]
 
-# objectives = [
-#     Objective(description="Peak emission", name="Peak", target=660, weight=10, max_noise=0.25),
-#     Objective(description="Peak width", name="FWHM", target="min", log=True, weight=2., max_noise=0.25),
-#     Objective(description="Quantum yield", name="PLQY", target="max", log=True, weight=1., max_noise=0.25),
-# ]
+objectives = [
+    Objective(description="Peak emission", name="Peak", target=660, weight=10, max_noise=0.25),
+    Objective(description="Peak width", name="FWHM", target="min", log=True, weight=2., max_noise=0.25),
+    Objective(description="Quantum yield", name="PLQY", target="max", log=True, weight=1., max_noise=0.25),
+]
 
 use_good_bad = True
 USE_AGENT_iterate = True
@@ -523,6 +535,13 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
                             'user_group':'primary', 
                             'user':'chlin'})
 
+                    # from bluesky_queueserver_api.zmq import REManagerAPI
+                    # from bluesky_queueserver_api import BPlan
+                    # RM = REManagerAPI( < address etc. >)
+                    # plan = BPlan("start_group_infuse", [wash_tube[1]], [wash_tube[2]])
+                    # plan.meta = ...
+                    # RM.item_add(plan)
+                    
                     ### Wash loop/tube for xxx seconds
                     zmq_single_request(
                         method='queue_item_add', 
@@ -584,6 +603,10 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
                     print(f'After event: good_data = {good_data}\n')
                     print(f'After event: finished sample = {finished}\n')
                     zmq_single_request(method='queue_start', zmq_server_address=zmq_server_address)
+<<<<<<< HEAD
+=======
+                    # RM.queue_start()
+>>>>>>> fecf1c505a6f10aa4bd4de859fa3e16c5689d899
             
             elif stream_name == 'fluorescence' and USE_AGENT_iterate and agent_iteration[-1]:
                 print('*** Add new points from agent to the fron of qsever ***\n')
@@ -609,6 +632,7 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
 					num_abs=num_uvvis[0], 
 					num_flu=num_uvvis[1], 
                     is_iteration=True, 
+                    zmq_server_address=zmq_server_address, 
                     )
 
                 zmq_single_request(method='queue_start', zmq_server_address=zmq_server_address)
