@@ -36,24 +36,14 @@ from bluesky.callbacks.best_effort import BestEffortCallback
 
 RE = RunEngine({})
 
-<<<<<<< HEAD
 db = Broker.named("xpd-ldrd20-31")
 # db = Broker.named("xpd")
-=======
-# db = Broker.named("xpd-ldrd20-31")
-db = Broker.named("xpd")
->>>>>>> fecf1c505a6f10aa4bd4de859fa3e16c5689d899
 bec = BestEffortCallback()
 
 RE.subscribe(db.insert)
 RE.subscribe(bec)
-<<<<<<< HEAD
 res = nslsii.configure_kafka_publisher(RE, beamline_name="xpd-ldrd20-31")
 # res = nslsii.configure_kafka_publisher(RE, beamline_name="xpd")
-=======
-res = nslsii.configure_kafka_publisher(RE, beamline_name="xpd")
-# res = nslsii.configure_kafka_publisher(RE, beamline_name="xpd-ldrd20-31")
->>>>>>> fecf1c505a6f10aa4bd4de859fa3e16c5689d899
 
 
 
