@@ -62,8 +62,9 @@ def xray_uvvis_plan(det1, det2, *args, md=None, num_abs=10, num_flu=10, sample_t
             # print(f"reading = {reading}")
             ret.update(reading)
             yield from bps.save()  # TODO: check if it's needed, most likely yes.
-            yield from bps.sleep(2)
-
+            # yield from bps.sleep(2)
+        
+        yield from bps.sleep(2)
 
         ## Start to collecting fluorescence
         spectrum_type='Corrected Sample'
@@ -85,8 +86,9 @@ def xray_uvvis_plan(det1, det2, *args, md=None, num_abs=10, num_flu=10, sample_t
             # print(f"reading = {reading}")
             ret.update(reading)
             yield from bps.save()  # TODO: check if it's needed, most likely yes.
-            yield from bps.sleep(2)
+            # yield from bps.sleep(2)
 
+        yield from bps.sleep(2)
         yield from bps.mv(LED, 'Low', UV_shutter, 'Low')
         
         # yield from bps.sleep(3)

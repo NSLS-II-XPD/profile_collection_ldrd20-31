@@ -41,7 +41,7 @@ plt.rcParams["figure.raise_window"] = False
 
 ## Input varaibales: read from inputs_qserver_kafka.xlsx
 xlsx = '/home/xf28id2/Documents/ChengHung/inputs_qserver_kafka_ML.xlsx'
-input_dic = de._read_input_xlsx(xlsx, sheet_name='inputs_xrun')
+input_dic = de._read_input_xlsx(xlsx, sheet_name='inputs')
 
 ##################################################################
 # Define namespace for tasks in Qserver and Kafa
@@ -69,7 +69,7 @@ num_uvvis = input_dic['num_uvvis']
 ## Add tasks into Qsever
 # zmq_control_addr='tcp://xf28id2-ca2:60615', 
 # zmq_info_addr='tcp://xf28id2-ca2:60625'
-zmq_control_addr='tcp://localhost:60615', 
+zmq_control_addr='tcp://localhost:60615' 
 zmq_info_addr='tcp://localhost:60625'
 
 RM = REManagerAPI(zmq_control_addr=zmq_control_addr, zmq_info_addr=zmq_info_addr)
@@ -104,31 +104,18 @@ print(f'Sample: {sample}')
 
 from blop import Agent, DOF, Objective
 
-
-
-# agent_data_path = '/home/xf28id2/data_ZnCl2'
+# agent_data_path = '/home/xf28id2/data_post_dilute_0418'
 # agent_data_path = '/home/xf28id2/data_ZnI2_60mM'
-agent_data_path = '/home/xf28id2/data_halide/'
+# agent_data_path = '/home/xf28id2/data_halide/'
 # agent_data_path = '/home/xf28id2/data_dilute_halide'
-
-# dofs = [
-#     DOF(description="CsPb(oleate)3", name="infusion_rate_CsPb", units="uL/min", search_bounds=(5, 110)),
-#     DOF(description="TOABr", name="infusion_rate_Br", units="uL/min", search_bounds=(70, 170)),
-#     DOF(description="ZnCl2", name="infusion_rate_Cl", units="uL/min", search_bounds=(0, 150)),
-#     DOF(description="ZnI2", name="infusion_rate_I2", units="uL/min", search_bounds=(0, 150)),
-# ]
-
-# objectives = [
-#     Objective(description="Peak emission", name="Peak", target=660, weight=10, max_noise=0.25),
-#     Objective(description="Peak width", name="FWHM", target="min", log=True, weight=2., max_noise=0.25),
-#     Objective(description="Quantum yield", name="PLQY", target="max", log=True, weight=1., max_noise=0.25),
-# ]
+agent_data_path = '/home/xf28id2/data_post_dilute_66mM_PF'
 
 use_good_bad = True
-USE_AGENT_iterate = True
-peak_target = 470
+post_dilute = True
+USE_AGENT_iterate = False
+peak_target = 420
 
-write_agent_data = False
+write_agent_data = True
 # rate_label = ['infusion_rate_CsPb', 'infusion_rate_Br', 'infusion_rate_Cl', 'infusion_rate_I2']
 # rate_label = ['infusion_rate_CsPb', 'infusion_rate_Br', 'infusion_rate_I2', 'infusion_rate_Cl']
 rate_label_dic =   {'CsPb':'infusion_rate_CsPb', 
@@ -139,9 +126,11 @@ rate_label_dic =   {'CsPb':'infusion_rate_CsPb',
 if USE_AGENT_iterate:
 
     # from prepare_agent import build_agen
-    from prepare_agent_pdf import build_agen_Cl
-    agent = build_agen_Cl(peak_target=peak_target)
+    # from prepare_agent_pdf import build_agen_Cl
+    # agent = build_agen_Cl(peak_target=peak_target)
 
+    from prepare_agent_select import build_agen2
+    agent = build_agen2(peak_target=peak_target)
 
 
 def print_kafka_messages(beamline_acronym, csv_path=csv_path, 
@@ -157,16 +146,24 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
           f'                  key height: {key_height}\n'
           f'                  height: {height}\n'
           f'                  distance: {distance}\n'
+          f'{post_dilute = }\n'
           f'{use_good_bad = }\n'
           f'{USE_AGENT_iterate = }\n'
           f'{peak_target = }\n'
           f'{write_agent_data = }\n'
-          f'{zmq_server_address = }')
+          f'{zmq_control_addr = }')
 
 
-    global db, catalog
+    global db, catalog, path_0, path_1
     db = databroker.Broker.named(beamline_acronym)
     catalog = databroker.catalog[f'{beamline_acronym}']
+    path_0  = csv_path
+
+    path_1 = csv_path + '/good_bad'
+    try:
+        os.mkdir(path_1)
+    except FileExistsError:
+        pass
 
     import palettable.colorbrewer.diverging as pld
     palette = pld.RdYlGn_4_r
@@ -175,7 +172,7 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
 
     # plt.figure()
     # def print_message(name, doc):
-    def print_message(consumer, doctype, doc, 
+    def print_message(consumer, doctype, doc,  
                       bad_data = [], good_data = [], check_abs365 = False, finished = [], 
                       agent_iteration = [], ):
                     #   pump_list=pump_list, sample=sample, precursor_list=precursor_list, 
@@ -220,9 +217,7 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
                 print(f"sample type: {message['sample_type']}")
             
         if name == 'stop':
-            inst1 = BInst("queue_stop")
-            RM.item_add(inst1, pos='front')
-
+            RM.queue_stop()
             print('\n*** qsever stop for data export, identification, and fitting ***\n')
             print(f"{datetime.datetime.now().isoformat()} documents {name}\n"
                   f"contents: {pprint.pformat(message)}"
@@ -253,11 +248,17 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
             ## Export, plotting, fitting, calculate # of good/bad data, add queue item
             for stream_name in stream_list:
                 ## Read data from databroker and turn into dic
-                qepro_dic, metadata_dic = de.read_qepro_by_stream(uid, stream_name=stream_name, data_agent='tiled')
+                qepro_dic, metadata_dic = de.read_qepro_by_stream(uid, stream_name=stream_name, data_agent='tiled', beamline_acronym=beamline_acronym)
                 sample_type = metadata_dic['sample_type']
                 ## Save data in dic into .csv file
-                de.dic_to_csv_for_stream(csv_path, qepro_dic, metadata_dic, stream_name=stream_name)
-                print(f'\n** export {stream_name} in uid: {uid[0:8]} to ../{os.path.basename(csv_path)} **\n')
+
+                if stream_name == 'primary':
+                    saving_path = path_1
+                else:
+                    saving_path = path_0
+
+                de.dic_to_csv_for_stream(saving_path, qepro_dic, metadata_dic, stream_name=stream_name)
+                print(f'\n** export {stream_name} in uid: {uid[0:8]} to ../{os.path.basename(saving_path)} **\n')
                 ## Plot data in dic
                 u = plot_uvvis(qepro_dic, metadata_dic)
                 if len(good_data)==0 and len(bad_data)==0:
@@ -290,7 +291,7 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
 
                     print(f'\nFitting function for baseline offset: {da.line_2D}\n')
                     ff_abs={'fit_function': da.line_2D, 'curve_fit': popt_abs}
-                    de.dic_to_csv_for_stream(csv_path, qepro_dic, metadata_dic, stream_name=stream_name, fitting=ff_abs)
+                    de.dic_to_csv_for_stream(saving_path, qepro_dic, metadata_dic, stream_name=stream_name, fitting=ff_abs)
                     u.plot_offfset(wavelength, da.line_2D, popt_abs)
                     print(f'\n** export offset results of absorption spectra complete**\n')
 
@@ -386,7 +387,8 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
                                 # print(f"\ntelling agent {agent_data}")
                                 # agent.tell(data=agent_data, append=True)
 
-                                agent = build_agen_Cl(peak_target=peak_target)
+                                # agent = build_agen_Cl(peak_target=peak_target)
+                                agent = build_agen2(peak_target=peak_target)
 
                                 if len(agent.table) < 2:
                                     acq_func = "qr"
@@ -426,7 +428,7 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
                         
                         print(f'\nFitting function: {f_fit}\n')
                         ff={'fit_function': f_fit, 'curve_fit': popt}
-                        de.dic_to_csv_for_stream(csv_path, qepro_dic, metadata_dic, stream_name=stream_name, fitting=ff, plqy_dic=plqy_dic)
+                        de.dic_to_csv_for_stream(saving_path, qepro_dic, metadata_dic, stream_name=stream_name, fitting=ff, plqy_dic=plqy_dic)
                         print(f'\n** export fitting results complete**\n')
                         
                         u.plot_peak_fit(x, y, f_fit, popt, peak=p, fill_between=True)
@@ -462,8 +464,7 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
                                     zmq_control_addr=zmq_control_addr,
                                     zmq_info_addr=zmq_info_addr)
                     
-                    inst1 = BInst("queue_stop")
-                    RM.item_add(inst1, pos='front')
+                    RM.queue_stop()
                     
                 elif len(good_data) <= 2 and use_good_bad:
                     print('*** Add another fluorescence and absorption scan to the fron of qsever ***\n')
@@ -491,15 +492,25 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
                 print('*** Add new points from agent to the fron of qsever ***\n')
                 print(f'*** New points from agent: {new_points} ***\n')
                 
-                set_target_list = [0 for i in range(new_points['points'].shape[1])]
-                sample = de._auto_name_sample(new_points['points'], prefix=prefix[1:])
+                if post_dilute:
+                    set_target_list = [0 for i in range(len(pump_list))]
+                    # rate_list = new_points['points'].tolist()[0][:-1] + [new_points['points'].sum()]
+                    rate_list = [rr for rr in new_points['points'].tolist()[0] if rr!=0] + [new_points['points'].sum()]
+                    rate_list = np.asarray(rate_list)
+                
+                else:
+                    # set_target_list = [0 for i in range(new_points['points'].shape[1])]
+                    set_target_list = [0 for i in range(len(pump_list))]
+                    rate_list = new_points['points']
+                    
+                sample = de._auto_name_sample(rate_list, prefix=prefix[1:])
 
                 sq.synthesis_queue(
                     syringe_list=syringe_list, 
                     pump_list=pump_list, 
                     set_target_list=set_target_list, 
                     target_vol_list=target_vol_list, 
-                    rate_list = new_points['points'], 
+                    rate_list = rate_list, 
                     syringe_mater_list=syringe_mater_list, 
                     precursor_list=precursor_list,
                     mixer=mixer, 
@@ -519,6 +530,8 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
     
             # elif use_good_bad:
             else:
+                print('*** Move to next reaction in Queue ***\n')
+                time.sleep(2)
                 RM.queue_start()
 
 

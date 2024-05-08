@@ -17,35 +17,35 @@ def build_agen_Cl(peak_target=660, peak_tolerance=5, size_target=6, ):
     agent_data_path = '/home/xf28id2/Documents/ChengHung'
 
 
-    if peak_target > 515:
-        I_up_limit = 200
-        Cl_up_limit = 0
-
-    elif peak_target < 500:
-        I_up_limit = 0
-        Cl_up_limit = 200
-
-    else:
-        I_up_limit = 0
-        Cl_up_limit = 0
+ 
 
 
     # dofs = [
-    #     DOF(description="CsPb(oleate)3", name="infusion_rate_CsPb", units="uL/min", search_bounds=(8, 110)),
-    #     DOF(description="TOABr", name="infusion_rate_Br", units="uL/min", search_bounds=(50, 200)),
-    #     DOF(description="ZnCl2", name="infusion_rate_Cl", units="uL/min", search_bounds=(0, Cl_up_limit)),
-    #     DOF(description="ZnI2", name="infusion_rate_I2", units="uL/min", search_bounds=(0, I_up_limit)),
+    #     DOF(description="CsPb(oleate)3", name="infusion_rate_CsPb", units="uL/min", search_domain=(8, 110)),
+    #     DOF(description="TOABr", name="infusion_rate_Br", units="uL/min", search_domain=(50, 200)),
+    #     DOF(description="ZnCl2", name="infusion_rate_Cl", units="uL/min", search_domain=(0, Cl_up_limit)),
+    #     DOF(description="ZnI2", name="infusion_rate_I2", units="uL/min", search_domain=(0, I_up_limit)),
     # ]
 
 
     dofs = [
-        DOF(description="CsPb(oleate)3", name="infusion_rate_CsPb", units="uL/min", search_bounds=(8, 110)),
-        DOF(description="TOABr", name="infusion_rate_Br", units="uL/min", search_bounds=(50, 200)),
-        DOF(description="ZnI2", name="infusion_rate_I2", units="uL/min", search_bounds=(0, I_up_limit)), 
-        DOF(description="ZnCl2", name="infusion_rate_Cl", units="uL/min", search_bounds=(0, Cl_up_limit)),
+        DOF(description="CsPb(oleate)3", name="infusion_rate_CsPb", units="uL/min", search_domain=(8, 110)),
+        DOF(description="TOABr", name="infusion_rate_Br", units="uL/min", search_domain=(50, 200)),
+        DOF(description="ZnI2", name="infusion_rate_I2", units="uL/min", search_domain=(0, 200), active=False), 
+        DOF(description="ZnCl2", name="infusion_rate_Cl", units="uL/min", search_domain=(0, 200), active=False),
     ]  
     
+    dofs[2].device.put(0.0)
+    dofs[3].device.put(0.0)
     
+    if peak_target > 515:
+        dofs[2].activate()
+        
+
+    elif peak_target < 500:
+        dofs[3].activate()
+
+
     peak_up = peak_target+peak_tolerance
     peak_down = peak_target-peak_tolerance
     
@@ -54,10 +54,10 @@ def build_agen_Cl(peak_target=660, peak_tolerance=5, size_target=6, ):
     
     objectives = [
         Objective(description="Peak emission", name="Peak", target=(peak_down, peak_up), weight=100, max_noise=0.25),
-        Objective(description="Peak width", name="FWHM", target="min", log=True, weight=5., max_noise=0.25),
-        Objective(description="Quantum yield", name="PLQY", target="max", log=True, weight=1., max_noise=0.25),
-        Objective(description="Particle size", name="size_nm", target=(size_target-1.5, size_target+1.5), log=True, weight=0.1, max_noise=0.25),
-        Objective(description="Phase ratio", name="reduced_ratio", target=(ratio_down, ratio_up), log=True, weight=0.1, max_noise=0.25),
+        Objective(description="Peak width", name="FWHM", target="min", transform="log", weight=5., max_noise=0.25),
+        Objective(description="Quantum yield", name="PLQY", target="max", transform="log", weight=1., max_noise=0.25),
+        Objective(description="Particle size", name="size_nm", target=(size_target-1.5, size_target+1.5), transform="log", weight=0.1, max_noise=0.25),
+        Objective(description="Phase ratio", name="reduced_ratio", target=(ratio_down, ratio_up), transform="log", weight=0.1, max_noise=0.25),
     ]
 
 

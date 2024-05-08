@@ -13,7 +13,8 @@ from blop import Agent, DOF, Objective
 def build_agen2(peak_target=660, peak_tolerance=5):
     # data_path = '/home/xf28id2/data_ZnCl2'
     #data_path = '/home/xf28id2/data'
-    agent_data_path = '/home/xf28id2/data_halide'
+    # agent_data_path = '/home/xf28id2/data_halide'
+    agent_data_path = '/home/xf28id2/data_post_dilute_66mM'
 
 
     if peak_target > 515:
