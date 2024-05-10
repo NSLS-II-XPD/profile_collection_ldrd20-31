@@ -20,6 +20,7 @@ resource.setrlimit(resource.RLIMIT_NOFILE, (65536, 65536))
 import _data_export as de
 from _plot_helper import plot_uvvis
 import _data_analysis as da
+import _pdf_calculator as pc
 
 # from bluesky_queueserver.manager.comms import zmq_single_request
 from bluesky_queueserver_api.zmq import REManagerAPI
@@ -241,8 +242,11 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
                 hei = height[0]
                 dis = distance[0]
             
-            ## remove 'scattering' from stream_list to avoid redundant work in next for loop
+            ## obtain phase fraction & particle size from g(r)
             if 'scattering' in stream_list:
+                phase_fraction, particel_size = pc._pdffit2_CsPbX3(gr_data, cif_list, qmax=20, qdamp=0.031, qbroad=0.032)
+                
+                ## remove 'scattering' from stream_list to avoid redundant work in next for loop
                 stream_list.remove('scattering')
             
             ## Export, plotting, fitting, calculate # of good/bad data, add queue item
@@ -364,6 +368,9 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
                             
                             optical_property = {'Peak': peak_emission, 'FWHM':fwhm, 'PLQY':plqy}
 
+
+                            ## Save data for ML agent
+                            ## TODO: add phase ratio & particle size from scattering
                             if write_agent_data:
                                 agent_data = {}
 
@@ -377,17 +384,10 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
 
                                 print(f"\nwrote to {agent_data_path}")
 
-                            
-                            ### Three parameters for ML: peak_emission, fwhm, plqy
-                            # TODO: add ML agent code here
-
 
                             if USE_AGENT_iterate:
 
                                 # print(f"\ntelling agent {agent_data}")
-                                # agent.tell(data=agent_data, append=True)
-
-                                # agent = build_agen_Cl(peak_target=peak_target)
                                 agent = build_agen2(peak_target=peak_target)
 
                                 if len(agent.table) < 2:
@@ -395,12 +395,7 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
                                 else:
                                     acq_func = "qei"
                                 
-                                # agent._construct_all_models()
-                                # agent._train_all_models()
-                                # new_points, _ = agent.ask(acq_func, n=1)
                                 new_points = agent.ask(acq_func, n=1)
-                                # new_points = agent.ask("qem", n=1)
-                                # agent.save_data(filepath="/home/xf28id2/data_halide/init_240122_01.h5")
 
                                 # peak_diff = peak_emission - peak_target
                                 peak_diff = False
@@ -422,15 +417,18 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
                                 else:
                                     agent_iteration.append(True)
 
-                        else:
-                            plqy_dic = None
-                            optical_property = None
+                        # TODO: remove the fllowing 3 lines if no error reported
+                        # else:
+                        #     plqy_dic = None
+                        #     optical_property = None
                         
+                        ## Save fitting data
                         print(f'\nFitting function: {f_fit}\n')
                         ff={'fit_function': f_fit, 'curve_fit': popt}
                         de.dic_to_csv_for_stream(saving_path, qepro_dic, metadata_dic, stream_name=stream_name, fitting=ff, plqy_dic=plqy_dic)
                         print(f'\n** export fitting results complete**\n')
                         
+                        ## Plot fitting data
                         u.plot_peak_fit(x, y, f_fit, popt, peak=p, fill_between=True)
                         print(f'\n** plot fitting results complete**\n')
                         if stream_name == 'primary':
@@ -492,6 +490,7 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
                 print('*** Add new points from agent to the fron of qsever ***\n')
                 print(f'*** New points from agent: {new_points} ***\n')
                 
+                ## TODO: add PF oil
                 if post_dilute:
                     set_target_list = [0 for i in range(len(pump_list))]
                     # rate_list = new_points['points'].tolist()[0][:-1] + [new_points['points'].sum()]

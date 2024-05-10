@@ -200,6 +200,9 @@ def read_qepro_by_stream(uid, stream_name='primary', data_agent='tiled', beamlin
 
 
 
+## TODO: add reading scattering data
+# def read_scatter_by_stream(uid, stream_name='scattering', data_agent='tiled', beamline_acronym='xpd-ldrd20-31'):
+#     return scatter_dic, metadata_dic
 
 ## Get uids from data folders through daily experiments for export database for ML
 ## Read uid from **fluorescence** folder
