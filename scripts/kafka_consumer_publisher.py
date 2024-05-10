@@ -20,11 +20,13 @@ resource.setrlimit(resource.RLIMIT_NOFILE, (65536, 65536))
 import _data_export as de
 from _plot_helper import plot_uvvis
 import _data_analysis as da
+import _pdf_calculator as pc
 
 # from bluesky_queueserver.manager.comms import zmq_single_request
 
 # db = databroker.Broker.named('xpd-ldrd20-31')
 # catalog = databroker.catalog['xpd-ldrd20-31']
+## test
 
 try:
     from nslsii import _read_bluesky_kafka_config_file  # nslsii <0.7.0
@@ -72,7 +74,8 @@ PLQY = input_dic['PLQY']
 # agent_data_path = '/home/xf28id2/data_halide'
 # agent_data_path = '/home/xf28id2/data_halide'
 # agent_data_path = '/home/xf28id2/data_post_dilute_66mM'
-agent_data_path = '/home/xf28id2/data_post_dilute_33mM'
+# agent_data_path = '/home/xf28id2/data_post_dilute_33mM'
+agent_data_path = '/home/xf28id2/Documents/ChengHung/20240510_kafka_pdffit'
 
 write_agent_data = True
 # rate_label = ['infusion_rate_CsPb', 'infusion_rate_Br', 'infusion_rate_Cl', 'infusion_rate_I2']
@@ -80,6 +83,13 @@ rate_label_dic =   {'CsPb':'infusion_rate_CsPb',
                     'Br':'infusion_rate_Br', 
                     'ZnI':'infusion_rate_I2', 
                     'ZnCl':'infusion_rate_Cl'}
+
+fitting_pdf = True
+if fitting_pdf:
+    pdf_cif_dir = '/home/xf28id2/Documents/ChengHung/pdffit2_test'
+    cif_list = [os.path.join(pdf_cif_dir, 'CsPbBr3_Orthorhombic.cif')]
+    gr_data = os.path.join(pdf_cif_dir, 'CsPbBr3.gr')
+
 
 
 def print_kafka_messages(beamline_acronym, csv_path=csv_path, 
@@ -97,9 +107,16 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
           f'{agent_data_path = }\n')
 
 
-    global db, catalog
+    global db, catalog, path_0, path_1
     db = databroker.Broker.named(beamline_acronym)
     catalog = databroker.catalog[f'{beamline_acronym}']
+    path_0  = csv_path
+
+    path_1 = csv_path + '/good_bad'
+    try:
+        os.mkdir(path_1)
+    except FileExistsError:
+        pass
 
     import palettable.colorbrewer.diverging as pld
     palette = pld.RdYlGn_4_r
@@ -178,8 +195,14 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
                 hei = height[0]
                 dis = distance[0]
             
-            ## remove 'scattering' from stream_list to avoid redundant work in next for loop
+            ## obtain phase fraction & particle size from g(r)
             if 'scattering' in stream_list:
+                if fitting_pdf:
+                    phase_fraction, particel_size = pc._pdffit2_CsPbX3(gr_data, cif_list, qmax=20, qdamp=0.031, qbroad=0.032, fix_APD=False)
+                    pdf_property={'Br_ratio': phase_fraction[0], 'Br_size':particel_size[0]}
+                else:
+                    pdf_property={'Br_ratio': None, 'Br_size':None}
+                ## remove 'scattering' from stream_list to avoid redundant work in next for loop
                 stream_list.remove('scattering')
             
             ## Export, plotting, fitting, calculate # of good/bad data, add queue item
@@ -299,6 +322,7 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
                                 agent_data = {}
 
                                 agent_data.update(optical_property)
+                                agent_data.update(pdf_property)
                                 agent_data.update({k:v for k, v in metadata_dic.items() if len(np.atleast_1d(v)) == 1})
 
                                 agent_data = de._exprot_rate_agent(metadata_dic, rate_label_dic, agent_data)
