@@ -20,7 +20,7 @@ def _no_oxidation_cif(cif_file):
     
 
 
-def _pdffit2_CsPbX3(gr_data, cif_list, qmax=20, qdamp=0.031, qbroad=0.032, fix_APD=True):
+def _pdffit2_CsPbX3(gr_data, cif_list, qmax=18, qdamp=0.031, qbroad=0.032, fix_APD=True):
 
     # Initialize the CifParser with the path to your .cif file
     # Parse the .cif file
@@ -134,7 +134,7 @@ def _set_CsPbBr3_constrain(PDF_calculator_object, phase_idx=1, fix_APD=True):
 
     if fix_APD:
         for par in [101, 102, 103, 104]:
-            pf.fixpar(101)
+            pf.fixpar(par)
 
 
 
