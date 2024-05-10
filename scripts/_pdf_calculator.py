@@ -20,7 +20,7 @@ def _no_oxidation_cif(cif_file):
     
 
 
-def _pdffit2_CsPbX3(gr_data, cif_list, qmax=20, qdamp=0.031, qbroad=0.032):
+def _pdffit2_CsPbX3(gr_data, cif_list, qmax=20, qdamp=0.031, qbroad=0.032, fix_APD=True):
 
     # Initialize the CifParser with the path to your .cif file
     # Parse the .cif file
@@ -46,7 +46,7 @@ def _pdffit2_CsPbX3(gr_data, cif_list, qmax=20, qdamp=0.031, qbroad=0.032):
         pf.add_structure(stru)
     
     # set contrains for lattice parameter, ADP
-    _set_CsPbBr3_constrain(pf)
+    _set_CsPbBr3_constrain(pf, fix_APD=fix_APD)
 
     # set constrain for data scale
     pf.constrain(pf.dscale, '@902')

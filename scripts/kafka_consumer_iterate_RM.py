@@ -134,6 +134,13 @@ if USE_AGENT_iterate:
     agent = build_agen2(peak_target=peak_target)
 
 
+fitting_pdf = True
+if fitting_pdf:
+    pdf_cif_dir = '/home/xf28id2/Documents/ChengHung/pdffit2_example/CsPbBr3/'
+    cif_list = [os.path.join(pdf_cif_dir, 'CsPbBr3_Orthorhombic.cif')]
+    gr_data = os.path.join(pdf_cif_dir, 'CsPbBr3.gr')
+
+
 def print_kafka_messages(beamline_acronym, csv_path=csv_path, 
                          key_height=key_height, height=height, distance=distance, 
                          pump_list=pump_list, sample=sample, precursor_list=precursor_list, 
@@ -244,8 +251,11 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
             
             ## obtain phase fraction & particle size from g(r)
             if 'scattering' in stream_list:
-                phase_fraction, particel_size = pc._pdffit2_CsPbX3(gr_data, cif_list, qmax=20, qdamp=0.031, qbroad=0.032)
-                
+                if fitting_pdf:
+                    phase_fraction, particel_size = pc._pdffit2_CsPbX3(gr_data, cif_list, qmax=20, qdamp=0.031, qbroad=0.032)
+                    pdf_property={'Br_ratio': phase_fraction[0], 'Br_size':particel_size[0]}
+                else:
+                    pdf_property={'Br_ratio': None, 'Br_size':None}
                 ## remove 'scattering' from stream_list to avoid redundant work in next for loop
                 stream_list.remove('scattering')
             
@@ -375,6 +385,8 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
                                 agent_data = {}
 
                                 agent_data.update(optical_property)
+                                agent_data.update(pdf_property)
+                                
                                 agent_data.update({k:v for k, v in metadata_dic.items() if len(np.atleast_1d(v)) == 1})
 
                                 agent_data = de._exprot_rate_agent(metadata_dic, rate_label_dic, agent_data)
