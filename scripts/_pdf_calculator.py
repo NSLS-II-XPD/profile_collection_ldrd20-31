@@ -12,7 +12,7 @@ def _no_oxidation_cif(cif_file):
     structure = parser.get_structures()[0] 
     structure.remove_oxidation_states()
     print(structure, '\n\n')
-    cif_pym = os.path.dirname(cif) + '/' + os.path.basename(cif)[:-4] + '_pym.cif'
+    cif_pym = os.path.dirname(cif_file) + '/' + os.path.basename(cif_file)[:-4] + '_pym.cif'
     w = CifWriter(structure,symprec=0.1)
     w.write_file(cif_pym)
     
