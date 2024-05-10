@@ -46,7 +46,7 @@ def _pdffit2_CsPbX3(gr_data, cif_list, qmax=20, qdamp=0.031, qbroad=0.032, fix_A
         pf.add_structure(stru)
     
     # set contrains for lattice parameter, ADP
-    _set_CsPbBr3_constrain(pf, fix_APD=fix_APD)
+    _set_CsPbBr3_constrain(pf, phase_idx=1, fix_APD=fix_APD)
 
     # set constrain for data scale
     pf.constrain(pf.dscale, '@902')
@@ -55,6 +55,11 @@ def _pdffit2_CsPbX3(gr_data, cif_list, qmax=20, qdamp=0.031, qbroad=0.032, fix_A
     # Set value for Qdamp, Qbraod
     pf.setvar(pf.qdamp, qdamp)
     pf.setvar(pf.qbroad, qbroad)
+
+    # Refine 
+    pf.pdfrange(1, 2.5, 60)
+    pf.refine()
+
 
     phase_fraction = pf.phase_fractions()['mass']
 
@@ -70,7 +75,7 @@ def _pdffit2_CsPbX3(gr_data, cif_list, qmax=20, qdamp=0.031, qbroad=0.032, fix_A
 '''
 lat_dic = {'a':11, 'b':12, 'c':13}
 '''
-def _set_CsPbBr3_constrain(PDF_calculator_object, fix_APD=True):
+def _set_CsPbBr3_constrain(PDF_calculator_object, phase_idx=1, fix_APD=True):
     pf = PDF_calculator_object
     pf.setphase(phase_idx)
 
