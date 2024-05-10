@@ -17,6 +17,7 @@ def build_agen_Cl(peak_target=660, peak_tolerance=5, size_target=6, ):
     agent_data_path = '/home/xf28id2/Documents/ChengHung'
 
 
+ 
 
 
 
@@ -45,6 +46,10 @@ def build_agen_Cl(peak_target=660, peak_tolerance=5, size_target=6, ):
     
     objectives = [
         Objective(description="Peak emission", name="Peak", target=(peak_down, peak_up), weight=100, max_noise=0.25),
+        Objective(description="Peak width", name="FWHM", target="min", transform="log", weight=5., max_noise=0.25),
+        Objective(description="Quantum yield", name="PLQY", target="max", transform="log", weight=1., max_noise=0.25),
+        Objective(description="Particle size", name="size_nm", target=(size_target-1.5, size_target+1.5), transform="log", weight=0.1, max_noise=0.25),
+        Objective(description="Phase ratio", name="reduced_ratio", target=(ratio_down, ratio_up), transform="log", weight=0.1, max_noise=0.25),
         Objective(description="Peak width", name="FWHM", target="min", transform="log", weight=5., max_noise=0.25),
         Objective(description="Quantum yield", name="PLQY", target="max", transform="log", weight=1., max_noise=0.25),
         Objective(description="Particle size", name="size_nm", target=(size_target-1.5, size_target+1.5), transform="log", weight=0.1, max_noise=0.25),

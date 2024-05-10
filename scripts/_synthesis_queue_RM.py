@@ -51,6 +51,11 @@ def synthesis_queue(
 		set_target_list = set_target_list.tolist()
 		
 
+	# 0. stop infuese for all pumps
+	flowplan = BPlan('stop_group', pump_list + [wash_tube[1]])
+	RM.item_add(flowplan, pos=pos)
+	
+	
 	for i in range(len(rate_list)):
 		# for i in range(2): 
 		## 1. Set i infuese rates
@@ -76,7 +81,12 @@ def synthesis_queue(
 
 
 		## 2. Start infuese
-		flowplan = BPlan('start_group_infuse', pump_list, rate_list[i])
+		if precursor_list[-1] == 'Toluene':
+			flowplan = BPlan('start_group_infuse', pump_list[:-1], rate_list[i][:-1])
+		
+		else:
+			flowplan = BPlan('start_group_infuse', pump_list, rate_list[i])
+		
 		RM.item_add(flowplan, pos=pos)
 
 
@@ -110,6 +120,14 @@ def synthesis_queue(
 			restplan = BPlan('wait_equilibrium2', mixer_pump_list, ratio=rest_time)
 			RM.item_add(restplan, pos=pos)
 
+
+		## 3.1 Wait for 30 secpnds for post dilute
+		if precursor_list[-1] == 'Toluene':
+			flowplan = BPlan('start_group_infuse', [pump_list[-1]], [rate_list[i][-1]])
+			RM.item_add(flowplan, pos=pos)
+			
+			restplan = BPlan('sleep_sec_q', 60)
+			RM.item_add(restplan, pos=pos)
 		
 
 		## 4-1. Take a fluorescence peak to check reaction
@@ -155,7 +173,7 @@ def synthesis_queue(
 		######  Kafka analyze data here. #######
 
 		## 7. Wash the loop and mixer
-		wash_tube_queue(pump_list, wash_tube, rate_unit, 
+		wash_tube_queue2(pump_list, wash_tube, rate_unit, 
 						pos=[pos,pos,pos,pos,pos], 
 						zmq_control_addr=zmq_control_addr,
 						zmq_info_addr=zmq_info_addr)
@@ -208,6 +226,42 @@ def wash_tube_queue(pump_list, wash_tube, rate_unit,
 
 
 
+
+def wash_tube_queue2(pump_list, wash_tube, rate_unit, 
+					pos=[0,1,2,3,4], 
+					zmq_control_addr='tcp://localhost:60615', 
+					zmq_info_addr='tcp://localhost:60625'):
+
+	RM = REManagerAPI(zmq_control_addr=zmq_control_addr, zmq_info_addr=zmq_info_addr)
+
+	### Stop all infusing pumps
+	flowplan = BPlan('stop_group', pump_list)
+	RM.item_add(flowplan, pos=pos[0])
+
+
+	### Set up washing tube/loop
+	flowplan = BPlan('set_group_infuse2', [wash_tube[0], wash_tube[3]], [wash_tube[1], wash_tube[4]], 
+					rate_list=[wash_tube[2], wash_tube[5]], 
+					target_vol_list=['30 ml', '15 ml'], 
+					set_target_list=[False, False], 
+					rate_unit=rate_unit)
+	RM.item_add(flowplan, pos=pos[1])	
+	
+	
+	### Start washing tube/loop
+	flowplan = BPlan('start_group_infuse', [wash_tube[1], wash_tube[4]], [wash_tube[2], wash_tube[5]])
+	RM.item_add(flowplan, pos=pos[2])	
+
+
+	### Wash loop/tube for xxx seconds
+	restplan = BPlan('sleep_sec_q', wash_tube[6])
+	RM.item_add(restplan, pos=pos[3])	
+	
+
+
+	### Stop washing
+	flowplan = BPlan('stop_group', [wash_tube[1], wash_tube[4]])
+	RM.item_add(flowplan, pos=pos[4])
 
 
 
