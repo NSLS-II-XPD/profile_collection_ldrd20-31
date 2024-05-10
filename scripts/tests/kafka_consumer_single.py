@@ -84,8 +84,8 @@ dofs = [
 
 objectives = [
     Objective(description="Peak emission", name="Peak", target=480, weight=10, min_snr=2),
-    Objective(description="Peak width", name="FWHM", target="min", log=True, weight=2., min_snr=2),
-    Objective(description="Quantum yield", name="PLQY", target="max", log=True, weight=1., min_snr=2),
+    Objective(description="Peak width", name="FWHM", target="min", transform="log", weight=2., min_snr=2),
+    Objective(description="Quantum yield", name="PLQY", target="max", transform="log", weight=1., min_snr=2),
 ]
 
 USE_AGENT = False

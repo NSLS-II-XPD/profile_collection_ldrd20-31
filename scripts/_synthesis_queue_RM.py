@@ -4,6 +4,7 @@ import pandas as pd
 import _data_export as de
 from bluesky_queueserver_api.zmq import REManagerAPI
 from bluesky_queueserver_api import BPlan, BInst
+# from ophyd.sim import det, noisy_det
 
 ## Arrange tasks of for PQDs synthesis
 def synthesis_queue(
@@ -81,14 +82,19 @@ def synthesis_queue(
 
 		## 3. Wait for equilibrium
 		if len(mixer) == 1:
-			mixer_pump_list = [[mixer[0], *pump_list]]
+			if precursor_list[-1] == 'Toluene':
+				mixer_pump_list = [[mixer[0], *pump_list[:-1]]]
+			else:
+				mixer_pump_list = [[mixer[0], *pump_list]]
 		elif len(mixer) == 2:
-			mixer_pump_list = [[mixer[0], *pump_list[:3]], [mixer[1], *pump_list]]
+			if precursor_list[-1] == 'Toluene':
+				mixer_pump_list = [[mixer[0], *pump_list[:3]], [mixer[1], *pump_list[:-1]]]
+			else:
+				mixer_pump_list = [[mixer[0], *pump_list[:3]], [mixer[1], *pump_list]]
 		
 		if dummy_qserver:
-			
-            restplan = BPlan('sleep_sec_q', 5)
-            RM.item_add(restplan, pos=pos)
+			restplan = BPlan('sleep_sec_q', 5)
+			RM.item_add(restplan, pos=pos)
 		
 		else:
 			if is_iteration:
@@ -102,18 +108,18 @@ def synthesis_queue(
 				rest_time = resident_t_ratio[-1]
 
 			restplan = BPlan('wait_equilibrium2', mixer_pump_list, ratio=rest_time)
-            RM.item_add(restplan, pos=pos)
+			RM.item_add(restplan, pos=pos)
 
 		
 
 		## 4-1. Take a fluorescence peak to check reaction
-        scanplan = BPlan('take_a_uvvis_csv_q', sample_type=sample[i], 
+		scanplan = BPlan('take_a_uvvis_csv_q', sample_type=sample[i], 
 						spectrum_type='Corrected Sample', 
                         correction_type='Dark', 
 						pump_list=pump_list, 
 						precursor_list=precursor_list, 
                         mixer=mixer)
-        RM.item_add(scanplan, pos=pos)
+		RM.item_add(scanplan, pos=pos)
     
 
 		# ## 4-2. Take a Absorption spectra to check reaction
@@ -129,12 +135,12 @@ def synthesis_queue(
 		#### Kafka check data here.
 
 		## 5. Sleep for 5 seconds for Kafak to check good/bad data
-        restplan = BPlan('sleep_sec_q', 2)
-        RM.item_add(restplan, pos=pos)
+		restplan = BPlan('sleep_sec_q', 2)
+		RM.item_add(restplan, pos=pos)
 		
 		
 		## 6. Start xray_uvvis bundle plan to take real data
-        scanplan = BPlan('xray_uvvis_plan', pe2c, qepro, 
+		scanplan = BPlan('xray_uvvis_plan', 'det', 'qepro', 
 						num_abs=num_abs, 
 						num_flu=num_flu,
 						sample_type=sample[i], 
@@ -191,7 +197,7 @@ def wash_tube_queue(pump_list, wash_tube, rate_unit,
 
 
 	### Wash loop/tube for xxx seconds
-	restplan = BPlan('sleep_sec_q', [wash_tube[3]])
+	restplan = BPlan('sleep_sec_q', wash_tube[3])
 	RM.item_add(restplan, pos=pos[3])	
 	
 
