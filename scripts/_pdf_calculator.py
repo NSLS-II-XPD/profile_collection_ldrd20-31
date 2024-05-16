@@ -14,7 +14,7 @@ def _no_oxidation_cif(cif_file):
     print(structure, '\n\n')
     cif_pym = os.path.dirname(cif_file) + '/' + os.path.basename(cif_file)[:-4] + '_pym.cif'
     w = CifWriter(structure,symprec=0.1)
-    w.write_file(cif_pym)
+    w.write_file(cif_pym) 
     
     return cif_pym
     
