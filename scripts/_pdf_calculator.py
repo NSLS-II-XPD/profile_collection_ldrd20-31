@@ -20,7 +20,7 @@ def _no_oxidation_cif(cif_file):
     
 
 
-def _pdffit2_CsPbX3(gr_data, cif_list, qmax=18, qdamp=0.031, qbroad=0.032, fix_APD=True):
+def _pdffit2_CsPbX3(gr_data, cif_list, qmax=18, qdamp=0.031, qbroad=0.032, fix_APD=True, toler=0.000001):
 
     # Initialize the CifParser with the path to your .cif file
     # Parse the .cif file
@@ -58,7 +58,7 @@ def _pdffit2_CsPbX3(gr_data, cif_list, qmax=18, qdamp=0.031, qbroad=0.032, fix_A
 
     # Refine 
     pf.pdfrange(1, 2.5, 60)
-    pf.refine()
+    pf.refine(toler=toler)
 
 
     phase_fraction = pf.phase_fractions()['mass']

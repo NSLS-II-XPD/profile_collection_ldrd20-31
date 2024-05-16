@@ -75,7 +75,7 @@ PLQY = input_dic['PLQY']
 # agent_data_path = '/home/xf28id2/data_halide'
 # agent_data_path = '/home/xf28id2/data_post_dilute_66mM'
 # agent_data_path = '/home/xf28id2/data_post_dilute_33mM'
-agent_data_path = '/home/xf28id2/Documents/ChengHung/20240510_kafka_pdffit'
+agent_data_path = '/home/xf28id2/Documents/ChengHung/pdffit2_test'
 
 write_agent_data = True
 # rate_label = ['infusion_rate_CsPb', 'infusion_rate_Br', 'infusion_rate_Cl', 'infusion_rate_I2']
@@ -198,10 +198,10 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
             ## obtain phase fraction & particle size from g(r)
             if 'scattering' in stream_list:
                 if fitting_pdf:
-                    phase_fraction, particel_size = pc._pdffit2_CsPbX3(gr_data, cif_list, qmax=20, qdamp=0.031, qbroad=0.032, fix_APD=False)
+                    phase_fraction, particel_size = pc._pdffit2_CsPbX3(gr_data, cif_list, qmax=20, qdamp=0.031, qbroad=0.032, fix_APD=False, toler=0.001)
                     pdf_property={'Br_ratio': phase_fraction[0], 'Br_size':particel_size[0]}
                 else:
-                    pdf_property={'Br_ratio': None, 'Br_size':None}
+                    pdf_property={'Br_ratio': np.nan, 'Br_size': np.nan}
                 ## remove 'scattering' from stream_list to avoid redundant work in next for loop
                 stream_list.remove('scattering')
             
