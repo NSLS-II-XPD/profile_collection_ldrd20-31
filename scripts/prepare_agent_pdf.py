@@ -14,7 +14,7 @@ from blop import Agent, DOF, Objective
 def build_agen_Cl(peak_target=660, peak_tolerance=5, size_target=6, ):
     # data_path = '/home/xf28id2/data_ZnCl2'
     #data_path = '/home/xf28id2/data'
-    agent_data_path = '/home/xf28id2/Documents/ChengHung'
+    agent_data_path = '/home/xf28id2/Documents/ChengHung/pdffit2_test'
 
 
     dofs = [
@@ -36,8 +36,8 @@ def build_agen_Cl(peak_target=660, peak_tolerance=5, size_target=6, ):
         Objective(description="Peak emission", name="Peak", target=(peak_down, peak_up), weight=100, max_noise=0.25),
         Objective(description="Peak width", name="FWHM", target="min", transform="log", weight=5., max_noise=0.25),
         Objective(description="Quantum yield", name="PLQY", target="max", transform="log", weight=1., max_noise=0.25),
-        Objective(description="Particle size", name="size_nm", target=(size_target-1.5, size_target+1.5), transform="log", weight=0.1, max_noise=0.25),
-        Objective(description="Phase ratio", name="reduced_ratio", target=(ratio_down, ratio_up), transform="log", weight=0.1, max_noise=0.25),   
+        Objective(description="Particle size", name="Br_size", target=(size_target-1.5, size_target+1.5), transform="log", weight=0.1, max_noise=0.25),
+        Objective(description="Phase ratio", name="Br_ratio", target=(ratio_down, ratio_up), transform="log", weight=0.1, max_noise=0.25),   
     ]
 
 
@@ -69,23 +69,23 @@ def build_agen_Cl(peak_target=660, peak_tolerance=5, size_target=6, ):
 
     metadata_keys = ["time", "uid", "r_2"]
 
-    # if os.path.exists(init_file):
-    #     agent.load_data(init_file)
 
-    # else:
-    # filepaths = glob.glob(f"{agent_data_path}/*.json")
-    # filepaths.sort()
+
+    filepaths = glob.glob(f"{agent_data_path}/*.json")
+    filepaths.sort()
     
-    fn = agent_data_path + '/' + 'agent_data_update_quinine_CsPbCl3.csv'
-    df = pd.read_csv(fn, sep=',', index_col=False)
+    # fn = agent_data_path + '/' + 'agent_data_update_quinine_CsPbCl3.csv'
+    # df = pd.read_csv(fn, sep=',', index_col=False)
     
     
-    for i in range(len(df['uid'])):
-        # with open(fp, "r") as f:
-        #     data = json.load(f)
-        data = {}
-        for key in df.keys():
-            data[key] = df[key][i]
+    # for i in range(len(df['uid'])):
+    for fp in tqdm(filepaths):
+        with open(fp, "r") as f:
+            data = json.load(f)
+        # print(data)
+        # data = {}
+        # for key in df.keys():
+        #     data[key] = df[key][i]
             
         r_2_min = 0.05
         try: 

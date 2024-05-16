@@ -135,7 +135,7 @@ if USE_AGENT_iterate:
     agent = build_agen2(peak_target=peak_target)
 
 
-fitting_pdf = True
+fitting_pdf = False
 if fitting_pdf:
     pdf_cif_dir = '/home/xf28id2/Documents/ChengHung/pdffit2_example/CsPbBr3/'
     cif_list = [os.path.join(pdf_cif_dir, 'CsPbBr3_Orthorhombic.cif')]
@@ -253,10 +253,10 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
             ## obtain phase fraction & particle size from g(r)
             if 'scattering' in stream_list:
                 if fitting_pdf:
-                    phase_fraction, particel_size = pc._pdffit2_CsPbX3(gr_data, cif_list, qmax=20, qdamp=0.031, qbroad=0.032)
+                    phase_fraction, particel_size = pc._pdffit2_CsPbX3(gr_data, cif_list, qmax=20, qdamp=0.031, qbroad=0.032, fix_APD=False, toler=0.001)
                     pdf_property={'Br_ratio': phase_fraction[0], 'Br_size':particel_size[0]}
                 else:
-                    pdf_property={'Br_ratio': None, 'Br_size':None}
+                    pdf_property={'Br_ratio': np.nan, 'Br_size': np.nan}
                 ## remove 'scattering' from stream_list to avoid redundant work in next for loop
                 stream_list.remove('scattering')
             
@@ -431,23 +431,26 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
                                     agent_iteration.append(True)
 
                         # TODO: remove the fllowing 3 lines if no error reported
-                        # else:
-                        #     plqy_dic = None
-                        #     optical_property = None
+                        else:
+                            plqy_dic = None
+                            optical_property = None
                         
-                        ## Save fitting data
-                        print(f'\nFitting function: {f_fit}\n')
-                        ff={'fit_function': f_fit, 'curve_fit': popt}
-                        de.dic_to_csv_for_stream(saving_path, qepro_dic, metadata_dic, stream_name=stream_name, fitting=ff, plqy_dic=plqy_dic)
-                        print(f'\n** export fitting results complete**\n')
-                        
-                        ## Plot fitting data
-                        u.plot_peak_fit(x, y, f_fit, popt, peak=p, fill_between=True)
-                        print(f'\n** plot fitting results complete**\n')
-                        if stream_name == 'primary':
-                            good_data.append(data_id)
+                    ## Save fitting data
+                    print(f'\nFitting function: {f_fit}\n')
+                    ff={'fit_function': f_fit, 'curve_fit': popt}
+                    de.dic_to_csv_for_stream(saving_path, qepro_dic, metadata_dic, stream_name=stream_name, fitting=ff, plqy_dic=plqy_dic)
+                    print(f'\n** export fitting results complete**\n')
                     
-                    elif peak==[] and prop==[]:
+                    ## Plot fitting data
+                    u.plot_peak_fit(x, y, f_fit, popt, peak=p, fill_between=True)
+                    print(f'\n** plot fitting results complete**\n')
+                    print(f'{peak = }')
+                    print(f'{prop = }')
+                    
+                    if stream_name == 'primary':
+                        good_data.append(data_id)
+
+                    elif (type(peak) == list) and (prop == []):
                         bad_data.append(data_id)
                         print(f"\n*** No need to carry out fitting for {stream_name} in uid: {uid[:8]} ***\n")
                         print(f"\n*** since {stream_name} in uid: {uid[:8]} is a bad data.***\n")

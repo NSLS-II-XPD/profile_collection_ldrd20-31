@@ -126,7 +126,7 @@ def synthesis_queue(
 			flowplan = BPlan('start_group_infuse', [pump_list[-1]], [rate_list[i][-1]])
 			RM.item_add(flowplan, pos=pos)
 			
-			restplan = BPlan('sleep_sec_q', 60)
+			restplan = BPlan('sleep_sec_q', 30)
 			RM.item_add(restplan, pos=pos)
 		
 
