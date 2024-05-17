@@ -20,7 +20,7 @@ def _no_oxidation_cif(cif_file):
     
 
 
-def _pdffit2_CsPbX3(gr_data, cif_list, qmax=18, qdamp=0.031, qbroad=0.032, fix_APD=True, toler=0.000001):
+def _pdffit2_CsPbX3(gr_data, cif_list, qmax=18, qdamp=0.031, qbroad=0.032, fix_APD=True, toler=0.000001, return_pf=False):
 
     # Initialize the CifParser with the path to your .cif file
     # Parse the .cif file
@@ -57,7 +57,7 @@ def _pdffit2_CsPbX3(gr_data, cif_list, qmax=18, qdamp=0.031, qbroad=0.032, fix_A
     pf.setvar(pf.qbroad, qbroad)
 
     # Refine 
-    pf.pdfrange(1, 2.5, 60)
+    pf.pdfrange(1, 2.5, 80)
     pf.refine(toler=toler)
 
 
@@ -68,7 +68,10 @@ def _pdffit2_CsPbX3(gr_data, cif_list, qmax=18, qdamp=0.031, qbroad=0.032, fix_A
         pf.setphase(i+1)
         particel_size.append(pf.getvar(pf.spdiameter))
 
-    return phase_fraction, particel_size
+    if return_pf:
+        return pf
+    else:
+        return phase_fraction, particel_size
 
 
 
@@ -90,16 +93,18 @@ def _set_CsPbBr3_constrain(PDF_calculator_object, phase_idx=1, fix_APD=True):
 
     # Refine phase scale factor.  Right side can have formulas.
     pf.constrain('pscale', '@111')
-    pf.setpar(111, 0.5)
+    pf.setpar(111, 0.85)
     # pf.setpar(20, pf.getvar(pf.pscale) / 2.0)
 
     # Refine sharpening factor for correlated motion of close atoms.
     pf.constrain(pf.delta2, '@122')
     pf.setpar(122, 6.87)
+    pf.fixpar(122)
 
     # Refine diameter for the spherical particle
     pf.constrain(pf.spdiameter, '@133')
-    pf.setpar(133, 46)
+    pf.setpar(133, 80)
+    # pf.fixpar(133)
 
     # Set temperature factors isotropic to each atom
     # idx starts from 1 not 0
