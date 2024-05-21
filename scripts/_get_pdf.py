@@ -9,6 +9,7 @@ from pdfstream.transformation.io import load_pdfconfig, write_pdfgetter
 from pdfstream.transformation.main import get_pdf
 from pathlib import Path
 from diffpy.pdfgetx import PDFConfig
+import typing
 
 def globfilename(path, search_item='*.tiff'):
     filenames = glob.glob(path+search_item)
@@ -77,28 +78,30 @@ def find_qmax(filename, ave_cutoff=8e-03, window_length=21):
 
 if __name__ == "__main__":
 
-    homepath='/nsls2/users/hzhong/pdfstream/'
-    testpath = './chi_files/'
+    homepath='/home/xf28id2/Documents/ChengHung/pdfstream_test/'
+    # testpath = './chi_files/'
     output_dir=homepath
-    testfiles = globfilename(testpath, "*.chi")
-    testfile =testfiles[1]
-    bkg_file = testfiles[0]
+    testfiles = globfilename(homepath, "*.chi")
+    testfile =testfiles[0]
+    bkg_file = testfiles[1]
 
     pdfconfig = PDFConfig()
+    pdfconfig.wavelength = 0.18447
+    pdfconfig.composition = 'CsPbBr3'
     #pdfconfig.readConfig(cfg_file)
-    config_file= globfilename('./','*.cfg')[0]
-    pdfconfig.readConfig(config_file)
+    # config_file= globfilename('./','*.cfg')[0]
+    # pdfconfig.readConfig(config_file)
     pdfconfig.backgroundfiles = bkg_file
     pdfconfig.bgscale=0.9
     print(pdfconfig)
 
-    transform('pdfconfig.cfg', testfile, output_dir=output_dir, plot_setting={'marker':'.','color':'green'} )
-    transform_bkg('pdfconfig.cfg', testfile, output_dir=output_dir, plot_setting={'marker':'.','color':'green'} )
-    transform_bkg(pdfconfig, testfile, output_dir=output_dir, plot_setting={'marker':'.','color':'green'} )
+    # transform('pdfconfig.cfg', testfile, output_dir=output_dir, plot_setting={'marker':'.','color':'green'} )
+    # transform_bkg('pdfconfig.cfg', testfile, output_dir=output_dir, plot_setting={'marker':'.','color':'green'} )
+    # transform_bkg(pdfconfig, testfile, output_dir=output_dir, plot_setting={'marker':'.','color':'green'} )
 
-    pdfconfig = PDFConfig()
-    config_file= globfilename('./','*.cfg')[0]
-    pdfconfig.readConfig(config_file)
+    # pdfconfig = PDFConfig()
+    # config_file= globfilename('./','*.cfg')[0]
+    # pdfconfig.readConfig(config_file)
     pdfconfig.qmaxinst = 24.0
     pdfconfig.qmin=1.0
     pdfconfig.qmax=20
@@ -112,7 +115,7 @@ if __name__ == "__main__":
     
     transform_bkg(pdfconfig, testfile, output_dir=output_dir, plot_setting={'marker':'.','color':'green'} )
 
-    fqfile = globfilename(output_dir, '*/*.fq')[1]
+    fqfile = globfilename(output_dir, '*/*.fq')[0]
     print(fqfile)
 
     qmax=find_qmax(fqfile,  ave_cutoff=8e-03, window_length=101)
