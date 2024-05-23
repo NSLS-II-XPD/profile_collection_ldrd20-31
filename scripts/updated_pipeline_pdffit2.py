@@ -13,12 +13,18 @@ from warnings import warn
 
 try:
     from diffpy.Structure import loadStructure
+except ImportError:
+    warn("diffpy.Structure import failed")
+try:
     from diffpy.srreal.pdfcalculator import PDFCalculator
+except ImportError:
+    warn("diffpy.srreal import failed")
+try:
     from diffpy.srfit.pdf import PDFContribution
     from diffpy.srfit.fitbase import FitRecipe, FitResults
     from diffpy.srfit.structure import constrainAsSpaceGroup
 except ImportError:
-    warn("Diffpy import failed")
+    warn("diffpy.srfit import failed")
 
 try:
     from pyobjcryst import loadCrystal
@@ -28,7 +34,7 @@ except ImportError:
 try:
     from diffpy.pdffit2 import PdfFit
 except ImportError:
-    warn("pyobjcryst import failed")
+    warn("diffpy.pdffit2 import failed")
     
 from monty.json import MSONable
 import numpy as np
@@ -636,8 +642,8 @@ class Refinery(MSONable):
 if __name__ == "__main__":
     #Old Code
     refinery = Refinery(
-        mystery_path="/Users/chenghunglin/Documents/Git_BNL/Local-Structure-Modeling/mysteries/Mystery_23_04_06.dat", 
-        results_path="/Users/chenghunglin/Documents/Git_BNL/Local-Structure-Modeling/results_PbS_chemsys_search",  # add this line
+        mystery_path="/home/xf28id2/Documents/ChengHung/pdffit2_example/CsPbBr3/CsPbBr3.gr", 
+        results_path="/home/xf28id2/Documents/ChengHung/pdffit2_example/results_CsPbBr_chemsys_search",  # add this line
         criteria={"elements":
                   {#["Pb","Se"],
                    #"$in": ["Cs"], 
@@ -651,7 +657,7 @@ if __name__ == "__main__":
             "qmax": 18.0,
             "rmin": 2.0,
             "rmax": 60.0,
-            "qdamp": 0.06,
-            "qbroad": 0.06
+            "qdamp": 0.031,
+            "qbroad": 0.032
         },
     )

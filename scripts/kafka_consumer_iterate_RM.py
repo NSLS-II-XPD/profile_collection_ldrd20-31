@@ -104,7 +104,7 @@ print(f'Sample: {sample}')
 # sys.path.insert(0, "/home/xf28id2/src/blop/blop")
 # from bloptools.bayesian import Agent, DOF, Objective
 
-from blop import Agent, DOF, Objective
+# from blop import Agent, DOF, Objective
 
 # agent_data_path = '/home/xf28id2/data_post_dilute_0418'
 # agent_data_path = '/home/xf28id2/data_ZnI2_60mM'
