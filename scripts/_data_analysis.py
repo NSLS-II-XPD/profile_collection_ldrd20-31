@@ -112,6 +112,57 @@ def rate_unit_converter(r0 = 'ul/min', r1 = 'ul/min'):
     return ruc
 
 
+
+### Filter out bad absorption data due to PF oil ###
+def percentile_abs(wavelength, absorbance, w_range=[210, 700], percent_range=[15, 85]):
+    absorbance = np.nan_to_num(absorbance, nan=0)
+    idx1, _ = find_nearest(wavelength[0], w_range[0])
+    idx2, _ = find_nearest(wavelength[0], w_range[1])
+
+    abs_array2 = absorbance[:, idx1:idx2]
+    wavelength2 = wavelength[:, idx1:idx2]
+
+    iqr = np.multiply(abs_array2, wavelength2).mean(axis=1)
+    q0, q1 = np.percentile(iqr, percent_range)
+    idx_iqr = np.argwhere(np.logical_and(iqr>=q0, iqr<=q1))
+
+
+    abs_percentile = np.zeros((idx_iqr.shape[0], absorbance.shape[1]))
+    j = 0
+    for i in idx_iqr.flatten():
+        abs_percentile[j] = absorbance[i]
+        j += 1
+
+    return abs_percentile
+
+
+
+### Filter out bad fluorescence PL data due to PF oil ###
+def percentile_PL(wavelength, fluorescence, w_range=[400, 800], percent_range=[30, 100]):
+    fluorescence = np.nan_to_num(fluorescence, nan=0)
+    idx1, _ = find_nearest(wavelength[0], w_range[0])
+    idx2, _ = find_nearest(wavelength[0], w_range[1])
+
+    PL_array2 = fluorescence[:, idx1:idx2]
+    wavelength2 = wavelength[:, idx1:idx2]
+
+    # iqr = np.multiply(abs_array2, wavelength2).mean(axis=1)
+    iqr = np.max(fluorescence, axis=1)
+    q0, q1 = np.percentile(iqr, percent_range)
+    idx_iqr = np.argwhere(np.logical_and(iqr>=q0, iqr<=q1))
+
+
+    PL_percentile = np.zeros((idx_iqr.shape[0], fluorescence.shape[1]))
+    j = 0
+    for i in idx_iqr.flatten():
+        PL_percentile[j] = fluorescence[i]
+        j += 1
+
+    return PL_percentile
+
+
+
+
 #### Criteria to identify a bad fluorescence peak ####
 # c1. PL peak height < 2000 --> execute in scipy.find_peaks
 # c2. PL peak wavelength < 560 nm, and the diference of peak integrstion (PL minus LED) < 100000
@@ -293,8 +344,8 @@ def _2peak_fit_good_PL(x0, y0, fit_function, peak=False, maxfev=100000, fit_boun
         initial_guess = [y.max(), x[y.argmax()], sigma, y[find_nearest(x, second_peak)[0]], second_peak, sigma]
     except (TypeError, IndexError):
         initial_guess = [y0[peak[0]], x0[peak[0]], sigma, y0[peak[-1]], x0[peak[-1]], sigma]
-    
-    
+
+
     try:
         bnd = ((0,200,0,0,200,0),(y.max()*1.15,1000, np.inf, y.max()*1.15,1000, np.inf))
         popt, pcov = curve_fit(fit_function, x, y, p0=initial_guess, bounds=bnd, maxfev=maxfev)
@@ -358,7 +409,7 @@ def _identify_one_in_kafka(qepro_dic, metadata_dic, key_height=200, distance=100
 
 
 
-def _identify_multi_in_kafka(qepro_dic, metadata_dic, key_height=200, distance=100, height=50, dummy_test=False):
+def _identify_multi_in_kafka(qepro_dic, metadata_dic, key_height=200, distance=100, height=50, dummy_test=False, w_range=[400, 800], percent_range=[30, 100]):
     t0 = de._readable_time(metadata_dic['time'])
     data_id = f'{t0[0]}_{t0[1]}_{metadata_dic["uid"][:8]}'
     _for_average = pd.DataFrame()
@@ -369,10 +420,12 @@ def _identify_multi_in_kafka(qepro_dic, metadata_dic, key_height=200, distance=1
         if (type(p1) is np.ndarray) and (type(p2) is dict):
             _for_average[f'{data_id}_{i:03d}'] = y_i
     
-    _for_average[f'{data_id}_mean'] = _for_average.mean(axis=1)
-    
+    # _for_average[f'{data_id}_mean'] = _for_average.mean(axis=1)
+
     x0 = x_i
-    y0 = _for_average[f'{data_id}_mean'].values
+    PL_per = percentile_PL(x0, _for_average.to_numpy().T, w_range=w_range, percent_range=percent_range)
+    # y0 = _for_average[f'{data_id}_mean'].values
+    y0 = PL_per.mean(axis=0)
     
     peak, prop = good_bad_data(x0, y0, key_height=key_height, data_id = f'{data_id}_average', distance=distance, height=height, dummy_test=dummy_test)                            
     return x0, y0, data_id, peak, prop

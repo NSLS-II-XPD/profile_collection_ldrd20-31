@@ -283,7 +283,7 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
                 u.plot_data(clear_fig=clear_fig)
                 print(f'\n** Plot {stream_name} in uid: {uid[0:8]} complete **\n')
                     
-                ## Idenfify good/bad data if it is a fluorescence sacn in 'primary'
+                ## Idenfify good/bad data if it is a fluorescence scan in 'primary'
                 if qepro_dic['QEPro_spectrum_type'][0]==2 and stream_name=='primary':
                     print(f'\n*** start to identify good/bad data in stream: {stream_name} ***\n')
                     x0, y0, data_id, peak, prop = da._identify_one_in_kafka(qepro_dic, metadata_dic, key_height=kh, distance=dis, height=hei, dummy_test=dummy_test)
@@ -291,8 +291,12 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
                 
                 ## Apply an offset to zero baseline of absorption spectra
                 elif stream_name == 'absorbance':
+                    print(f'\n*** start to flter absorbance within 15%-85% due to PF oil phase***\n')
+                    abs_per = da.percentile_abs(qepro_dic['QEPro_x_axis'], qepro_dic['QEPro_output'], percent_range=[15, 85])
+                    
                     print(f'\n*** start to check absorbance at 365b nm in stream: {stream_name} is positive or not***\n')
-                    abs_array = qepro_dic['QEPro_output'][1:].mean(axis=0)
+                    # abs_array = qepro_dic['QEPro_output'][1:].mean(axis=0)
+                    abs_array = abs_per.mean(axis=0)
                     wavelength = qepro_dic['QEPro_x_axis'][0]
 
                     popt_abs01, _ = da.fit_line_2D(wavelength, abs_array, da.line_2D, x_range=[205, 240], plot=False)

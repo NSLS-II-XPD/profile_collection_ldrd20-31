@@ -103,7 +103,7 @@ def _set_CsPbBr3_constrain(PDF_calculator_object, phase_idx=1, fix_APD=True):
 
     # Refine diameter for the spherical particle
     pf.constrain(pf.spdiameter, '@133')
-    pf.setpar(133, 80)
+    pf.setpar(133, 100)
     # pf.fixpar(133)
 
     # Set temperature factors isotropic to each atom

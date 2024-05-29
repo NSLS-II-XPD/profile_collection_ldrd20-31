@@ -194,7 +194,7 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
                 kh = key_height[0]
                 hei = height[0]
                 dis = distance[0]
-            
+            '''
             ## obtain phase fraction & particle size from g(r)
             if 'scattering' in stream_list:
                 if fitting_pdf:
@@ -204,7 +204,7 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
                     pdf_property={'Br_ratio': np.nan, 'Br_size': np.nan}
                 ## remove 'scattering' from stream_list to avoid redundant work in next for loop
                 stream_list.remove('scattering')
-            
+
             ## Export, plotting, fitting, calculate # of good/bad data, add queue item
             for stream_name in stream_list:
                 ## Read data from databroker and turn into dic
@@ -258,7 +258,7 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
                     # u.plot_average_good(x0, y0, color=cmap(color_idx[sub_idx]), label=label_uid)
                     # sub_idx = sample.index(metadata_dic['sample_type'])
                     u.plot_average_good(x0, y0, label=label_uid, clf_limit=14)
-                    
+                
                 ## Skip peak fitting if qepro type is absorbance
                 if qepro_dic['QEPro_spectrum_type'][0] == 3:  
                     print(f"\n*** No need to carry out fitting for {stream_name} in uid: {uid[:8]} ***\n")
@@ -367,7 +367,7 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
 
             print(f'*** Accumulated num of good data: {len(good_data)} ***\n')
             print(f'good_data = {good_data}\n')
-            print(f'*** Accumulated num of bad data: {len(bad_data)} ***\n')
+            print(f'*** Accumulated num of bad data: {len(bad_data)} ***\n') '''
             print('########### Events printing division ############\n')
 
 
