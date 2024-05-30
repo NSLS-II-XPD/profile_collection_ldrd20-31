@@ -13,6 +13,7 @@ import databroker
 import json
 import glob
 from tqdm import tqdm
+from diffpy.pdfgetx import PDFConfig
 
 import resource
 resource.setrlimit(resource.RLIMIT_NOFILE, (65536, 65536))
@@ -21,6 +22,7 @@ import _data_export as de
 from _plot_helper import plot_uvvis
 import _data_analysis as da
 import _pdf_calculator as pc
+import _get_pdf as gp
 
 # from bluesky_queueserver.manager.comms import zmq_single_request
 from bluesky_queueserver_api.zmq import REManagerAPI
@@ -135,6 +137,12 @@ if USE_AGENT_iterate:
     agent = build_agen2(peak_target=peak_target)
 
 
+iq_to_gr = False
+if iq_to_gr:
+    gr_path = '/home/xf28id2/Documents/ChengHung/pdfstream_test/'
+    cfg_fn = '/home/xf28id2/Documents/ChengHung/pdfstream_test/pdfgetx3.cfg'
+    bkg_fn = glob.glob(os.path.join(gr_path, '**bkg**.chi'))
+
 fitting_pdf = False
 if fitting_pdf:
     pdf_cif_dir = '/home/xf28id2/Documents/ChengHung/pdffit2_example/CsPbBr3/'
@@ -226,8 +234,20 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
                 print(f"sample type: {message['sample_type']}")
             
         if name == 'stop':
-            RM.queue_stop()
-            print('\n*** qsever stop for data export, identification, and fitting ***\n')
+            # stop queue for data analysis, used with quick processing, washing loop after analysis
+            if wash_tube[0] == 0:
+                RM.queue_stop()
+                print('\n*** qsever stop for data export, identification, and fitting ***\n')
+            
+            ## conduct data analysis, especially for pdf calculation, during washing loop
+            elif wash_tube[0] == 1:
+                wash_tube_queue2(pump_list, wash_tube, rate_unit, 
+                                zmq_control_addr=zmq_control_addr,
+                                zmq_info_addr=zmq_info_addr
+                                )
+                RM.queue_start()
+                print('\n*** Start data analysis, export, and pdf fitting during washing loop***\n')
+            
             print(f"{datetime.datetime.now().isoformat()} documents {name}\n"
                   f"contents: {pprint.pformat(message)}"
             )
@@ -252,6 +272,13 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
             
             ## obtain phase fraction & particle size from g(r)
             if 'scattering' in stream_list:
+                if iq_to_gr:
+                    pdfconfig = PDFConfig()
+                    pdfconfig.readConfig(cfg_fn)
+                    pdfconfig.backgroundfiles = bkg_fn[-1]
+                    sqfqgr_path = gp.transform_bkg(pdfconfig, testfile, output_dir=gr_path, 
+                                plot_setting={'marker':'.','color':'green'}, test=True)    
+                    gr_data = sqfqgr_path['gr']
                 if fitting_pdf:
                     phase_fraction, particel_size = pc._pdffit2_CsPbX3(gr_data, cif_list, qmax=20, qdamp=0.031, qbroad=0.032, fix_APD=False, toler=0.001)
                     pdf_property={'Br_ratio': phase_fraction[0], 'Br_size':particel_size[0]}
@@ -423,7 +450,7 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
                                     print(f'\nReach the target, stop iteration, stop all pumps, and wash the loop.\n')
 
                                     ### Stop all infusing pumps and wash loop
-                                    wash_tube_queue(pump_list, wash_tube, rate_unit, 
+                                    wash_tube_queue2(pump_list, wash_tube, rate_unit, 
                                                     zmq_control_addr=zmq_control_addr,
                                                     zmq_info_addr=zmq_info_addr)
                                     
@@ -478,7 +505,7 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
                     print('*** qsever aborted due to too many bad scans, please check setup ***\n')
 
                     ### Stop all infusing pumps and wash loop
-                    wash_tube_queue(pump_list, wash_tube, rate_unit, 
+                    wash_tube_queue2(pump_list, wash_tube, rate_unit, 
                                     zmq_control_addr=zmq_control_addr,
                                     zmq_info_addr=zmq_info_addr)
                     

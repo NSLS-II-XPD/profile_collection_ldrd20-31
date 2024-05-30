@@ -123,3 +123,6 @@ if __name__ == "__main__":
     pdfconfig.qmax=qmax
     print(pdfconfig)
     transform_bkg(pdfconfig, testfile, output_dir=output_dir, plot_setting={'marker':'.','color':'green'} )
+
+
+
