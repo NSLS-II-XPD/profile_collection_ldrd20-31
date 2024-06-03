@@ -560,3 +560,23 @@ dds2_p2 = syrng_DDS_ax('XF:28IDC-ES:1{Pump:Syrng-DDS:2-Ax:B}', name='DDS2_p2', p
                                  'read_infuse_rate', 'read_infuse_rate_unit',
                                  'read_withdraw_rate', 'read_withdraw_rate_unit'])
 
+# XF:28IDC-ES:1{Pump:Syrng-DDS:3-Ax:A}STATUS
+
+dds3 = syrng_DDS('XF:28IDC-ES:1{Pump:Syrng-DDS:3', name='DDS3')
+
+dds3_p1 = syrng_DDS_ax('XF:28IDC-ES:1{Pump:Syrng-DDS:3-Ax:A}', name='DDS3_p1', parent=dds3,
+                     read_attrs=['status',
+                                 'read_target_vol', 'read_target_vol_unit',
+                                 'read_infused', 'read_infused_unit',
+                                 'read_withdrawn', 'read_withdrawn_unit',
+                                 'read_infuse_rate', 'read_infuse_rate_unit',
+                                 'read_withdraw_rate', 'read_withdraw_rate_unit'])
+
+dds3_p2 = syrng_DDS_ax('XF:28IDC-ES:1{Pump:Syrng-DDS:3-Ax:B}', name='DDS3_p2', parent=dds3,
+                     read_attrs=['status',
+                                 'read_target_vol', 'read_target_vol_unit',
+                                 'read_infused', 'read_infused_unit',
+                                 'read_withdrawn', 'read_withdrawn_unit',
+                                 'read_infuse_rate', 'read_infuse_rate_unit',
+                                 'read_withdraw_rate', 'read_withdraw_rate_unit'])
+

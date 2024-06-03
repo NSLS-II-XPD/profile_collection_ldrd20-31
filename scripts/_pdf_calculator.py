@@ -20,7 +20,7 @@ def _no_oxidation_cif(cif_file):
     
 
 
-def _pdffit2_CsPbX3(gr_data, cif_list, qmax=18, qdamp=0.031, qbroad=0.032, fix_APD=True, toler=0.000001, return_pf=False):
+def _pdffit2_CsPbX3(gr_data, cif_list, qmax=18, rmax=120, qdamp=0.031, qbroad=0.032, fix_APD=True, toler=0.000001, return_pf=False):
 
     # Initialize the CifParser with the path to your .cif file
     # Parse the .cif file
@@ -57,20 +57,17 @@ def _pdffit2_CsPbX3(gr_data, cif_list, qmax=18, qdamp=0.031, qbroad=0.032, fix_A
     pf.setvar(pf.qbroad, qbroad)
 
     # Refine 
-    pf.pdfrange(1, 2.5, 80)
+    pf.pdfrange(1, 2.5, rmax)
     pf.refine(toler=toler)
-
-
-    phase_fraction = pf.phase_fractions()['mass']
-
-    particel_size = []
-    for i in range(pf.num_phases()):
-        pf.setphase(i+1)
-        particel_size.append(pf.getvar(pf.spdiameter))
 
     if return_pf:
         return pf
     else:
+        phase_fraction = pf.phase_fractions()['mass']
+        particel_size = []
+        for i in range(pf.num_phases()):
+            pf.setphase(i+1)
+            particel_size.append(pf.getvar(pf.spdiameter))
         return phase_fraction, particel_size
 
 
@@ -103,7 +100,7 @@ def _set_CsPbBr3_constrain(PDF_calculator_object, phase_idx=1, fix_APD=True):
 
     # Refine diameter for the spherical particle
     pf.constrain(pf.spdiameter, '@133')
-    pf.setpar(133, 100)
+    pf.setpar(133, 80)
     # pf.fixpar(133)
 
     # Set temperature factors isotropic to each atom

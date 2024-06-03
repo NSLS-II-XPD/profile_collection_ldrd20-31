@@ -9,6 +9,7 @@ from pdfstream.transformation.io import load_pdfconfig, write_pdfgetter
 from pdfstream.transformation.main import get_pdf
 from pathlib import Path
 from diffpy.pdfgetx import PDFConfig
+from diffpy.pdfgetx.pdfgetter import PDFConfigError
 import typing
 
 def globfilename(path, search_item='*.tiff'):
@@ -22,6 +23,7 @@ def transform_bkg(
     output_dir: str = ".",
     plot_setting: typing.Union[str, dict] = None,
     test: bool = False,
+    gr_fn: str = '/home/xf28id2/Documents/test.gr',
 ) -> typing.Dict[str, str]:
     """Transform the data."""
     if isinstance(cfg_file,str):
@@ -29,10 +31,17 @@ def transform_bkg(
     else:
         pdfconfig = cfg_file
     
-    chi = load_array(data_file)
-    pdfgetter = get_pdf(pdfconfig, chi, plot_setting=plot_setting)
-    filename = Path(data_file).stem
-    dct = write_pdfgetter(output_dir, filename, pdfgetter)
+    if type(data_file) is str:
+        chi = load_array(data_file)
+    elif type(data_file) is np.ndarray:
+        chi = data_file
+    try:
+        pdfgetter = get_pdf(pdfconfig, chi, plot_setting=plot_setting)
+    except PDFConfigError:
+        pdfgetter = get_pdf(pdfconfig, chi, plot_setting='OFF')
+    # filename = Path(data_file).stem
+    # dct = write_pdfgetter(output_dir, filename, pdfgetter)
+    dct = write_pdfgetter(output_dir, gr_fn, pdfgetter)
     if not test:
         plt.show()
     return dct
@@ -78,6 +87,7 @@ def find_qmax(filename, ave_cutoff=8e-03, window_length=21):
 
 if __name__ == "__main__":
 
+    '''
     homepath='/home/xf28id2/Documents/ChengHung/pdfstream_test/'
     # testpath = './chi_files/'
     output_dir=homepath
@@ -123,6 +133,7 @@ if __name__ == "__main__":
     pdfconfig.qmax=qmax
     print(pdfconfig)
     transform_bkg(pdfconfig, testfile, output_dir=output_dir, plot_setting={'marker':'.','color':'green'} )
+    '''
 
 
 

@@ -24,6 +24,16 @@ def _read_input_xlsx(fn, sheet_name='inputs', skiprows=1, header=None, index_col
     return input_dic
 
 
+## Creat file name based on date, time, uid, sample_name/type from fluorescence stream
+def _fn_generator(uid, beamline_acronym='xpd'):
+    _, metadata_dic = de.read_qepro_by_stream(uid, stream_name='fluorescence', data_agent='tiled', beamline_acronym=beamline_acronym)
+    sample_type = metadata_dic['sample_type']
+    date, ttime = de._readable_time(metadata_dic['time'])
+    full_uid = metadata_dic['uid']
+    fn = f'{sample_type}_{date}-{ttime}_{full_uid[0:8]}'
+    return fn
+
+
 ## Auto generate sample name with given prefix and infuse_rate
 ## If prefix = None, 'Pre00', 'Pre01', 'Pre02', ... will be used.
 def _auto_name_sample(infuse_rates, prefix=None):
@@ -260,7 +270,7 @@ def dic_to_csv_for_stream(csv_path, qepro_dic, metadata_dic, stream_name='primar
             print('Input fitting info is not correct.\n'
                   'Please fllow as:  {"fit_function": da._1gauss, "curve_fit": popt}')
 
-    if stream_name == 'primary' and fitting == None:
+    if stream_name == 'take_a_uvvis' and fitting == None:
         if spectrum_type == 3:
             spec = 'Abs'
             fout = f'{csv_path}/{sample_type}_{spec}_{date}-{time}_{full_uid[0:8]}.csv'
@@ -297,7 +307,7 @@ def dic_to_csv_for_stream(csv_path, qepro_dic, metadata_dic, stream_name='primar
                 else:
                     fp.write(f'{x_axis_data[0,i]},{dark_data[0,i]},{sample_data[0,i]},{output_data[0,i]}\n')
     
-    elif stream_name != 'primary' and fitting == None:
+    elif stream_name != 'take_a_uvvis' and fitting == None:
         new_dir = f'{csv_path}/{date}{time}_{full_uid[0:8]}_{stream_name}'
         os.makedirs(new_dir, exist_ok=True)
         for j in range(x_axis_data.shape[0]):
@@ -332,7 +342,7 @@ def dic_to_csv_for_stream(csv_path, qepro_dic, metadata_dic, stream_name='primar
                         fp.write(f'{x_axis_data[j,i]},{dark_data[j,i]},{sample_data[j,i]},{output_data[j,i]}\n')
     
     elif type(fitting) is dict:
-        if stream_name == 'primary':
+        if stream_name == 'take_a_uvvis':
             fout = f'{csv_path}/{sample_type}_PL_{date}-{time}_{full_uid[0:8]}_fitted.csv'
         
         elif stream_name == 'fluorescence' or stream_name == 'absorbance':

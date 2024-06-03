@@ -11,10 +11,10 @@ from tqdm import tqdm
 from blop import Agent, DOF, Objective
 
 
-def build_agen_Cl(peak_target=660, peak_tolerance=5, size_target=6, ):
+def build_agen(peak_target=660, peak_tolerance=5, size_target=6, agent_data_path='/'):
     # data_path = '/home/xf28id2/data_ZnCl2'
     #data_path = '/home/xf28id2/data'
-    agent_data_path = '/home/xf28id2/Documents/ChengHung/pdffit2_test'
+    agent_data_path = agent_data_path
 
 
     dofs = [
@@ -36,8 +36,8 @@ def build_agen_Cl(peak_target=660, peak_tolerance=5, size_target=6, ):
         Objective(description="Peak emission", name="Peak", target=(peak_down, peak_up), weight=100, max_noise=0.25),
         Objective(description="Peak width", name="FWHM", target="min", transform="log", weight=5., max_noise=0.25),
         Objective(description="Quantum yield", name="PLQY", target="max", transform="log", weight=1., max_noise=0.25),
-        Objective(description="Particle size", name="Br_size", target=(size_target-1.5, size_target+1.5), transform="log", weight=0.1, max_noise=0.25),
-        Objective(description="Phase ratio", name="Br_ratio", target=(ratio_down, ratio_up), transform="log", weight=0.1, max_noise=0.25),   
+        # Objective(description="Particle size", name="Br_size", target=(size_target-1.5, size_target+1.5), transform="log", weight=0.1, max_noise=0.25),
+        # Objective(description="Phase ratio", name="Br_ratio", target=(ratio_down, ratio_up), transform="log", weight=0.1, max_noise=0.25),   
     ]
 
 
@@ -50,14 +50,28 @@ def build_agen_Cl(peak_target=660, peak_tolerance=5, size_target=6, ):
     agent = Agent(dofs=dofs, objectives=objectives, db=None, verbose=True)
     
     
-    if peak_target > 500:
+    # if peak_target > 500:
+    #     agent.dofs.infusion_rate_Cl.deactivate()
+    #     agent.dofs.infusion_rate_Cl.device.put(0)
+
+    # elif peak_target < 515:        
+    #     agent.dofs.infusion_rate_I2.deactivate()
+    #     agent.dofs.infusion_rate_I2.device.put(0)
+        
+    if peak_target > 518:
         agent.dofs.infusion_rate_Cl.deactivate()
         agent.dofs.infusion_rate_Cl.device.put(0)
 
-    elif peak_target < 515:        
+    elif peak_target < 500:        
         agent.dofs.infusion_rate_I2.deactivate()
         agent.dofs.infusion_rate_I2.device.put(0)
-
+    
+    else:
+        agent.dofs.infusion_rate_I2.deactivate()
+        agent.dofs.infusion_rate_I2.device.put(0)
+        agent.dofs.infusion_rate_Cl.deactivate()
+        agent.dofs.infusion_rate_Cl.device.put(0)
+    
     # else:
     #     agent.dofs.infusion_rate_Cl.deactivate()
     #     agent.dofs.infusion_rate_Cl.device.put(0)

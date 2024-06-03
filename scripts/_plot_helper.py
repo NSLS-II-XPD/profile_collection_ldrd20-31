@@ -15,7 +15,8 @@ class plot_uvvis(open_figures):
     def __init__(self, qepro_dic, metadata_dic, 
                  figure_labels = ['primary_absorbance', 'primary_fluorescence', 
                                   'bundle_absorbance', 'bundle_fluorescence',
-                                  'peak fitting', 'Spectra Evolution', 'CsPbX3']):
+                                  'peak fitting', 'Spectra Evolution', 'CsPbX3', 
+                                  'I(Q)', 'g(r)']):
         self.fig = figure_labels
         self.uid = metadata_dic['uid']
         self.stream_name = metadata_dic['stream_name']
@@ -46,7 +47,7 @@ class plot_uvvis(open_figures):
             plt.clf()
             ax = f.gca()
         
-        elif self.stream_name == 'primary':
+        elif self.stream_name == 'take_a_uvvis':
             if self.qepro_dic['QEPro_spectrum_type'] == 3:
                 y_label = 'Absorbance'
                 try: f = plt.figure(self.fig[0])
@@ -229,6 +230,43 @@ class plot_uvvis(open_figures):
         ax.legend()
         f.canvas.manager.show()
         f.canvas.flush_events()
+        
+        
+        
+    def plot_iq_to_gr(self, iq_df, gr_df, gr_fit=None, label=None):
+        try: f = plt.figure(self.fig[7])
+        except (IndexError): f = plt.figure(self.fig[-1])
+        plt.clf()
+        ax = f.gca()
+        if label == None:
+            label = f'{self.time}_{self.uid[0:8]}'
+        ax.plot(iq_df[0], iq_df[1], label=label)
+        ax.set_xlabel('Q(A-1)', fontdict={'size': 14})
+        ax.set_ylabel('I(Q)', fontdict={'size': 14})
+        ax.legend()
+        
+        try: f = plt.figure(self.fig[8])
+        except (IndexError): f = plt.figure(self.fig[-1])
+        plt.clf()
+        ax = f.gca()
+        if label == None:
+            label = f'{self.time}_{self.uid[0:8]}'
+        ax.plot(gr_df[0], gr_df[1], 'o', label=label, 
+                markersize=4, markerfacecolor='none', markeredgewidth=0.4)
+        if type(gr_fit) is np.ndarray:
+            ax.plot(gr_fit[0], gr_fit[1], label='PDF Fit')
+        ax.set_xlabel('r(A)', fontdict={'size': 14})
+        ax.set_ylabel('g(r)', fontdict={'size': 14})
+        ax.legend()
+        
+        # ax.set_ylabel(y_label, fontdict={'size': 14})
+        # if title == None:
+        #     title = f'{self.date}-{self.time}_{self.uid[0:8]}_{self.stream_name}'
+        # ax.set_title(title)
+        f.canvas.manager.show()
+        f.canvas.flush_events()
+        
+        
         
 
         

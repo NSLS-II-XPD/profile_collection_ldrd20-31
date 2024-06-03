@@ -1,6 +1,7 @@
 from ophyd.sim import det, noisy_det
 from bluesky.utils import ts_msg_hook
 import bluesky.preprocessors as bpp
+# import time
 # RE.msg_hook = ts_msg_hook
 
 
@@ -43,6 +44,7 @@ def xray_uvvis_plan(det1, det2, *args, md=None, num_abs=10, num_flu=10, sample_t
         # For fluorescence: spectrum_type='Corrected Sample', correction_type='Dark'
         
         ## Start to collecting absrobtion
+        # t0 = time.time()
         spectrum_type='Absorbtion'
         correction_type='Reference'
         if LED.get()=='Low' and UV_shutter.get()=='High' and qepro.correction.get()==correction_type and qepro.spectrum_type.get()==spectrum_type:
@@ -52,7 +54,7 @@ def xray_uvvis_plan(det1, det2, *args, md=None, num_abs=10, num_flu=10, sample_t
             # yield from bps.abs_set(qepro.spectrum_type, spectrum_type, wait=True)
             yield from bps.mv(qepro.correction, correction_type, qepro.spectrum_type, spectrum_type)
             yield from bps.mv(LED, 'Low', UV_shutter, 'High')
-            yield from bps.sleep(2)
+            yield from bps.sleep(1)
 
         for i in range(num_abs):
             yield from bps.trigger(det2, wait=True)
@@ -64,7 +66,7 @@ def xray_uvvis_plan(det1, det2, *args, md=None, num_abs=10, num_flu=10, sample_t
             yield from bps.save()  # TODO: check if it's needed, most likely yes.
             # yield from bps.sleep(2)
         
-        yield from bps.sleep(2)
+        yield from bps.sleep(1)
 
         ## Start to collecting fluorescence
         spectrum_type='Corrected Sample'
@@ -76,7 +78,7 @@ def xray_uvvis_plan(det1, det2, *args, md=None, num_abs=10, num_flu=10, sample_t
             # yield from bps.abs_set(qepro.spectrum_type, spectrum_type, wait=True)
             yield from bps.mv(qepro.correction, correction_type, qepro.spectrum_type, spectrum_type)
             yield from bps.mv(LED, 'High', UV_shutter, 'Low')
-            yield from bps.sleep(2)
+            yield from bps.sleep(1)
 
         for i in range(num_flu):  # TODO: fix the number of triggers
             yield from bps.trigger(det2, wait=True)
@@ -88,9 +90,9 @@ def xray_uvvis_plan(det1, det2, *args, md=None, num_abs=10, num_flu=10, sample_t
             yield from bps.save()  # TODO: check if it's needed, most likely yes.
             # yield from bps.sleep(2)
 
-        yield from bps.sleep(2)
+        yield from bps.sleep(1)
         yield from bps.mv(LED, 'Low', UV_shutter, 'Low')
-        
+        # t1 = time.time()
         # yield from bps.sleep(3)
         ...
         ###

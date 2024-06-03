@@ -24,6 +24,7 @@ def synthesis_queue(
 					name_by_prefix=True,  
 					num_abs=5, 
 					num_flu=5, 
+					det1_time=15, 
 					pos='back',
                     dummy_qserver=False,
 					is_iteration=False, 
@@ -52,7 +53,7 @@ def synthesis_queue(
 		
 
 	# 0. stop infuese for all pumps
-	flowplan = BPlan('stop_group', pump_list + [wash_tube[1]])
+	flowplan = BPlan('stop_group', pump_list + [wash_tube[2], wash_tube[5]])
 	RM.item_add(flowplan, pos=pos)
 	
 	
@@ -153,14 +154,15 @@ def synthesis_queue(
 		#### Kafka check data here.
 
 		## 5. Sleep for 5 seconds for Kafak to check good/bad data
-		restplan = BPlan('sleep_sec_q', 2)
+		restplan = BPlan('sleep_sec_q', 5)
 		RM.item_add(restplan, pos=pos)
 		
 		
 		## 6. Start xray_uvvis bundle plan to take real data
-		scanplan = BPlan('xray_uvvis_plan', 'det', 'qepro', 
+		scanplan = BPlan('xray_uvvis_plan', 'pe1c', 'qepro', 
 						num_abs=num_abs, 
 						num_flu=num_flu,
+      					det1_time=det1_time, 
 						sample_type=sample[i], 
 						spectrum_type='Absorbtion', 
 						correction_type='Reference', 
@@ -168,6 +170,10 @@ def synthesis_queue(
 						precursor_list=precursor_list, 
 						mixer=mixer)
 		RM.item_add(scanplan, pos=pos)
+        
+        ## 6.1 sleep 20 seconds for stopping
+		restplan = BPlan('sleep_sec_q', 20)
+		RM.item_add(restplan, pos=pos)
         
 
 		######  Kafka analyze data here. #######
@@ -211,6 +217,7 @@ def wash_tube_queue(pump_list, wash_tube, rate_unit,
 					rate_list=[wash_tube[3]], 
 					target_vol_list=['30 ml'], 
 					set_target_list=[False], 
+					syringe_mater_list = ['steel'], 
 					rate_unit=rate_unit)
 	RM.item_add(flowplan, pos=pos[1])	
 	
@@ -250,6 +257,7 @@ def wash_tube_queue2(pump_list, wash_tube, rate_unit,
 					rate_list=[wash_tube[3], wash_tube[6]], 
 					target_vol_list=['30 ml', '15 ml'], 
 					set_target_list=[False, False], 
+					syringe_mater_list = ['steel', 'plastic_BD'], 
 					rate_unit=rate_unit)
 	RM.item_add(flowplan, pos=pos[1])	
 	

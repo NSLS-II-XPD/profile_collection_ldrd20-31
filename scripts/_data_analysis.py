@@ -140,11 +140,19 @@ def percentile_abs(wavelength, absorbance, w_range=[210, 700], percent_range=[15
 ### Filter out bad fluorescence PL data due to PF oil ###
 def percentile_PL(wavelength, fluorescence, w_range=[400, 800], percent_range=[30, 100]):
     fluorescence = np.nan_to_num(fluorescence, nan=0)
-    idx1, _ = find_nearest(wavelength[0], w_range[0])
-    idx2, _ = find_nearest(wavelength[0], w_range[1])
+    try:
+        idx1, _ = find_nearest(wavelength[0], w_range[0])
+        idx2, _ = find_nearest(wavelength[0], w_range[1])
+    except (IndexError):
+        idx1, _ = find_nearest(wavelength, w_range[0])
+        idx2, _ = find_nearest(wavelength, w_range[1])        
 
     PL_array2 = fluorescence[:, idx1:idx2]
-    wavelength2 = wavelength[:, idx1:idx2]
+    
+    try:
+        wavelength2 = wavelength[:, idx1:idx2]
+    except (IndexError):
+        wavelength2 = wavelength[idx1:idx2]
 
     # iqr = np.multiply(abs_array2, wavelength2).mean(axis=1)
     iqr = np.max(fluorescence, axis=1)
@@ -420,7 +428,7 @@ def _identify_multi_in_kafka(qepro_dic, metadata_dic, key_height=200, distance=1
         if (type(p1) is np.ndarray) and (type(p2) is dict):
             _for_average[f'{data_id}_{i:03d}'] = y_i
     
-    # _for_average[f'{data_id}_mean'] = _for_average.mean(axis=1)
+    _for_average[f'{data_id}_mean'] = _for_average.mean(axis=1)
 
     x0 = x_i
     PL_per = percentile_PL(x0, _for_average.to_numpy().T, w_range=w_range, percent_range=percent_range)
