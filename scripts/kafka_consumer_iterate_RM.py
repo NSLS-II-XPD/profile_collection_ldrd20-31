@@ -99,13 +99,6 @@ if bool(prefix[0]):
     sample = de._auto_name_sample(infuse_rates, prefix=prefix[1:])
 print(f'Sample: {sample}')
 
-agent_data_path = '/home/xf28id2/Documents/ChengHung/202405_halide_data/with_xray'
-
-use_good_bad = True
-post_dilute = True
-USE_AGENT_iterate = False
-peak_target = 515
-write_agent_data = True
 
 rate_label_dic =   {'CsPb':'infusion_rate_CsPb', 
                     'Br':'infusion_rate_Br', 
@@ -114,10 +107,17 @@ rate_label_dic =   {'CsPb':'infusion_rate_CsPb',
 
 new_points_label = ['infusion_rate_CsPb', 'infusion_rate_Br', 'infusion_rate_I2', 'infusion_rate_Cl']
 
+
+use_good_bad = True
+post_dilute = True
+write_agent_data = True
+agent_data_path = '/home/xf28id2/Documents/ChengHung/202405_halide_data/with_xray'
+
+USE_AGENT_iterate = False
+peak_target = 515
 if USE_AGENT_iterate:
     from prepare_agent_pdf import build_agen
     agent = build_agen(peak_target=peak_target, agent_data_path=agent_data_path)
-
 
 iq_to_gr = True
 if iq_to_gr:
@@ -129,7 +129,6 @@ if iq_to_gr:
     # bkg_fn = glob.glob(os.path.join(gr_path, '**bkg**.chi'))
     bkg_fn = ['/nsls2/data/xpd-new/legacy/processed/xpdUser/tiff_base/Toluene_OleAcid_mask/integration/Toluene_OleAcid_mask_20240602-122852_c49480_primary-1_mean_q.chi']
     
-    
 search_and_match = True
 if search_and_match:
     from updated_pipeline_pdffit2 import Refinery
@@ -137,15 +136,12 @@ if search_and_match:
     # mystery_path = "'/home/xf28id2/Documents/ChengHung/pdfstream_test/gr"
     results_path = "/home/xf28id2/Documents/ChengHung/pdffit2_example/results_CsPbBr_chemsys_search"
 
-
-
 fitting_pdf = False
 if fitting_pdf:
     global pdf_cif_dir, cif_list, gr_data
     pdf_cif_dir = '/home/xf28id2/Documents/ChengHung/pdffit2_example/CsPbBr3/'
     cif_list = [os.path.join(pdf_cif_dir, 'CsPbBr3_Orthorhombic.cif')]
     gr_data = os.path.join(pdf_cif_dir, 'CsPbBr3.gr')
-
 
 use_sandbox = True
 if use_sandbox:
@@ -299,9 +295,9 @@ def print_kafka_messages(beamline_acronym_01, beamline_acronym_02, csv_path=csv_
             stream_list = list(message['num_events'].keys())
             
             
-        ## When uid is assigned and trpe is a string, move to data fitting, calculation
+        ## When uid is assigned and type is a string, move to data fitting, calculation
         if (name == 'stop') and (type(uid) is str):
-            print(f'\n**** start 0.60to export uid: {uid} ****\n')
+            print(f'\n**** start to export uid: {uid} ****\n')
             print(f'\n**** with stream name in {stream_list} ****\n')
 
             ## Set good/bad data condictions to the corresponding sample
@@ -594,6 +590,7 @@ def print_kafka_messages(beamline_acronym_01, beamline_acronym_02, csv_path=csv_
                     print(f'{peak = }')
                     print(f'{prop = }')
                     
+                    ## Append good/bad idetified results
                     if stream_name == 'take_a_uvvis':
                         good_data.append(data_id)
 
@@ -656,6 +653,7 @@ def print_kafka_messages(beamline_acronym_01, beamline_acronym_02, csv_path=csv_
 
                     RM.queue_start()
             
+            ## Add predicted new points from ML agent into qserver
             elif stream_name == 'fluorescence' and USE_AGENT_iterate and agent_iteration[-1]:
                 print('*** Add new points from agent to the fron of qsever ***\n')
                 print(f'*** New points from agent: {new_points} ***\n')
