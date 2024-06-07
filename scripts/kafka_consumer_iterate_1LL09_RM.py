@@ -26,9 +26,6 @@ import _pdf_calculator as pc
 from bluesky_queueserver_api.zmq import REManagerAPI
 from bluesky_queueserver_api import BPlan, BInst
 
-# db = databroker.Broker.named('xpd-ldrd20-31')
-# catalog = databroker.catalog['xpd-ldrd20-31']
-
 try:
     from nslsii import _read_bluesky_kafka_config_file  # nslsii <0.7.0
 except (ImportError, AttributeError):
@@ -100,46 +97,55 @@ if bool(prefix[0]):
     sample = de._auto_name_sample(infuse_rates, prefix=prefix[1:])
 print(f'Sample: {sample}')
 
-# import sys
-# sys.path.insert(0, "/home/xf28id2/src/blop/blop")
-# from bloptools.bayesian import Agent, DOF, Objective
-
-# from blop import Agent, DOF, Objective
-
-# agent_data_path = '/home/xf28id2/data_post_dilute_0418'
-# agent_data_path = '/home/xf28id2/data_ZnI2_60mM'
-# # agent_data_path = '/home/xf28id2/data_halide/'
-# agent_data_path = '/home/xf28id2/data_dilute_halide'
-agent_data_path = '/home/xf28id2/data_post_dilute_66mM_PF'
-
-use_good_bad = True
-post_dilute = True
-USE_AGENT_iterate = False
-peak_target = 420
-
-write_agent_data = True
-# rate_label = ['infusion_rate_CsPb', 'infusion_rate_Br', 'infusion_rate_Cl', 'infusion_rate_I2']
-# rate_label = ['infusion_rate_CsPb', 'infusion_rate_Br', 'infusion_rate_I2', 'infusion_rate_Cl']
 rate_label_dic =   {'CsPb':'infusion_rate_CsPb', 
                     'Br':'infusion_rate_Br', 
                     'ZnI':'infusion_rate_I2', 
                     'ZnCl':'infusion_rate_Cl'}
 
+use_good_bad = True
+post_dilute = True
+write_agent_data = True
+agent_data_path = '/home/xf28id2/data_post_dilute_66mM_PF'
+
+USE_AGENT_iterate = False
+peak_target = 515
 if USE_AGENT_iterate:
+    from prepare_agent_pdf import build_agen
+    agent = build_agen(peak_target=peak_target, agent_data_path=agent_data_path)
 
-    # from prepare_agent import build_agen
-    # from prepare_agent_pdf import build_agen_Cl
-    # agent = build_agen_Cl(peak_target=peak_target)
-
-    from prepare_agent_select import build_agen2
-    agent = build_agen2(peak_target=peak_target)
-
+iq_to_gr = False
+if iq_to_gr:
+    from diffpy.pdfgetx import PDFConfig
+    global gr_path, cfg_fn, iq_fn, bkg_fn
+    gr_path = '/home/xf28id2/Documents/ChengHung/pdfstream_test/'
+    cfg_fn = '/home/xf28id2/Documents/ChengHung/pdfstream_test/pdfgetx3.cfg'
+    iq_fn = glob.glob(os.path.join(gr_path, '**CsPb**.chi'))
+    # bkg_fn = glob.glob(os.path.join(gr_path, '**bkg**.chi'))
+    bkg_fn = ['/nsls2/data/xpd-new/legacy/processed/xpdUser/tiff_base/Toluene_OleAcid_mask/integration/Toluene_OleAcid_mask_20240602-122852_c49480_primary-1_mean_q.chi']
+    
+search_and_match = False
+if search_and_match:
+    from updated_pipeline_pdffit2 import Refinery
+    mystery_path = "/home/xf28id2/Documents/ChengHung/pdffit2_example/CsPbBr3"
+    # mystery_path = "'/home/xf28id2/Documents/ChengHung/pdfstream_test/gr"
+    results_path = "/home/xf28id2/Documents/ChengHung/pdffit2_example/results_CsPbBr_chemsys_search"
 
 fitting_pdf = False
 if fitting_pdf:
+    global pdf_cif_dir, cif_list, gr_data
     pdf_cif_dir = '/home/xf28id2/Documents/ChengHung/pdffit2_example/CsPbBr3/'
     cif_list = [os.path.join(pdf_cif_dir, 'CsPbBr3_Orthorhombic.cif')]
     gr_data = os.path.join(pdf_cif_dir, 'CsPbBr3.gr')
+
+use_sandbox = True
+if use_sandbox:
+    global sandbox_tiled_client
+    sandbox_tiled_client = from_uri("https://tiled.nsls2.bnl.gov/api/v1/metadata/xpd/sandbox")
+
+write_to_sandbox = True
+if write_to_sandbox:
+    global sandbox_tiled_client
+    sandbox_tiled_client = from_uri("https://tiled.nsls2.bnl.gov/api/v1/metadata/xpd/sandbox")
 
 
 def print_kafka_messages(beamline_acronym, csv_path=csv_path, 
@@ -163,12 +169,12 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
           f'{zmq_control_addr = }')
 
 
-    global db, catalog, path_0, path_1
-    db = databroker.Broker.named(beamline_acronym)
-    catalog = databroker.catalog[f'{beamline_acronym}']
+    global tiled_client, path_0, path_1
+    # tiled_client = from_profile("nsls2")[beamline_acronym]["raw"]
+    tiled_client = from_profile[beamline_acronym]
     path_0  = csv_path
-
     path_1 = csv_path + '/good_bad'
+
     try:
         os.mkdir(path_1)
     except FileExistsError:
@@ -263,7 +269,8 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
             ## Export, plotting, fitting, calculate # of good/bad data, add queue item
             for stream_name in stream_list:
                 ## Read data from databroker and turn into dic
-                qepro_dic, metadata_dic = de.read_qepro_by_stream(uid, stream_name=stream_name, data_agent='tiled', beamline_acronym=beamline_acronym)
+                qepro_dic, metadata_dic = de.read_qepro_by_stream(
+                    uid, stream_name=stream_name, data_agent='tiled', beamline_acronym=beamline_acronym)
                 sample_type = metadata_dic['sample_type']
                 ## Save data in dic into .csv file
 
@@ -292,6 +299,7 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
                 ## Apply an offset to zero baseline of absorption spectra
                 elif stream_name == 'absorbance':
                     print(f'\n*** start to flter absorbance within 15%-85% due to PF oil phase***\n')
+                    ## Apply percnetile filtering for absorption spectra, defaut percent_range = [15, 85]
                     abs_per = da.percentile_abs(qepro_dic['QEPro_x_axis'], qepro_dic['QEPro_output'], percent_range=[15, 85])
                     
                     print(f'\n*** start to check absorbance at 365b nm in stream: {stream_name} is positive or not***\n')
@@ -318,7 +326,10 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
                 ## Avergae scans in 'fluorescence' and idenfify good/bad
                 elif stream_name == 'fluorescence':
                     print(f'\n*** start to identify good/bad data in stream: {stream_name} ***\n')
-                    x0, y0, data_id, peak, prop = da._identify_multi_in_kafka(qepro_dic, metadata_dic, key_height=kh, distance=dis, height=hei, dummy_test=dummy_test)
+                    ## Apply percnetile filtering for PL spectra, defaut percent_range = [30, 100]
+                    x0, y0, data_id, peak, prop = da._identify_multi_in_kafka(qepro_dic, metadata_dic, 
+                                                key_height=kh, distance=dis, height=hei, 
+                                                dummy_test=dummy_test, percent_range=[30, 100])
                     label_uid = f'{uid[0:8]}_{metadata_dic["sample_type"]}'
                     # u.plot_average_good(x0, y0, color=cmap(color_idx[sub_idx]), label=label_uid)
                     # sub_idx = sample.index(metadata_dic['sample_type'])
@@ -381,7 +392,8 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
                             
                             plqy_dic = {'PL_integral':PL_integral_s, 'Absorbance_365':absorbance_s, 'plqy': plqy}
                             
-                            optical_property = {'Peak': peak_emission, 'FWHM':fwhm, 'PLQY':plqy}
+                            optical_property = {'PL_integral':PL_integral_s, 'Absorbance_365':absorbance_s, 
+                                                'Peak': peak_emission, 'FWHM':fwhm, 'PLQY':plqy}
 
 
                             ## Save data for ML agent
@@ -434,9 +446,8 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
                                 else:
                                     agent_iteration.append(True)
 
-                        # TODO: remove the fllowing 3 lines if no error reported
                         else:
-                            plqy_dic = None
+                            # plqy_dic = None
                             optical_property = None
                         
                     ## Save fitting data
@@ -462,9 +473,14 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
                     print('\n*** export, identify good/bad, fitting complete ***\n')
                     
                     try :
-                        print(f"\n*** {sample_type} of uid: {uid[:8]} has: {optical_property}.***\n")
+                        print(f"\n*** {sample_type} of uid: {uid[:8]} has: ***\n"
+                              f"{optical_property = }***\n"
+                              f"{pdf_property = }***\n")
                     except (UnboundLocalError):
                         pass
+
+                    if write_to_sandbox:
+                        ...
 
             print(f'*** Accumulated num of good data: {len(good_data)} ***\n')
             print(f'good_data = {good_data}\n')

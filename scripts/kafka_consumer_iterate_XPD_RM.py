@@ -148,6 +148,11 @@ if use_sandbox:
     global sandbox_tiled_client
     sandbox_tiled_client = from_uri("https://tiled.nsls2.bnl.gov/api/v1/metadata/xpd/sandbox")
 
+write_to_sandbox = False
+if write_to_sandbox:
+    global sandbox_tiled_client
+    sandbox_tiled_client = from_uri("https://tiled.nsls2.bnl.gov/api/v1/metadata/xpd/sandbox")
+
 
 def print_kafka_messages(beamline_acronym_01, beamline_acronym_02, csv_path=csv_path, 
                          key_height=key_height, height=height, distance=distance, 
@@ -173,7 +178,8 @@ def print_kafka_messages(beamline_acronym_01, beamline_acronym_02, csv_path=csv_
 
 
     global tiled_client, path_0, path_1
-    tiled_client = from_profile("nsls2")["xpd"]["raw"]
+    # tiled_client = from_profile("nsls2")["xpd"]["raw"]  ## needs permission
+    tiled_client = from_profile["xpd"]
     path_0  = csv_path
     path_1 = csv_path + '/good_bad'
     
@@ -431,6 +437,7 @@ def print_kafka_messages(beamline_acronym_01, beamline_acronym_02, csv_path=csv_
                 ## Apply an offset to zero baseline of absorption spectra
                 elif stream_name == 'absorbance':
                     print(f'\n*** start to flter absorbance within 15%-85% due to PF oil phase***\n')
+                    ## Apply percnetile filtering for absorption spectra, defaut percent_range = [15, 85]
                     abs_per = da.percentile_abs(qepro_dic['QEPro_x_axis'], qepro_dic['QEPro_output'], percent_range=[15, 85])
                     
                     print(f'\n*** start to check absorbance at 365b nm in stream: {stream_name} is positive or not***\n')
@@ -457,7 +464,10 @@ def print_kafka_messages(beamline_acronym_01, beamline_acronym_02, csv_path=csv_
                 ## Avergae scans in 'fluorescence' and idenfify good/bad
                 elif stream_name == 'fluorescence':
                     print(f'\n*** start to identify good/bad data in stream: {stream_name} ***\n')
-                    x0, y0, data_id, peak, prop = da._identify_multi_in_kafka(qepro_dic, metadata_dic, key_height=kh, distance=dis, height=hei, dummy_test=dummy_test)
+                    ## Apply percnetile filtering for PL spectra, defaut percent_range = [30, 100]
+                    x0, y0, data_id, peak, prop = da._identify_multi_in_kafka(qepro_dic, metadata_dic, 
+                                                key_height=kh, distance=dis, height=hei, 
+                                                dummy_test=dummy_test, percent_range=[30, 100])
                     label_uid = f'{uid[0:8]}_{metadata_dic["sample_type"]}'
                     # u.plot_average_good(x0, y0, color=cmap(color_idx[sub_idx]), label=label_uid)
                     # sub_idx = sample.index(metadata_dic['sample_type'])
@@ -520,11 +530,10 @@ def print_kafka_messages(beamline_acronym_01, beamline_acronym_02, csv_path=csv_
                             
                             plqy_dic = {'PL_integral':PL_integral_s, 'Absorbance_365':absorbance_s, 'plqy': plqy}
                             
-                            optical_property = {'Peak': peak_emission, 'FWHM':fwhm, 'PLQY':plqy}
-
+                            optical_property = {'PL_integral':PL_integral_s, 'Absorbance_365':absorbance_s, 
+                                                'Peak': peak_emission, 'FWHM':fwhm, 'PLQY':plqy}
 
                             ## Save data for ML agent
-                            ## TODO: add phase ratio & particle size from scattering
                             if write_agent_data:
                                 agent_data = {}
 
@@ -573,9 +582,8 @@ def print_kafka_messages(beamline_acronym_01, beamline_acronym_02, csv_path=csv_
                                 else:
                                     agent_iteration.append(True)
 
-                        # TODO: remove the fllowing 3 lines if no error reported
                         else:
-                            plqy_dic = None
+                            # plqy_dic = None
                             optical_property = None
                         
                     ## Save fitting data
@@ -602,9 +610,14 @@ def print_kafka_messages(beamline_acronym_01, beamline_acronym_02, csv_path=csv_
                     print('\n*** export, identify good/bad, fitting complete ***\n')
                     
                     try :
-                        print(f"\n*** {sample_type} of uid: {uid[:8]} has: {optical_property}.***\n")
+                        print(f"\n*** {sample_type} of uid: {uid[:8]} has: ***\n"
+                              f"{optical_property = }***\n"
+                              f"{pdf_property = }***\n")
                     except (UnboundLocalError):
                         pass
+
+                    if write_to_sandbox:
+                        ...
 
             print(f'*** Accumulated num of good data: {len(good_data)} ***\n')
             print(f'good_data = {good_data}\n')
