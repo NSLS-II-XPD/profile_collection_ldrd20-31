@@ -249,7 +249,7 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
                     abs_array_offset = abs_array - da.line_2D(wavelength, *popt_abs)
 
                     print(f'\nFitting function for baseline offset: {da.line_2D}\n')
-                    ff_abs={'fit_function': da.line_2D, 'curve_fit': popt_abs}
+                    ff_abs={'fit_function': da.line_2D, 'curve_fit': popt_abs, 'percentile_mean': abs_array}
                     de.dic_to_csv_for_stream(csv_path, qepro_dic, metadata_dic, stream_name=stream_name, fitting=ff_abs)
                     u.plot_offfset(wavelength, da.line_2D, popt_abs)
                     print(f'\n** export offset results of absorption spectra complete**\n')
@@ -347,7 +347,7 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
                             optical_property = None
                         
                         print(f'\nFitting function: {f_fit}\n')
-                        ff={'fit_function': f_fit, 'curve_fit': popt}
+                        ff={'fit_function': f_fit, 'curve_fit': popt, 'percentile_mean': y0}
                         de.dic_to_csv_for_stream(csv_path, qepro_dic, metadata_dic, stream_name=stream_name, fitting=ff, plqy_dic=plqy_dic)
                         print(f'\n** export fitting results complete**\n')
                         

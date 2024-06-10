@@ -262,7 +262,8 @@ def dic_to_csv_for_stream(csv_path, qepro_dic, metadata_dic, stream_name='primar
         f1 = fitting['fit_function']
         popt = fitting['curve_fit']
         fitted_y = f1(x_axis_data[-1], *popt)
-        output_mean = np.mean(output_data, axis=0)
+        # output_mean = np.mean(output_data, axis=0)
+        output_mean = fitting['percentile_mean']  ## add percentile filtering mean data here
     except (TypeError, KeyError):
         if fitting == None:
             pass

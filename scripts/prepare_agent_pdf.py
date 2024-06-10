@@ -124,3 +124,17 @@ def build_agen(peak_target=660, peak_tolerance=5, size_target=6, agent_data_path
 
     # print(agent.ask("qei", n=1))
     # print(agent.ask("qr", n=36))
+
+
+'''
+ agent.posterior
+ import torch
+ 
+ res = agent.ask('qem', n=1)
+ agent.posterior(torch.tensor(res['points'])).mean
+
+ x = torch.tensor([[ 24.0426776 , 159.30614932, 101.20516362]])
+ agent.posterior(x)
+ agent.posterior(x).mean
+ agent.plot_acquisition(); plt.show()
+ '''

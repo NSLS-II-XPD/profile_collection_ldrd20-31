@@ -455,7 +455,7 @@ def print_kafka_messages(beamline_acronym_01, beamline_acronym_02, csv_path=csv_
                     abs_array_offset = abs_array - da.line_2D(wavelength, *popt_abs)
 
                     print(f'\nFitting function for baseline offset: {da.line_2D}\n')
-                    ff_abs={'fit_function': da.line_2D, 'curve_fit': popt_abs}
+                    ff_abs={'fit_function': da.line_2D, 'curve_fit': popt_abs, 'percentile_mean': abs_array}
                     de.dic_to_csv_for_stream(saving_path, qepro_dic, metadata_dic, stream_name=stream_name, fitting=ff_abs)
                     u.plot_offfset(wavelength, da.line_2D, popt_abs)
                     print(f'\n** export offset results of absorption spectra complete**\n')
@@ -533,21 +533,17 @@ def print_kafka_messages(beamline_acronym_01, beamline_acronym_02, csv_path=csv_
                             optical_property = {'PL_integral':PL_integral_s, 'Absorbance_365':absorbance_s, 
                                                 'Peak': peak_emission, 'FWHM':fwhm, 'PLQY':plqy}
 
-                            ## Save data for ML agent
-                            if write_agent_data:
-                                agent_data = {}
 
-                                agent_data.update(optical_property)
-                                agent_data.update(pdf_property)
-                                
-                                agent_data.update({k:v for k, v in metadata_dic.items() if len(np.atleast_1d(v)) == 1})
+                            ## Creat agent_data in type of dict for exporting as json and wirte to sandbox
+                            agent_data = {}
+                            agent_data.update(optical_property)
+                            agent_data.update(pdf_property)
+                            agent_data.update({k:v for k, v in metadata_dic.items() if len(np.atleast_1d(v)) == 1})
+                            agent_data = de._exprot_rate_agent(metadata_dic, rate_label_dic, agent_data)
 
-                                agent_data = de._exprot_rate_agent(metadata_dic, rate_label_dic, agent_data)
-                                                                
-                                with open(f"{agent_data_path}/{data_id}.json", "w") as f:
-                                    json.dump(agent_data, f)
-
-                                print(f"\nwrote to {agent_data_path}")
+                            ## Update absorbance offset and fluorescence fitting results inot agent_data
+                            agent_data.update({'abs_offset':{'fit_function':ff_abs['fit_function'].__name__, 'popt':ff_abs['curve_fit'].tolist()}})
+                            agent_data.update({'PL_fitting':{'fit_function':ff['fit_function'].__name__, 'popt':ff['curve_fit'].tolist()}})
 
 
                             if USE_AGENT_iterate:
@@ -588,7 +584,7 @@ def print_kafka_messages(beamline_acronym_01, beamline_acronym_02, csv_path=csv_
                         
                     ## Save fitting data
                     print(f'\nFitting function: {f_fit}\n')
-                    ff={'fit_function': f_fit, 'curve_fit': popt}
+                    ff={'fit_function': f_fit, 'curve_fit': popt, 'percentile_mean': y0}
                     de.dic_to_csv_for_stream(saving_path, qepro_dic, metadata_dic, stream_name=stream_name, fitting=ff, plqy_dic=plqy_dic)
                     print(f'\n** export fitting results complete**\n')
                     
@@ -616,8 +612,26 @@ def print_kafka_messages(beamline_acronym_01, beamline_acronym_02, csv_path=csv_
                     except (UnboundLocalError):
                         pass
 
+                    ## Save processed data in df and agent_data as metadta in sandbox
                     if write_to_sandbox:
-                        ...
+                        df = pd.DataFrame()
+                        df['wavelength_nm'] = x0
+                        df['absorbance_mean'] = abs_array
+                        df['absorbance_offset'] = abs_array_offset
+                        df['fluorescence_mean'] = y0
+                        df['fluorescence_fitting'] = f_fit(x0, *popt)
+                        sandbox_tiled_client.write_dataframe(df, metadata=agent_data)
+                        uri = sandbox_tiled_client.values()[-1].uri
+                        sandbox_uid = uri.split('/')[-1]
+                        print(f"\nwrote to Tiled sandbox uid: {sandbox_uid}")
+
+                    ## Save agent_data locally
+                    if write_agent_data:
+                        agent_data.update({'sandbox_uid': sandbox_uid})                               
+                        with open(f"{agent_data_path}/{data_id}.json", "w") as f:
+                            json.dump(agent_data, f)
+
+                        print(f"\nwrote to {agent_data_path}")
 
             print(f'*** Accumulated num of good data: {len(good_data)} ***\n')
             print(f'good_data = {good_data}\n')
