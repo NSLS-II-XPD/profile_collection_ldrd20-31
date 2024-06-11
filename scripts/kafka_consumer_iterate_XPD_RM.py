@@ -116,6 +116,7 @@ agent_data_path = '/home/xf28id2/Documents/ChengHung/202405_halide_data/with_xra
 USE_AGENT_iterate = False
 peak_target = 515
 if USE_AGENT_iterate:
+    import torch
     from prepare_agent_pdf import build_agen
     agent = build_agen(peak_target=peak_target, agent_data_path=agent_data_path)
 
@@ -549,7 +550,7 @@ def print_kafka_messages(beamline_acronym_01, beamline_acronym_02, csv_path=csv_
                             if USE_AGENT_iterate:
 
                                 # print(f"\ntelling agent {agent_data}")
-                                agent = build_agen(peak_target=peak_target)
+                                agent = build_agen(peak_target=peak_target, agent_data_path=agent_data_path)
 
                                 if len(agent.table) < 2:
                                     acq_func = "qr"
@@ -558,6 +559,32 @@ def print_kafka_messages(beamline_acronym_01, beamline_acronym_02, csv_path=csv_
                                 
                                 new_points = agent.ask(acq_func, n=1)
 
+                                ## Get target of agent.ask()
+                                agent_target = agent.objectives.summary['target'].tolist()
+                                
+                                ## Get mean and standard deviation of agent.ask()
+                                res_values = []
+                                for i in new_points_label:
+                                    if i in new_points['points'].keys():
+                                        res_values.append(new_points['points'][i])
+                                x_tensor = torch.tensor(res_value)
+                                post = agent.posterior(x_tensor)
+                                post_mean = post.mean.tolist()[0]
+                                post_stddev = post.stddev.tolist()[0]
+
+                                ## apply np.exp for log-transform objectives
+                                if_log = agent.objectives.summary['transform']
+                                for j in range(if_log.shape[0]):
+                                    if if_log[j] == 'log':
+                                        post_mean[j] = np.exp(post_mean[j])
+                                        post_stddev[j] = np.exp(post_stddev[j])
+
+                                ## Update target, mean, and standard deviation in agent_data
+                                agent_data.update({'agent_target': agent_target})
+                                agent_data.update({'posterior_mean': post_mean})
+                                agent_data.update({'posterior_stddev': post_stddev})
+                                
+                                
                                 # peak_diff = peak_emission - peak_target
                                 peak_diff = False
 

@@ -102,6 +102,8 @@ rate_label_dic =   {'CsPb':'infusion_rate_CsPb',
                     'ZnI':'infusion_rate_I2', 
                     'ZnCl':'infusion_rate_Cl'}
 
+new_points_label = ['infusion_rate_CsPb', 'infusion_rate_Br', 'infusion_rate_I2', 'infusion_rate_Cl']
+
 use_good_bad = True
 post_dilute = True
 write_agent_data = True
@@ -417,7 +419,7 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
                             if USE_AGENT_iterate:
 
                                 # print(f"\ntelling agent {agent_data}")
-                                agent = build_agen2(peak_target=peak_target)
+                                agent = build_agen2(peak_target=peak_target, agent_data_path=agent_data_path)
 
                                 if len(agent.table) < 2:
                                     acq_func = "qr"
@@ -530,8 +532,15 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
                 if post_dilute:
                     set_target_list = [0 for i in range(len(pump_list))]
                     # rate_list = new_points['points'].tolist()[0][:-1] + [new_points['points'].sum()]
-                    rate_list = [rr for rr in new_points['points'].tolist()[0] if rr!=0] + [new_points['points'].sum()]
-                    rate_list = np.asarray(rate_list)
+                    # rate_list = [rr for rr in new_points['points'].tolist()[0] if rr!=0] + [new_points['points'].sum()]
+                    # rate_list = np.asarray(rate_list)
+                    rate_list = []
+                    for i in new_points_label:
+                        for key in new_points['points']:
+                            if i == key:
+                                rate_list.append(new_points['points'][key][0])
+                    rate_list.insert(2, sum(rate_list)/10)
+                    rate_list.append(sum(rate_list)*5)
                 
                 else:
                     # set_target_list = [0 for i in range(new_points['points'].shape[1])]

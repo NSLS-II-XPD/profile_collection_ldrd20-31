@@ -127,14 +127,45 @@ def build_agen(peak_target=660, peak_tolerance=5, size_target=6, agent_data_path
 
 
 '''
- agent.posterior
- import torch
- 
- res = agent.ask('qem', n=1)
- agent.posterior(torch.tensor(res['points'])).mean
+agent.posterior
+import torch
 
- x = torch.tensor([[ 24.0426776 , 159.30614932, 101.20516362]])
- agent.posterior(x)
- agent.posterior(x).mean
- agent.plot_acquisition(); plt.show()
+res = agent.ask('qem', n=1)
+agent.posterior(torch.tensor(res['points'])).mean
+
+x = torch.tensor([[ 24.0426776 , 159.30614932, 101.20516362]])
+agent.posterior(x)
+agent.posterior(x).mean
+agent.plot_acquisition(); plt.show()
+
+
+18/2: agent
+18/3: agent.table
+18/4: agent.table.Peak
+18/5: plt.rcParams['font.size'] = 4
+18/6: import matplotlib.pyplot as plt
+18/7: plt.rcParams['font.size'] = 4
+18/8: agent.plot_objectives(); plt.show()
+18/9: agent.objectives
+18/10: agent.ask("qem", n=1)
+18/11: agent.ask("qei", n=1)
+18/12: agent.ask("qei", n=1)
+18/13: import torch
+18/14: x = torch.tensor(res[0])
+18/15: res = agent.ask("qem", n=4)
+18/16: x = torch.tensor(res[0])
+18/17: agent.posterior(x).mean
+18/18: agent.best
+18/19: agent.objectives
+18/20: post = agent.posterior(x)
+18/21: post.mean
+18/22: post.sigma
+18/23: post.stddev
+18/24: agent.objectives
+18/25: agent.plot_acquisition(); plt.show()
+18/26: agent.plot_constraint(); plt.show()
+18/27: agent.dofs
+18/28: agent.objectives
+18/29: agent.best
+
  '''
