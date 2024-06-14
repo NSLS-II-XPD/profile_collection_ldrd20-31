@@ -42,7 +42,7 @@ existing_devices:
     is_flyable: false
     is_movable: false
     is_readable: true
-    module: __main__
+    module: startup_script
   dds1_p1:
     classname: syrng_DDS_ax
     components:
@@ -301,7 +301,7 @@ existing_devices:
     is_flyable: false
     is_movable: false
     is_readable: true
-    module: __main__
+    module: startup_script
   dds1_p2:
     classname: syrng_DDS_ax
     components:
@@ -560,7 +560,7 @@ existing_devices:
     is_flyable: false
     is_movable: false
     is_readable: true
-    module: __main__
+    module: startup_script
   dds2:
     classname: syrng_DDS
     components:
@@ -591,7 +591,7 @@ existing_devices:
     is_flyable: false
     is_movable: false
     is_readable: true
-    module: __main__
+    module: startup_script
   dds2_p1:
     classname: syrng_DDS_ax
     components:
@@ -850,7 +850,7 @@ existing_devices:
     is_flyable: false
     is_movable: false
     is_readable: true
-    module: __main__
+    module: startup_script
   dds2_p2:
     classname: syrng_DDS_ax
     components:
@@ -1109,7 +1109,556 @@ existing_devices:
     is_flyable: false
     is_movable: false
     is_readable: true
-    module: __main__
+    module: startup_script
+  dds3:
+    classname: syrng_DDS
+    components:
+      communication:
+        classname: EpicsSignal
+        is_flyable: false
+        is_movable: true
+        is_readable: true
+        module: ophyd.signal
+      set_condition:
+        classname: EpicsSignal
+        is_flyable: false
+        is_movable: true
+        is_readable: true
+        module: ophyd.signal
+      show_condition:
+        classname: EpicsSignalRO
+        is_flyable: false
+        is_movable: true
+        is_readable: true
+        module: ophyd.signal
+      update_pump:
+        classname: EpicsSignal
+        is_flyable: false
+        is_movable: true
+        is_readable: true
+        module: ophyd.signal
+    is_flyable: false
+    is_movable: false
+    is_readable: true
+    module: startup_script
+  dds3_p1:
+    classname: syrng_DDS_ax
+    components:
+      LIM:
+        classname: EpicsSignal
+        is_flyable: false
+        is_movable: true
+        is_readable: true
+        module: ophyd.signal
+      clear_infused:
+        classname: EpicsSignal
+        is_flyable: false
+        is_movable: true
+        is_readable: true
+        module: ophyd.signal
+      clear_withdrawn:
+        classname: EpicsSignal
+        is_flyable: false
+        is_movable: true
+        is_readable: true
+        module: ophyd.signal
+      force:
+        classname: EpicsSignal
+        is_flyable: false
+        is_movable: true
+        is_readable: true
+        module: ophyd.signal
+      infuse_rate:
+        classname: EpicsSignal
+        is_flyable: false
+        is_movable: true
+        is_readable: true
+        module: ophyd.signal
+      infuse_rate_unit:
+        classname: EpicsSignal
+        is_flyable: false
+        is_movable: true
+        is_readable: true
+        module: ophyd.signal
+      max_infuse:
+        classname: EpicsSignal
+        is_flyable: false
+        is_movable: true
+        is_readable: true
+        module: ophyd.signal
+      max_withdraw:
+        classname: EpicsSignal
+        is_flyable: false
+        is_movable: true
+        is_readable: true
+        module: ophyd.signal
+      min_infuse:
+        classname: EpicsSignal
+        is_flyable: false
+        is_movable: true
+        is_readable: true
+        module: ophyd.signal
+      min_withdraw:
+        classname: EpicsSignal
+        is_flyable: false
+        is_movable: true
+        is_readable: true
+        module: ophyd.signal
+      pump_infuse:
+        classname: EpicsSignal
+        is_flyable: false
+        is_movable: true
+        is_readable: true
+        module: ophyd.signal
+      pump_stop:
+        classname: EpicsSignal
+        is_flyable: false
+        is_movable: true
+        is_readable: true
+        module: ophyd.signal
+      pump_withdraw:
+        classname: EpicsSignal
+        is_flyable: false
+        is_movable: true
+        is_readable: true
+        module: ophyd.signal
+      read_force:
+        classname: EpicsSignalRO
+        is_flyable: false
+        is_movable: true
+        is_readable: true
+        module: ophyd.signal
+      read_force_unit:
+        classname: EpicsSignalRO
+        is_flyable: false
+        is_movable: true
+        is_readable: true
+        module: ophyd.signal
+      read_infuse_rate:
+        classname: EpicsSignalRO
+        is_flyable: false
+        is_movable: true
+        is_readable: true
+        module: ophyd.signal
+      read_infuse_rate_unit:
+        classname: EpicsSignalRO
+        is_flyable: false
+        is_movable: true
+        is_readable: true
+        module: ophyd.signal
+      read_infused:
+        classname: EpicsSignalRO
+        is_flyable: false
+        is_movable: true
+        is_readable: true
+        module: ophyd.signal
+      read_infused_unit:
+        classname: EpicsSignalRO
+        is_flyable: false
+        is_movable: true
+        is_readable: true
+        module: ophyd.signal
+      read_max_infuse:
+        classname: EpicsSignalRO
+        is_flyable: false
+        is_movable: true
+        is_readable: true
+        module: ophyd.signal
+      read_max_infuse_unit:
+        classname: EpicsSignalRO
+        is_flyable: false
+        is_movable: true
+        is_readable: true
+        module: ophyd.signal
+      read_max_withdraw:
+        classname: EpicsSignalRO
+        is_flyable: false
+        is_movable: true
+        is_readable: true
+        module: ophyd.signal
+      read_max_withdraw_unit:
+        classname: EpicsSignalRO
+        is_flyable: false
+        is_movable: true
+        is_readable: true
+        module: ophyd.signal
+      read_min_infuse:
+        classname: EpicsSignalRO
+        is_flyable: false
+        is_movable: true
+        is_readable: true
+        module: ophyd.signal
+      read_min_infuse_unit:
+        classname: EpicsSignalRO
+        is_flyable: false
+        is_movable: true
+        is_readable: true
+        module: ophyd.signal
+      read_min_withdraw:
+        classname: EpicsSignalRO
+        is_flyable: false
+        is_movable: true
+        is_readable: true
+        module: ophyd.signal
+      read_min_withdraw_unit:
+        classname: EpicsSignalRO
+        is_flyable: false
+        is_movable: true
+        is_readable: true
+        module: ophyd.signal
+      read_target_time:
+        classname: EpicsSignalRO
+        is_flyable: false
+        is_movable: true
+        is_readable: true
+        module: ophyd.signal
+      read_target_vol:
+        classname: EpicsSignalRO
+        is_flyable: false
+        is_movable: true
+        is_readable: true
+        module: ophyd.signal
+      read_target_vol_unit:
+        classname: EpicsSignalRO
+        is_flyable: false
+        is_movable: true
+        is_readable: true
+        module: ophyd.signal
+      read_withdraw_rate:
+        classname: EpicsSignalRO
+        is_flyable: false
+        is_movable: true
+        is_readable: true
+        module: ophyd.signal
+      read_withdraw_rate_unit:
+        classname: EpicsSignalRO
+        is_flyable: false
+        is_movable: true
+        is_readable: true
+        module: ophyd.signal
+      read_withdrawn:
+        classname: EpicsSignalRO
+        is_flyable: false
+        is_movable: true
+        is_readable: true
+        module: ophyd.signal
+      read_withdrawn_unit:
+        classname: EpicsSignalRO
+        is_flyable: false
+        is_movable: true
+        is_readable: true
+        module: ophyd.signal
+      set_infuse_range:
+        classname: EpicsSignal
+        is_flyable: false
+        is_movable: true
+        is_readable: true
+        module: ophyd.signal
+      set_withdraw_range:
+        classname: EpicsSignal
+        is_flyable: false
+        is_movable: true
+        is_readable: true
+        module: ophyd.signal
+      status:
+        classname: EpicsSignalRO
+        is_flyable: false
+        is_movable: true
+        is_readable: true
+        module: ophyd.signal
+      target_time:
+        classname: EpicsSignal
+        is_flyable: false
+        is_movable: true
+        is_readable: true
+        module: ophyd.signal
+      target_vol:
+        classname: EpicsSignal
+        is_flyable: false
+        is_movable: true
+        is_readable: true
+        module: ophyd.signal
+      target_vol_unit:
+        classname: EpicsSignal
+        is_flyable: false
+        is_movable: true
+        is_readable: true
+        module: ophyd.signal
+      withdraw_rate:
+        classname: EpicsSignal
+        is_flyable: false
+        is_movable: true
+        is_readable: true
+        module: ophyd.signal
+      withdraw_rate_unit:
+        classname: EpicsSignal
+        is_flyable: false
+        is_movable: true
+        is_readable: true
+        module: ophyd.signal
+    is_flyable: false
+    is_movable: false
+    is_readable: true
+    module: startup_script
+  dds3_p2:
+    classname: syrng_DDS_ax
+    components:
+      LIM:
+        classname: EpicsSignal
+        is_flyable: false
+        is_movable: true
+        is_readable: true
+        module: ophyd.signal
+      clear_infused:
+        classname: EpicsSignal
+        is_flyable: false
+        is_movable: true
+        is_readable: true
+        module: ophyd.signal
+      clear_withdrawn:
+        classname: EpicsSignal
+        is_flyable: false
+        is_movable: true
+        is_readable: true
+        module: ophyd.signal
+      force:
+        classname: EpicsSignal
+        is_flyable: false
+        is_movable: true
+        is_readable: true
+        module: ophyd.signal
+      infuse_rate:
+        classname: EpicsSignal
+        is_flyable: false
+        is_movable: true
+        is_readable: true
+        module: ophyd.signal
+      infuse_rate_unit:
+        classname: EpicsSignal
+        is_flyable: false
+        is_movable: true
+        is_readable: true
+        module: ophyd.signal
+      max_infuse:
+        classname: EpicsSignal
+        is_flyable: false
+        is_movable: true
+        is_readable: true
+        module: ophyd.signal
+      max_withdraw:
+        classname: EpicsSignal
+        is_flyable: false
+        is_movable: true
+        is_readable: true
+        module: ophyd.signal
+      min_infuse:
+        classname: EpicsSignal
+        is_flyable: false
+        is_movable: true
+        is_readable: true
+        module: ophyd.signal
+      min_withdraw:
+        classname: EpicsSignal
+        is_flyable: false
+        is_movable: true
+        is_readable: true
+        module: ophyd.signal
+      pump_infuse:
+        classname: EpicsSignal
+        is_flyable: false
+        is_movable: true
+        is_readable: true
+        module: ophyd.signal
+      pump_stop:
+        classname: EpicsSignal
+        is_flyable: false
+        is_movable: true
+        is_readable: true
+        module: ophyd.signal
+      pump_withdraw:
+        classname: EpicsSignal
+        is_flyable: false
+        is_movable: true
+        is_readable: true
+        module: ophyd.signal
+      read_force:
+        classname: EpicsSignalRO
+        is_flyable: false
+        is_movable: true
+        is_readable: true
+        module: ophyd.signal
+      read_force_unit:
+        classname: EpicsSignalRO
+        is_flyable: false
+        is_movable: true
+        is_readable: true
+        module: ophyd.signal
+      read_infuse_rate:
+        classname: EpicsSignalRO
+        is_flyable: false
+        is_movable: true
+        is_readable: true
+        module: ophyd.signal
+      read_infuse_rate_unit:
+        classname: EpicsSignalRO
+        is_flyable: false
+        is_movable: true
+        is_readable: true
+        module: ophyd.signal
+      read_infused:
+        classname: EpicsSignalRO
+        is_flyable: false
+        is_movable: true
+        is_readable: true
+        module: ophyd.signal
+      read_infused_unit:
+        classname: EpicsSignalRO
+        is_flyable: false
+        is_movable: true
+        is_readable: true
+        module: ophyd.signal
+      read_max_infuse:
+        classname: EpicsSignalRO
+        is_flyable: false
+        is_movable: true
+        is_readable: true
+        module: ophyd.signal
+      read_max_infuse_unit:
+        classname: EpicsSignalRO
+        is_flyable: false
+        is_movable: true
+        is_readable: true
+        module: ophyd.signal
+      read_max_withdraw:
+        classname: EpicsSignalRO
+        is_flyable: false
+        is_movable: true
+        is_readable: true
+        module: ophyd.signal
+      read_max_withdraw_unit:
+        classname: EpicsSignalRO
+        is_flyable: false
+        is_movable: true
+        is_readable: true
+        module: ophyd.signal
+      read_min_infuse:
+        classname: EpicsSignalRO
+        is_flyable: false
+        is_movable: true
+        is_readable: true
+        module: ophyd.signal
+      read_min_infuse_unit:
+        classname: EpicsSignalRO
+        is_flyable: false
+        is_movable: true
+        is_readable: true
+        module: ophyd.signal
+      read_min_withdraw:
+        classname: EpicsSignalRO
+        is_flyable: false
+        is_movable: true
+        is_readable: true
+        module: ophyd.signal
+      read_min_withdraw_unit:
+        classname: EpicsSignalRO
+        is_flyable: false
+        is_movable: true
+        is_readable: true
+        module: ophyd.signal
+      read_target_time:
+        classname: EpicsSignalRO
+        is_flyable: false
+        is_movable: true
+        is_readable: true
+        module: ophyd.signal
+      read_target_vol:
+        classname: EpicsSignalRO
+        is_flyable: false
+        is_movable: true
+        is_readable: true
+        module: ophyd.signal
+      read_target_vol_unit:
+        classname: EpicsSignalRO
+        is_flyable: false
+        is_movable: true
+        is_readable: true
+        module: ophyd.signal
+      read_withdraw_rate:
+        classname: EpicsSignalRO
+        is_flyable: false
+        is_movable: true
+        is_readable: true
+        module: ophyd.signal
+      read_withdraw_rate_unit:
+        classname: EpicsSignalRO
+        is_flyable: false
+        is_movable: true
+        is_readable: true
+        module: ophyd.signal
+      read_withdrawn:
+        classname: EpicsSignalRO
+        is_flyable: false
+        is_movable: true
+        is_readable: true
+        module: ophyd.signal
+      read_withdrawn_unit:
+        classname: EpicsSignalRO
+        is_flyable: false
+        is_movable: true
+        is_readable: true
+        module: ophyd.signal
+      set_infuse_range:
+        classname: EpicsSignal
+        is_flyable: false
+        is_movable: true
+        is_readable: true
+        module: ophyd.signal
+      set_withdraw_range:
+        classname: EpicsSignal
+        is_flyable: false
+        is_movable: true
+        is_readable: true
+        module: ophyd.signal
+      status:
+        classname: EpicsSignalRO
+        is_flyable: false
+        is_movable: true
+        is_readable: true
+        module: ophyd.signal
+      target_time:
+        classname: EpicsSignal
+        is_flyable: false
+        is_movable: true
+        is_readable: true
+        module: ophyd.signal
+      target_vol:
+        classname: EpicsSignal
+        is_flyable: false
+        is_movable: true
+        is_readable: true
+        module: ophyd.signal
+      target_vol_unit:
+        classname: EpicsSignal
+        is_flyable: false
+        is_movable: true
+        is_readable: true
+        module: ophyd.signal
+      withdraw_rate:
+        classname: EpicsSignal
+        is_flyable: false
+        is_movable: true
+        is_readable: true
+        module: ophyd.signal
+      withdraw_rate_unit:
+        classname: EpicsSignal
+        is_flyable: false
+        is_movable: true
+        is_readable: true
+        module: ophyd.signal
+    is_flyable: false
+    is_movable: false
+    is_readable: true
+    module: startup_script
   det:
     classname: SynGauss
     components:
@@ -1519,7 +2068,7 @@ existing_devices:
         is_flyable: false
         is_movable: true
         is_readable: true
-        module: __main__
+        module: startup_script
       trigger_mode:
         classname: EpicsSignalWithRBV
         is_flyable: false
@@ -1541,7 +2090,7 @@ existing_devices:
     is_flyable: false
     is_movable: false
     is_readable: true
-    module: __main__
+    module: startup_script
   ultra1:
     classname: syrng_ultra
     components:
@@ -1722,7 +2271,7 @@ existing_devices:
     is_flyable: false
     is_movable: false
     is_readable: true
-    module: __main__
+    module: startup_script
   ultra2:
     classname: syrng_ultra
     components:
@@ -1903,16 +2452,16 @@ existing_devices:
     is_flyable: false
     is_movable: false
     is_readable: true
-    module: __main__
+    module: startup_script
 existing_plans:
   LED_off:
-    module: __main__
+    module: startup_script
     name: LED_off
     parameters: []
     properties:
       is_generator: true
   LED_on:
-    module: __main__
+    module: startup_script
     name: LED_on
     parameters: []
     properties:
@@ -1958,32 +2507,53 @@ existing_plans:
       name: md
     properties:
       is_generator: true
+  count_stream:
+    description: Count a detector and emit documents in a specified stream.
+    module: startup_script
+    name: count_stream
+    parameters:
+    - kind:
+        name: POSITIONAL_OR_KEYWORD
+        value: 1
+      name: det
+    - default: '''primary'''
+      kind:
+        name: POSITIONAL_OR_KEYWORD
+        value: 1
+      name: stream_name
+    - default: None
+      kind:
+        name: POSITIONAL_OR_KEYWORD
+        value: 1
+      name: md
+    properties:
+      is_generator: true
   deuterium_off:
-    module: __main__
+    module: startup_script
     name: deuterium_off
     parameters: []
     properties:
       is_generator: true
   deuterium_on:
-    module: __main__
+    module: startup_script
     name: deuterium_on
     parameters: []
     properties:
       is_generator: true
   halogen_off:
-    module: __main__
+    module: startup_script
     name: halogen_off
     parameters: []
     properties:
       is_generator: true
   halogen_on:
-    module: __main__
+    module: startup_script
     name: halogen_on
     parameters: []
     properties:
       is_generator: true
   insitu_test:
-    module: __main__
+    module: startup_script
     name: insitu_test
     parameters:
     - kind:
@@ -2032,7 +2602,7 @@ existing_plans:
     properties:
       is_generator: true
   reset_pumps2:
-    module: __main__
+    module: startup_script
     name: reset_pumps2
     parameters:
     - kind:
@@ -2094,7 +2664,7 @@ existing_plans:
     properties:
       is_generator: true
   set_group_infuse:
-    module: __main__
+    module: startup_script
     name: set_group_infuse
     parameters:
     - kind:
@@ -2123,7 +2693,7 @@ existing_plans:
     properties:
       is_generator: true
   set_group_infuse2:
-    module: __main__
+    module: startup_script
     name: set_group_infuse2
     parameters:
     - kind:
@@ -2162,7 +2732,7 @@ existing_plans:
     properties:
       is_generator: true
   set_group_withdraw:
-    module: __main__
+    module: startup_script
     name: set_group_withdraw
     parameters:
     - kind:
@@ -2191,7 +2761,7 @@ existing_plans:
     properties:
       is_generator: true
   setup_collection_q:
-    module: __main__
+    module: startup_script
     name: setup_collection_q
     parameters:
     - default: '100'
@@ -2227,19 +2797,19 @@ existing_plans:
     properties:
       is_generator: true
   shutter_close:
-    module: __main__
+    module: startup_script
     name: shutter_close
     parameters: []
     properties:
       is_generator: true
   shutter_open:
-    module: __main__
+    module: startup_script
     name: shutter_open
     parameters: []
     properties:
       is_generator: true
   sleep_sec_q:
-    module: __main__
+    module: startup_script
     name: sleep_sec_q
     parameters:
     - kind:
@@ -2249,7 +2819,7 @@ existing_plans:
     properties:
       is_generator: true
   start_group_infuse:
-    module: __main__
+    module: startup_script
     name: start_group_infuse
     parameters:
     - kind:
@@ -2263,7 +2833,7 @@ existing_plans:
     properties:
       is_generator: true
   start_group_withdraw:
-    module: __main__
+    module: startup_script
     name: start_group_withdraw
     parameters:
     - kind:
@@ -2273,7 +2843,7 @@ existing_plans:
     properties:
       is_generator: true
   stop_group:
-    module: __main__
+    module: startup_script
     name: stop_group
     parameters:
     - kind:
@@ -2283,7 +2853,7 @@ existing_plans:
     properties:
       is_generator: true
   take_a_uvvis_csv_q:
-    module: __main__
+    module: startup_script
     name: take_a_uvvis_csv_q
     parameters:
     - default: '''test'''
@@ -2344,7 +2914,7 @@ existing_plans:
     properties:
       is_generator: true
   take_ref_bkg_q:
-    module: __main__
+    module: startup_script
     name: take_ref_bkg_q
     parameters:
     - default: '15'
@@ -2385,7 +2955,7 @@ existing_plans:
     properties:
       is_generator: true
   wait_equilibrium:
-    module: __main__
+    module: startup_script
     name: wait_equilibrium
     parameters:
     - kind:
@@ -2409,7 +2979,7 @@ existing_plans:
     properties:
       is_generator: true
   wait_equilibrium2:
-    module: __main__
+    module: startup_script
     name: wait_equilibrium2
     parameters:
     - kind:
@@ -2429,7 +2999,7 @@ existing_plans:
     properties:
       is_generator: true
   xray_uvvis_plan:
-    module: __main__
+    module: startup_script
     name: xray_uvvis_plan
     parameters:
     - kind:

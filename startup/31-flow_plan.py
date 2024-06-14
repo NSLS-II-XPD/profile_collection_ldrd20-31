@@ -214,6 +214,19 @@ def take_ref_bkg_q(integration_time=15, num_spectra_to_average=16,
 
 
 
+def count_stream(det, stream_name="primary", md=None):
+    """Count a detector and emit documents in a specified stream."""
+    @bpp.stage_decorator([det])
+    @bpp.run_decorator(md=md)
+    def _inner_count():
+        yield from bps.trigger(det)
+        yield from bps.create(name=stream_name)
+        reading = (yield from bps.read(det))
+        yield from bps.save()
+
+    yield from _inner_count()
+
+
 
 def take_a_uvvis_csv_q(sample_type='test', plot=False, csv_path=None, data_agent='tiled', 
                         spectrum_type='Absorbtion', correction_type='Reference', 
@@ -254,7 +267,7 @@ def take_a_uvvis_csv_q(sample_type='test', plot=False, csv_path=None, data_agent
             # yield from shutter_open()
             yield from bps.mv(LED, 'Low', UV_shutter, 'High')
             yield from bps.sleep(2)
-            uid = (yield from count([qepro], md=_md))
+            uid = (yield from count_stream(qepro, stream_name="take_a_uvvis", md=_md))
         
         
     else:
@@ -267,7 +280,7 @@ def take_a_uvvis_csv_q(sample_type='test', plot=False, csv_path=None, data_agent
             # yield from LED_on()
             yield from bps.mv(LED, 'High', UV_shutter, 'Low')
             yield from bps.sleep(2)
-            uid = (yield from count([qepro], md=_md))
+            uid = (yield from count_stream(qepro, stream_name="take_a_uvvis", md=_md))
     
     yield from bps.mv(LED, 'Low', UV_shutter, 'Low')
     

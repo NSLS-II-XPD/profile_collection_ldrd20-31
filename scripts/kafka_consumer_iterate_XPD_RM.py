@@ -99,14 +99,12 @@ if bool(prefix[0]):
     sample = de._auto_name_sample(infuse_rates, prefix=prefix[1:])
 print(f'Sample: {sample}')
 
-
 rate_label_dic =   {'CsPb':'infusion_rate_CsPb', 
                     'Br':'infusion_rate_Br', 
                     'ZnI':'infusion_rate_I2', 
                     'ZnCl':'infusion_rate_Cl'}
 
 new_points_label = ['infusion_rate_CsPb', 'infusion_rate_Br', 'infusion_rate_I2', 'infusion_rate_Cl']
-
 
 use_good_bad = True
 post_dilute = True
@@ -144,14 +142,13 @@ if fitting_pdf:
     cif_list = [os.path.join(pdf_cif_dir, 'CsPbBr3_Orthorhombic.cif')]
     gr_data = os.path.join(pdf_cif_dir, 'CsPbBr3.gr')
 
+global sandbox_tiled_client
 use_sandbox = True
 if use_sandbox:
-    global sandbox_tiled_client
     sandbox_tiled_client = from_uri("https://tiled.nsls2.bnl.gov/api/v1/metadata/xpd/sandbox")
 
 write_to_sandbox = False
 if write_to_sandbox:
-    global sandbox_tiled_client
     sandbox_tiled_client = from_uri("https://tiled.nsls2.bnl.gov/api/v1/metadata/xpd/sandbox")
 
 
@@ -180,7 +177,7 @@ def print_kafka_messages(beamline_acronym_01, beamline_acronym_02, csv_path=csv_
 
     global tiled_client, path_0, path_1
     # tiled_client = from_profile("nsls2")["xpd"]["raw"]  ## needs permission
-    tiled_client = from_profile["xpd"]
+    tiled_client = from_profile("xpd")
     path_0  = csv_path
     path_1 = csv_path + '/good_bad'
     
@@ -647,6 +644,10 @@ def print_kafka_messages(beamline_acronym_01, beamline_acronym_02, csv_path=csv_
                         df['absorbance_offset'] = abs_array_offset
                         df['fluorescence_mean'] = y0
                         df['fluorescence_fitting'] = f_fit(x0, *popt)
+
+                        ## use pd.concat to add various length data together
+                        # df_new = pd.concat([df, df_iq, df_gr], ignore_index=False, axis=1)
+
                         sandbox_tiled_client.write_dataframe(df, metadata=agent_data)
                         uri = sandbox_tiled_client.values()[-1].uri
                         sandbox_uid = uri.split('/')[-1]
@@ -665,9 +666,6 @@ def print_kafka_messages(beamline_acronym_01, beamline_acronym_02, csv_path=csv_
             print(f'*** Accumulated num of bad data: {len(bad_data)} ***\n')
             print('########### Events printing division ############\n')
             
-            # TODO: add processed Uv-Vis to sandbox
-            # sandbox_tiled_client.write_dataframe(gr_data, meatadata={'raw_data_uid':'xxxxx'})
-            # sandbox_tiled_client.write_dataframe(_data, meatadata={'raw_data_uid':'xxxxx'})
             
             ## Depend on # of good/bad data, add items into queue item or stop 
             if stream_name == 'take_a_uvvis' and use_good_bad:     
@@ -712,7 +710,6 @@ def print_kafka_messages(beamline_acronym_01, beamline_acronym_02, csv_path=csv_
                 print('*** Add new points from agent to the fron of qsever ***\n')
                 print(f'*** New points from agent: {new_points} ***\n')
                 
-                ## TODO: add PF oil
                 if post_dilute:
                     set_target_list = [0 for i in range(len(pump_list))]
                     # rate_list = new_points['points'].tolist()[0][:-1] + [new_points['points'].sum()]

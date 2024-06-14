@@ -199,7 +199,7 @@ def synthesis_queue(
 
 
 
-
+## wash loop with one solvent
 def wash_tube_queue(pump_list, wash_tube, rate_unit, 
 					pos=[0,1,2,3,4], 
 					zmq_control_addr='tcp://localhost:60615', 
@@ -239,7 +239,7 @@ def wash_tube_queue(pump_list, wash_tube, rate_unit,
 
 
 
-
+## wash loop with two solvents
 def wash_tube_queue2(pump_list, wash_tube, rate_unit, 
 					pos=[0,1,2,3,4], 
 					zmq_control_addr='tcp://localhost:60615', 

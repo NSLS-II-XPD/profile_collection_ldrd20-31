@@ -13,6 +13,8 @@ import databroker
 import json
 import glob
 from tqdm import tqdm
+from diffpy.pdfgetx import PDFConfig
+from tiled.client import from_uri, from_profile
 
 import resource
 resource.setrlimit(resource.RLIMIT_NOFILE, (65536, 65536))
@@ -67,7 +69,7 @@ num_uvvis = input_dic['num_uvvis']
 ## Add tasks into Qsever
 # zmq_control_addr='tcp://xf28id2-ca2:60615', 
 # zmq_info_addr='tcp://xf28id2-ca2:60625'
-zmq_control_addr='tcp://localhost:60615' 
+# zmq_control_addr='tcp://localhost:60615'
 zmq_control_addr='tcp://localhost:60615' 
 zmq_info_addr='tcp://localhost:60625'
 
@@ -112,6 +114,7 @@ agent_data_path = '/home/xf28id2/data_post_dilute_66mM_PF'
 USE_AGENT_iterate = False
 peak_target = 515
 if USE_AGENT_iterate:
+    import torch
     from prepare_agent_pdf import build_agen
     agent = build_agen(peak_target=peak_target, agent_data_path=agent_data_path)
 
@@ -139,14 +142,13 @@ if fitting_pdf:
     cif_list = [os.path.join(pdf_cif_dir, 'CsPbBr3_Orthorhombic.cif')]
     gr_data = os.path.join(pdf_cif_dir, 'CsPbBr3.gr')
 
+global sandbox_tiled_client
 use_sandbox = True
 if use_sandbox:
-    global sandbox_tiled_client
     sandbox_tiled_client = from_uri("https://tiled.nsls2.bnl.gov/api/v1/metadata/xpd/sandbox")
 
 write_to_sandbox = True
 if write_to_sandbox:
-    global sandbox_tiled_client
     sandbox_tiled_client = from_uri("https://tiled.nsls2.bnl.gov/api/v1/metadata/xpd/sandbox")
 
 
@@ -173,7 +175,7 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
 
     global tiled_client, path_0, path_1
     # tiled_client = from_profile("nsls2")[beamline_acronym]["raw"]
-    tiled_client = from_profile[beamline_acronym]
+    tiled_client = from_profile(beamline_acronym)
     path_0  = csv_path
     path_1 = csv_path + '/good_bad'
 
@@ -398,22 +400,16 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
                                                 'Peak': peak_emission, 'FWHM':fwhm, 'PLQY':plqy}
 
 
-                            ## Save data for ML agent
-                            ## TODO: add phase ratio & particle size from scattering
-                            if write_agent_data:
-                                agent_data = {}
+                            ## Creat agent_data in type of dict for exporting as json and wirte to sandbox
+                            agent_data = {}
+                            agent_data.update(optical_property)
+                            agent_data.update(pdf_property)
+                            agent_data.update({k:v for k, v in metadata_dic.items() if len(np.atleast_1d(v)) == 1})
+                            agent_data = de._exprot_rate_agent(metadata_dic, rate_label_dic, agent_data)
 
-                                agent_data.update(optical_property)
-                                agent_data.update(pdf_property)
-                                
-                                agent_data.update({k:v for k, v in metadata_dic.items() if len(np.atleast_1d(v)) == 1})
-
-                                agent_data = de._exprot_rate_agent(metadata_dic, rate_label_dic, agent_data)
-                                                                
-                                with open(f"{agent_data_path}/{data_id}.json", "w") as f:
-                                    json.dump(agent_data, f)
-
-                                print(f"\nwrote to {agent_data_path}")
+                            ## Update absorbance offset and fluorescence fitting results inot agent_data
+                            agent_data.update({'abs_offset':{'fit_function':ff_abs['fit_function'].__name__, 'popt':ff_abs['curve_fit'].tolist()}})
+                            agent_data.update({'PL_fitting':{'fit_function':ff['fit_function'].__name__, 'popt':ff['curve_fit'].tolist()}})
 
 
                             if USE_AGENT_iterate:
@@ -427,6 +423,31 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
                                     acq_func = "qei"
                                 
                                 new_points = agent.ask(acq_func, n=1)
+
+                                ## Get target of agent.ask()
+                                agent_target = agent.objectives.summary['target'].tolist()
+                                
+                                ## Get mean and standard deviation of agent.ask()
+                                res_values = []
+                                for i in new_points_label:
+                                    if i in new_points['points'].keys():
+                                        res_values.append(new_points['points'][i])
+                                x_tensor = torch.tensor(res_value)
+                                post = agent.posterior(x_tensor)
+                                post_mean = post.mean.tolist()[0]
+                                post_stddev = post.stddev.tolist()[0]
+
+                                ## apply np.exp for log-transform objectives
+                                if_log = agent.objectives.summary['transform']
+                                for j in range(if_log.shape[0]):
+                                    if if_log[j] == 'log':
+                                        post_mean[j] = np.exp(post_mean[j])
+                                        post_stddev[j] = np.exp(post_stddev[j])
+
+                                ## Update target, mean, and standard deviation in agent_data
+                                agent_data.update({'agent_target': agent_target})
+                                agent_data.update({'posterior_mean': post_mean})
+                                agent_data.update({'posterior_stddev': post_stddev})
 
                                 # peak_diff = peak_emission - peak_target
                                 peak_diff = False
@@ -464,7 +485,8 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
                     print(f'{peak = }')
                     print(f'{prop = }')
                     
-                    if stream_name == 'primary':
+                    ## Append good/bad idetified results
+                    if stream_name == 'take_a_uvvis':
                         good_data.append(data_id)
 
                     elif (type(peak) == list) and (prop == []):
@@ -481,8 +503,30 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
                     except (UnboundLocalError):
                         pass
 
+                    ## Save processed data in df and agent_data as metadta in sandbox
                     if write_to_sandbox:
-                        ...
+                        df = pd.DataFrame()
+                        df['wavelength_nm'] = x0
+                        df['absorbance_mean'] = abs_array
+                        df['absorbance_offset'] = abs_array_offset
+                        df['fluorescence_mean'] = y0
+                        df['fluorescence_fitting'] = f_fit(x0, *popt)
+
+                        ## use pd.concat to add various length data together
+                        # df_new = pd.concat([df, df_iq, df_gr], ignore_index=False, axis=1)
+
+                        sandbox_tiled_client.write_dataframe(df, metadata=agent_data)
+                        uri = sandbox_tiled_client.values()[-1].uri
+                        sandbox_uid = uri.split('/')[-1]
+                        print(f"\nwrote to Tiled sandbox uid: {sandbox_uid}")
+
+                    ## Save agent_data locally
+                    if write_agent_data:
+                        agent_data.update({'sandbox_uid': sandbox_uid})                               
+                        with open(f"{agent_data_path}/{data_id}.json", "w") as f:
+                            json.dump(agent_data, f)
+
+                        print(f"\nwrote to {agent_data_path}")
 
             print(f'*** Accumulated num of good data: {len(good_data)} ***\n')
             print(f'good_data = {good_data}\n')
@@ -491,12 +535,12 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
             
             
             ## Depend on # of good/bad data, add items into queue item or stop 
-            if stream_name == 'primary' and use_good_bad:     
+            if stream_name == 'take_a_uvvis' and use_good_bad:     
                 if len(bad_data) > 3:
                     print('*** qsever aborted due to too many bad scans, please check setup ***\n')
 
                     ### Stop all infusing pumps and wash loop
-                    wash_tube_queue(pump_list, wash_tube, rate_unit, 
+                    sq.wash_tube_queue2(pump_list, wash_tube, 'ul/min', 
                                     zmq_control_addr=zmq_control_addr,
                                     zmq_info_addr=zmq_info_addr)
                     
@@ -504,6 +548,10 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
                     
                 elif len(good_data) <= 2 and use_good_bad:
                     print('*** Add another fluorescence and absorption scan to the fron of qsever ***\n')
+                    
+                    restplan = BPlan('sleep_sec_q', 3)
+                    RM.item_add(restplan, pos=0)
+
                     scanplan = BPlan('take_a_uvvis_csv_q', 
                                     sample_type=metadata_dic['sample_type'], 
                                     spectrum_type='Corrected Sample', 
@@ -511,7 +559,7 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
                                     pump_list=pump_list, 
                                     precursor_list=precursor_list, 
                                     mixer=mixer)
-                    RM.item_add(scanplan, pos='front')
+                    RM.item_add(scanplan, pos=1)
                     RM.queue_start()
 
                 elif len(good_data) > 2 and use_good_bad:
@@ -528,7 +576,6 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
                 print('*** Add new points from agent to the fron of qsever ***\n')
                 print(f'*** New points from agent: {new_points} ***\n')
                 
-                ## TODO: add PF oil
                 if post_dilute:
                     set_target_list = [0 for i in range(len(pump_list))]
                     # rate_list = new_points['points'].tolist()[0][:-1] + [new_points['points'].sum()]
@@ -576,7 +623,7 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
             else:
                 print('*** Move to next reaction in Queue ***\n')
                 time.sleep(2)
-                RM.queue_start()
+                # RM.queue_start()
 
 
     kafka_config = _read_bluesky_kafka_config_file(config_file_path="/etc/bluesky/kafka.yml")
