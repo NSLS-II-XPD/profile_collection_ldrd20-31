@@ -13,7 +13,7 @@ import databroker
 import json
 import glob
 from tqdm import tqdm
-from diffpy.pdfgetx import PDFConfig
+# from diffpy.pdfgetx import PDFConfig
 from tiled.client import from_uri, from_profile
 
 import resource
@@ -22,7 +22,7 @@ resource.setrlimit(resource.RLIMIT_NOFILE, (65536, 65536))
 import _data_export as de
 from _plot_helper import plot_uvvis
 import _data_analysis as da
-import _pdf_calculator as pc
+# import _pdf_calculator as pc
 
 # from bluesky_queueserver.manager.comms import zmq_single_request
 from bluesky_queueserver_api.zmq import REManagerAPI
@@ -137,6 +137,7 @@ if search_and_match:
 
 fitting_pdf = False
 if fitting_pdf:
+    import _pdf_calculator as pc
     global pdf_cif_dir, cif_list, gr_data
     pdf_cif_dir = '/home/xf28id2/Documents/ChengHung/pdffit2_example/CsPbBr3/'
     cif_list = [os.path.join(pdf_cif_dir, 'CsPbBr3_Orthorhombic.cif')]
@@ -278,7 +279,7 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
                 sample_type = metadata_dic['sample_type']
                 ## Save data in dic into .csv file
 
-                if stream_name == 'primary':
+                if stream_name == 'take_a_uvvis':
                     saving_path = path_1
                 else:
                     saving_path = path_0
@@ -294,8 +295,8 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
                 u.plot_data(clear_fig=clear_fig)
                 print(f'\n** Plot {stream_name} in uid: {uid[0:8]} complete **\n')
                     
-                ## Idenfify good/bad data if it is a fluorescence scan in 'primary'
-                if qepro_dic['QEPro_spectrum_type'][0]==2 and stream_name=='primary':
+                ## Idenfify good/bad data if it is a fluorescence scan in 'take_a_uvvis'
+                if qepro_dic['QEPro_spectrum_type'][0]==2 and stream_name=='take_a_uvvis':
                     print(f'\n*** start to identify good/bad data in stream: {stream_name} ***\n')
                     x0, y0, data_id, peak, prop = da._identify_one_in_kafka(qepro_dic, metadata_dic, key_height=kh, distance=dis, height=hei, dummy_test=dummy_test)
                 
@@ -321,7 +322,7 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
                     abs_array_offset = abs_array - da.line_2D(wavelength, *popt_abs)
 
                     print(f'\nFitting function for baseline offset: {da.line_2D}\n')
-                    ff_abs={'fit_function': da.line_2D, 'curve_fit': popt_abs}
+                    ff_abs={'fit_function': da.line_2D, 'curve_fit': popt_abs, 'percentile_mean': abs_array}
                     de.dic_to_csv_for_stream(saving_path, qepro_dic, metadata_dic, stream_name=stream_name, fitting=ff_abs)
                     u.plot_offfset(wavelength, da.line_2D, popt_abs)
                     print(f'\n** export offset results of absorption spectra complete**\n')
@@ -373,6 +374,7 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
                         peak_emission_id = np.argmax(np.asarray(intensity_list))
                         peak_emission = peak_list[peak_emission_id]
                         fwhm = fwhm_list[peak_emission_id]
+                        ff={'fit_function': f_fit, 'curve_fit': popt, 'percentile_mean': y0}
 
                         ## Calculate PLQY for fluorescence stream
                         if (stream_name == 'fluorescence') and (PLQY[0]==1):
@@ -470,12 +472,11 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
                                     agent_iteration.append(True)
 
                         else:
-                            # plqy_dic = None
+                            plqy_dic = None
                             optical_property = None
                         
                     ## Save fitting data
                     print(f'\nFitting function: {f_fit}\n')
-                    ff={'fit_function': f_fit, 'curve_fit': popt}
                     de.dic_to_csv_for_stream(saving_path, qepro_dic, metadata_dic, stream_name=stream_name, fitting=ff, plqy_dic=plqy_dic)
                     print(f'\n** export fitting results complete**\n')
                     
@@ -504,7 +505,7 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
                         pass
 
                     ## Save processed data in df and agent_data as metadta in sandbox
-                    if write_to_sandbox:
+                    if write_to_sandbox and (stream_name == 'fluorescence'):
                         df = pd.DataFrame()
                         df['wavelength_nm'] = x0
                         df['absorbance_mean'] = abs_array
@@ -515,14 +516,16 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
                         ## use pd.concat to add various length data together
                         # df_new = pd.concat([df, df_iq, df_gr], ignore_index=False, axis=1)
 
-                        sandbox_tiled_client.write_dataframe(df, metadata=agent_data)
-                        uri = sandbox_tiled_client.values()[-1].uri
+                        entry = sandbox_tiled_client.write_dataframe(df, metadata=agent_data)
+                        # uri = sandbox_tiled_client.values()[-1].uri
+                        uri = entry.uri
                         sandbox_uid = uri.split('/')[-1]
+                        agent_data.update({'sandbox_uid': sandbox_uid})
                         print(f"\nwrote to Tiled sandbox uid: {sandbox_uid}")
 
                     ## Save agent_data locally
-                    if write_agent_data:
-                        agent_data.update({'sandbox_uid': sandbox_uid})                               
+                    if write_agent_data and (stream_name == 'fluorescence'):
+                        # agent_data.update({'sandbox_uid': sandbox_uid})                            
                         with open(f"{agent_data_path}/{data_id}.json", "w") as f:
                             json.dump(agent_data, f)
 
@@ -622,8 +625,8 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
             # elif use_good_bad:
             else:
                 print('*** Move to next reaction in Queue ***\n')
-                time.sleep(2)
-                # RM.queue_start()
+                # time.sleep(2)
+                RM.queue_start()
 
 
     kafka_config = _read_bluesky_kafka_config_file(config_file_path="/etc/bluesky/kafka.yml")

@@ -53,6 +53,7 @@ def xray_uvvis_plan(det1, det2, *args, md=None, num_abs=10, num_flu=10, sample_t
             # yield from bps.abs_set(qepro.correction, correction_type, wait=True)
             # yield from bps.abs_set(qepro.spectrum_type, spectrum_type, wait=True)
             yield from bps.mv(qepro.correction, correction_type, qepro.spectrum_type, spectrum_type)
+            yield from bps.sleep(1)
             yield from bps.mv(LED, 'Low', UV_shutter, 'High')
             yield from bps.sleep(1)
 
@@ -66,6 +67,7 @@ def xray_uvvis_plan(det1, det2, *args, md=None, num_abs=10, num_flu=10, sample_t
             yield from bps.save()  # TODO: check if it's needed, most likely yes.
             # yield from bps.sleep(2)
         
+        yield from bps.mv(LED, 'Low', UV_shutter, 'Low')
         yield from bps.sleep(1)
 
         ## Start to collecting fluorescence
@@ -77,6 +79,7 @@ def xray_uvvis_plan(det1, det2, *args, md=None, num_abs=10, num_flu=10, sample_t
             # yield from bps.abs_set(qepro.correction, correction_type, wait=True)
             # yield from bps.abs_set(qepro.spectrum_type, spectrum_type, wait=True)
             yield from bps.mv(qepro.correction, correction_type, qepro.spectrum_type, spectrum_type)
+            yield from bps.sleep(1)
             yield from bps.mv(LED, 'High', UV_shutter, 'Low')
             yield from bps.sleep(1)
 
@@ -90,8 +93,8 @@ def xray_uvvis_plan(det1, det2, *args, md=None, num_abs=10, num_flu=10, sample_t
             yield from bps.save()  # TODO: check if it's needed, most likely yes.
             # yield from bps.sleep(2)
 
-        yield from bps.sleep(1)
         yield from bps.mv(LED, 'Low', UV_shutter, 'Low')
+        yield from bps.sleep(1)
         # t1 = time.time()
         # yield from bps.sleep(3)
         ...

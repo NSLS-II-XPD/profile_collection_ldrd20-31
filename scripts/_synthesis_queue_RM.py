@@ -158,8 +158,8 @@ def synthesis_queue(
 		RM.item_add(restplan, pos=pos)
 		
 		
-		## 6. Start xray_uvvis bundle plan to take real data
-		scanplan = BPlan('xray_uvvis_plan', 'pe1c', 'qepro', 
+		## 6. Start xray_uvvis bundle plan to take real data  ('pe1c' or 'det')
+		scanplan = BPlan('xray_uvvis_plan', 'det', 'qepro', 
 						num_abs=num_abs, 
 						num_flu=num_flu,
       					det1_time=det1_time, 
@@ -172,7 +172,7 @@ def synthesis_queue(
 		RM.item_add(scanplan, pos=pos)
         
         ## 6.1 sleep 20 seconds for stopping
-		restplan = BPlan('sleep_sec_q', 20)
+		restplan = BPlan('sleep_sec_q', 3)
 		RM.item_add(restplan, pos=pos)
         
 

@@ -382,7 +382,7 @@ def print_kafka_messages(beamline_acronym_01, beamline_acronym_02, csv_path=csv_
                     # gr_data = '/home/xf28id2/Documents/ChengHung/pdffit2_example/CsPbBr3/CsPbBr3.gr'
                     gr_df = pd.read_csv(gr_data, names=['Q', 'I'], sep =' ')
                     pf = pc._pdffit2_CsPbX3(gr_data, cif_list, rmax=120, qmax=14, qdamp=0.031, qbroad=0.032, 
-                                            fix_APD=True, toler=0.001, return_pf=True)
+                                            fix_APD=False, toler=0.001, return_pf=True)
                     phase_fraction = pf.phase_fractions()['mass']
                     particel_size = []
                     for i in range(pf.num_phases()):
@@ -505,6 +505,7 @@ def print_kafka_messages(beamline_acronym_01, beamline_acronym_02, csv_path=csv_
                         peak_emission_id = np.argmax(np.asarray(intensity_list))
                         peak_emission = peak_list[peak_emission_id]
                         fwhm = fwhm_list[peak_emission_id]
+                        ff={'fit_function': f_fit, 'curve_fit': popt, 'percentile_mean': y0}
 
                         ## Calculate PLQY for fluorescence stream
                         if (stream_name == 'fluorescence') and (PLQY[0]==1):
@@ -603,12 +604,11 @@ def print_kafka_messages(beamline_acronym_01, beamline_acronym_02, csv_path=csv_
                                     agent_iteration.append(True)
 
                         else:
-                            # plqy_dic = None
+                            plqy_dic = None
                             optical_property = None
                         
                     ## Save fitting data
                     print(f'\nFitting function: {f_fit}\n')
-                    ff={'fit_function': f_fit, 'curve_fit': popt, 'percentile_mean': y0}
                     de.dic_to_csv_for_stream(saving_path, qepro_dic, metadata_dic, stream_name=stream_name, fitting=ff, plqy_dic=plqy_dic)
                     print(f'\n** export fitting results complete**\n')
                     
@@ -648,14 +648,15 @@ def print_kafka_messages(beamline_acronym_01, beamline_acronym_02, csv_path=csv_
                         ## use pd.concat to add various length data together
                         # df_new = pd.concat([df, df_iq, df_gr], ignore_index=False, axis=1)
 
-                        sandbox_tiled_client.write_dataframe(df, metadata=agent_data)
-                        uri = sandbox_tiled_client.values()[-1].uri
-                        sandbox_uid = uri.split('/')[-1]
+                        entry = sandbox_tiled_client.write_dataframe(df, metadata=agent_data)
+                        # uri = sandbox_tiled_client.values()[-1].uri
+                        uri = entry.uri
+                        agent_data.update({'sandbox_uid': sandbox_uid})
                         print(f"\nwrote to Tiled sandbox uid: {sandbox_uid}")
 
                     ## Save agent_data locally
                     if write_agent_data:
-                        agent_data.update({'sandbox_uid': sandbox_uid})                               
+                        # agent_data.update({'sandbox_uid': sandbox_uid})                               
                         with open(f"{agent_data_path}/{data_id}.json", "w") as f:
                             json.dump(agent_data, f)
 

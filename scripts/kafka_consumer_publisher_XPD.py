@@ -66,17 +66,24 @@ PLQY = input_dic['PLQY']
 
 # from blop import Agent, DOF, Objective
 
-# agent_data_path = '/home/xf28id2/data_post_dilute_66mM'
-# agent_data_path = '/home/xf28id2/data_post_dilute_33mM'
-agent_data_path = '/home/xf28id2/Documents/ChengHung/pdffit2_test'
-
-write_agent_data = False
-# rate_label = ['infusion_rate_CsPb', 'infusion_rate_Br', 'infusion_rate_Cl', 'infusion_rate_I2']
 rate_label_dic =   {'CsPb':'infusion_rate_CsPb', 
                     'Br':'infusion_rate_Br', 
                     'ZnI':'infusion_rate_I2', 
                     'ZnCl':'infusion_rate_Cl'}
 
+new_points_label = ['infusion_rate_CsPb', 'infusion_rate_Br', 'infusion_rate_I2', 'infusion_rate_Cl']
+
+# use_good_bad = True
+# post_dilute = True
+write_agent_data = True
+agent_data_path = '/home/xf28id2/Documents/ChengHung/202405_halide_data/with_xray'
+
+# USE_AGENT_iterate = False
+# peak_target = 515
+# if USE_AGENT_iterate:
+#     import torch
+#     from prepare_agent_pdf import build_agen
+#     agent = build_agen(peak_target=peak_target, agent_data_path=agent_data_path)
 
 iq_to_gr = True
 if iq_to_gr:
@@ -85,8 +92,8 @@ if iq_to_gr:
     gr_path = '/home/xf28id2/Documents/ChengHung/pdfstream_test/'
     cfg_fn = '/home/xf28id2/Documents/ChengHung/pdfstream_test/pdfgetx3.cfg'
     iq_fn = glob.glob(os.path.join(gr_path, '**CsPb**.chi'))
-    bkg_fn = glob.glob(os.path.join(gr_path, '**bkg**.chi'))
-    
+    # bkg_fn = glob.glob(os.path.join(gr_path, '**bkg**.chi'))
+    bkg_fn = ['/nsls2/data/xpd-new/legacy/processed/xpdUser/tiff_base/Toluene_OleAcid_mask/integration/Toluene_OleAcid_mask_20240602-122852_c49480_primary-1_mean_q.chi']
     
 search_and_match = True
 if search_and_match:
@@ -95,20 +102,22 @@ if search_and_match:
     # mystery_path = "'/home/xf28id2/Documents/ChengHung/pdfstream_test/gr"
     results_path = "/home/xf28id2/Documents/ChengHung/pdffit2_example/results_CsPbBr_chemsys_search"
 
-
-
-fitting_pdf = True
+fitting_pdf = False
 if fitting_pdf:
     global pdf_cif_dir, cif_list, gr_data
     pdf_cif_dir = '/home/xf28id2/Documents/ChengHung/pdffit2_example/CsPbBr3/'
     cif_list = [os.path.join(pdf_cif_dir, 'CsPbBr3_Orthorhombic.cif')]
     gr_data = os.path.join(pdf_cif_dir, 'CsPbBr3.gr')
 
-
+global sandbox_tiled_client
 use_sandbox = True
 if use_sandbox:
-    global sandbox_tiled_client
     sandbox_tiled_client = from_uri("https://tiled.nsls2.bnl.gov/api/v1/metadata/xpd/sandbox")
+
+write_to_sandbox = False
+if write_to_sandbox:
+    sandbox_tiled_client = from_uri("https://tiled.nsls2.bnl.gov/api/v1/metadata/xpd/sandbox")
+
 
 
 def print_kafka_messages(beamline_acronym_01, beamline_acronym_02, csv_path=csv_path, 
@@ -126,16 +135,18 @@ def print_kafka_messages(beamline_acronym_01, beamline_acronym_02, csv_path=csv_
           f'                  key height: {key_height}\n'
           f'                  height: {height}\n'
           f'                  distance: {distance}\n'
-          f'{post_dilute = }\n'
-          f'{use_good_bad = }\n'
-          f'{USE_AGENT_iterate = }\n'
-          f'{peak_target = }\n'
+        #   f'{post_dilute = }\n'
+        #   f'{use_good_bad = }\n'
+        #   f'{USE_AGENT_iterate = }\n'
+        #   f'{peak_target = }\n'
+        #   f'{zmq_control_addr = }\n'
           f'{write_agent_data = }\n'
-          f'{zmq_control_addr = }')
+          f'{agent_data_path = }\n')
 
 
     global tiled_client, path_0, path_1
-    tiled_client = from_profile("nsls2")["xpd"]["raw"]
+    # tiled_client = from_profile("nsls2")["xpd"]["raw"]
+    tiled_client = from_profile(beamline_acronym_01)
     path_0  = csv_path
     path_1 = csv_path + '/good_bad'
     
@@ -309,7 +320,7 @@ def print_kafka_messages(beamline_acronym_01, beamline_acronym_02, csv_path=csv_
                     gr_df.to_csv(gr_data, index=False, header=False)
                     
                 if search_and_match:
-                    gr_data = '/home/xf28id2/Documents/ChengHung/pdffit2_example/CsPbBr3/CsPbBr3.gr'
+                    # gr_data = '/home/xf28id2/Documents/ChengHung/pdffit2_example/CsPbBr3/CsPbBr3.gr'
                     refinery = Refinery(mystery_path=gr_data, results_path=results_path, 
                                 criteria={"elements":
                                     {#["Pb","Se"], 
@@ -337,10 +348,10 @@ def print_kafka_messages(beamline_acronym_01, beamline_acronym_02, csv_path=csv_
                           f'*** {cif_fn} ***\n\n')
                 
                 if fitting_pdf:
-                    gr_data = '/home/xf28id2/Documents/ChengHung/pdffit2_example/CsPbBr3/CsPbBr3.gr'
+                    # gr_data = '/home/xf28id2/Documents/ChengHung/pdffit2_example/CsPbBr3/CsPbBr3.gr'
                     gr_df = pd.read_csv(gr_data, names=['Q', 'I'], sep =' ')
-                    pf = pc._pdffit2_CsPbX3(gr_data, cif_list, qmax=20, qdamp=0.031, qbroad=0.032, 
-                                            fix_APD=True, toler=0.001, return_pf=True)
+                    pf = pc._pdffit2_CsPbX3(gr_data, cif_list, rmax=120, qmax=14, qdamp=0.031, qbroad=0.032, 
+                                            fix_APD=False, toler=0.001, return_pf=True)
                     phase_fraction = pf.phase_fractions()['mass']
                     particel_size = []
                     for i in range(pf.num_phases()):
@@ -360,14 +371,20 @@ def print_kafka_messages(beamline_acronym_01, beamline_acronym_02, csv_path=csv_
                 stream_list.remove('scattering')
             
             ## Export, plotting, fitting, calculate # of good/bad data, add queue item
-            print()
             for stream_name in stream_list:
                 ## Read data from databroker and turn into dic
-                qepro_dic, metadata_dic = de.read_qepro_by_stream(uid, stream_name=stream_name, data_agent='tiled', beamline_acronym=beamline_acronym_01)
+                qepro_dic, metadata_dic = de.read_qepro_by_stream(
+                    uid, stream_name=stream_name, data_agent='tiled', beamline_acronym=beamline_acronym_01)
                 print(f'{qepro_dic = }')
                 print(f'{metadata_dic = }')
                 sample_type = metadata_dic['sample_type']
                 ## Save data in dic into .csv file
+
+                if stream_name == 'take_a_uvvis':
+                    saving_path = path_1
+                else:
+                    saving_path = path_0
+
                 de.dic_to_csv_for_stream(csv_path, qepro_dic, metadata_dic, stream_name=stream_name)
                 print(f'\n** export {stream_name} in uid: {uid[0:8]} to ../{os.path.basename(csv_path)} **\n')
                 ## Plot data in dic
@@ -379,16 +396,21 @@ def print_kafka_messages(beamline_acronym_01, beamline_acronym_02, csv_path=csv_
                 u.plot_data(clear_fig=clear_fig)
                 print(f'\n** Plot {stream_name} in uid: {uid[0:8]} complete **\n')
                     
-                ## Idenfify good/bad data if it is a fluorescence sacn in 'primary'
-                if qepro_dic['QEPro_spectrum_type'][0]==2 and stream_name=='primary':
+                ## Idenfify good/bad data if it is a fluorescence sacn in 'take_a_uvvis'
+                if qepro_dic['QEPro_spectrum_type'][0]==2 and stream_name=='take_a_uvvis':
                     print(f'\n*** start to identify good/bad data in stream: {stream_name} ***\n')
                     x0, y0, data_id, peak, prop = da._identify_one_in_kafka(qepro_dic, metadata_dic, key_height=kh, distance=dis, height=hei, dummy_test=dummy_test)
                 
                 
                 ## Apply an offset to zero baseline of absorption spectra
                 elif stream_name == 'absorbance':
+                    print(f'\n*** start to flter absorbance within 15%-85% due to PF oil phase***\n')
+                    ## Apply percnetile filtering for absorption spectra, defaut percent_range = [15, 85]
+                    abs_per = da.percentile_abs(qepro_dic['QEPro_x_axis'], qepro_dic['QEPro_output'], percent_range=[15, 85])
+                    
                     print(f'\n*** start to check absorbance at 365b nm in stream: {stream_name} is positive or not***\n')
-                    abs_array = qepro_dic['QEPro_output'][1:].mean(axis=0)
+                    # abs_array = qepro_dic['QEPro_output'][1:].mean(axis=0)
+                    abs_array = abs_per.mean(axis=0)
                     wavelength = qepro_dic['QEPro_x_axis'][0]
 
                     popt_abs01, _ = da.fit_line_2D(wavelength, abs_array, da.line_2D, x_range=[205, 240], plot=False)
@@ -397,12 +419,12 @@ def print_kafka_messages(beamline_acronym_01, beamline_acronym_02, csv_path=csv_
                         popt_abs = popt_abs02
                     elif abs(popt_abs01[0]) <= abs(popt_abs02[0]):
                         popt_abs = popt_abs01
-
+                    
                     abs_array_offset = abs_array - da.line_2D(wavelength, *popt_abs)
 
                     print(f'\nFitting function for baseline offset: {da.line_2D}\n')
-                    ff_abs={'fit_function': da.line_2D, 'curve_fit': popt_abs}
-                    de.dic_to_csv_for_stream(csv_path, qepro_dic, metadata_dic, stream_name=stream_name, fitting=ff_abs)
+                    ff_abs={'fit_function': da.line_2D, 'curve_fit': popt_abs, 'percentile_mean': abs_array}
+                    de.dic_to_csv_for_stream(saving_path, qepro_dic, metadata_dic, stream_name=stream_name, fitting=ff_abs)
                     u.plot_offfset(wavelength, da.line_2D, popt_abs)
                     print(f'\n** export offset results of absorption spectra complete**\n')
 
@@ -410,11 +432,14 @@ def print_kafka_messages(beamline_acronym_01, beamline_acronym_02, csv_path=csv_
                 ## Avergae scans in 'fluorescence' and idenfify good/bad
                 elif stream_name == 'fluorescence':
                     print(f'\n*** start to identify good/bad data in stream: {stream_name} ***\n')
-                    x0, y0, data_id, peak, prop = da._identify_multi_in_kafka(qepro_dic, metadata_dic, key_height=kh, distance=dis, height=hei, dummy_test=dummy_test)
+                    ## Apply percnetile filtering for PL spectra, defaut percent_range = [30, 100]
+                    x0, y0, data_id, peak, prop = da._identify_multi_in_kafka(qepro_dic, metadata_dic, 
+                                                key_height=kh, distance=dis, height=hei, 
+                                                dummy_test=dummy_test, percent_range=[30, 100])
                     label_uid = f'{uid[0:8]}_{metadata_dic["sample_type"]}'
                     # u.plot_average_good(x0, y0, color=cmap(color_idx[sub_idx]), label=label_uid)
                     # sub_idx = sample.index(metadata_dic['sample_type'])
-                    u.plot_average_good(x0, y0, label=label_uid, clf_limit=14)
+                    u.plot_average_good(x0, y0, label=label_uid, clf_limit=9)
                 
                 ## Skip peak fitting if qepro type is absorbance
                 if qepro_dic['QEPro_spectrum_type'][0] == 3:  
@@ -450,6 +475,7 @@ def print_kafka_messages(beamline_acronym_01, beamline_acronym_02, csv_path=csv_
                         peak_emission_id = np.argmax(np.asarray(intensity_list))
                         peak_emission = peak_list[peak_emission_id]
                         fwhm = fwhm_list[peak_emission_id]
+                        ff={'fit_function': f_fit, 'curve_fit': popt, 'percentile_mean': y0}
 
                         ## Calculate PLQY for fluorescence stream
                         if (stream_name == 'fluorescence') and (PLQY[0]==1):
@@ -475,39 +501,28 @@ def print_kafka_messages(beamline_acronym_01, beamline_acronym_02, csv_path=csv_
                             
                             optical_property = {'Peak': peak_emission, 'FWHM':fwhm, 'PLQY':plqy}
 
-                            if write_agent_data:
-                                agent_data = {}
+                            ## Creat agent_data in type of dict for exporting as json and wirte to sandbox
+                            agent_data = {}
+                            agent_data.update(optical_property)
+                            agent_data.update(pdf_property)
+                            agent_data.update({k:v for k, v in metadata_dic.items() if len(np.atleast_1d(v)) == 1})
+                            agent_data = de._exprot_rate_agent(metadata_dic, rate_label_dic, agent_data)
 
-                                agent_data.update(optical_property)
-                                agent_data.update(pdf_property)
-                                agent_data.update({k:v for k, v in metadata_dic.items() if len(np.atleast_1d(v)) == 1})
-
-                                agent_data = de._exprot_rate_agent(metadata_dic, rate_label_dic, agent_data)
- 
-                                with open(f"{agent_data_path}/{data_id}.json", "w") as f:
-                                    json.dump(agent_data, f)
-
-                                print(f"\nwrote to {agent_data_path}")
-
-                            
-                            ### Three parameters for ML: peak_emission, fwhm, plqy
-                            # TODO: add ML agent code here
-
-                            data = {}
-
+                            ## Update absorbance offset and fluorescence fitting results inot agent_data
+                            agent_data.update({'abs_offset':{'fit_function':ff_abs['fit_function'].__name__, 'popt':ff_abs['curve_fit'].tolist()}})
+                            agent_data.update({'PL_fitting':{'fit_function':ff['fit_function'].__name__, 'popt':ff['curve_fit'].tolist()}})
 
                         else:
                             plqy_dic = None
                             optical_property = None
                         
                         print(f'\nFitting function: {f_fit}\n')
-                        ff={'fit_function': f_fit, 'curve_fit': popt}
                         de.dic_to_csv_for_stream(csv_path, qepro_dic, metadata_dic, stream_name=stream_name, fitting=ff, plqy_dic=plqy_dic)
                         print(f'\n** export fitting results complete**\n')
                         
                         u.plot_peak_fit(x, y, f_fit, popt, peak=p, fill_between=True)
                         print(f'\n** plot fitting results complete**\n')
-                        if stream_name == 'primary':
+                        if stream_name == 'take_a_uvvis':
                             good_data.append(data_id)
                     
                     elif peak==[] and prop==[]:
@@ -521,6 +536,32 @@ def print_kafka_messages(beamline_acronym_01, beamline_acronym_02, csv_path=csv_
                         print(f"\n*** {sample_type} of uid: {uid[:8]} has: {optical_property}.***\n")
                     except (UnboundLocalError):
                         pass
+
+                    ## Save processed data in df and agent_data as metadta in sandbox
+                    if write_to_sandbox:
+                        df = pd.DataFrame()
+                        df['wavelength_nm'] = x0
+                        df['absorbance_mean'] = abs_array
+                        df['absorbance_offset'] = abs_array_offset
+                        df['fluorescence_mean'] = y0
+                        df['fluorescence_fitting'] = f_fit(x0, *popt)
+
+                        ## use pd.concat to add various length data together
+                        # df_new = pd.concat([df, df_iq, df_gr], ignore_index=False, axis=1)
+
+                        entry = sandbox_tiled_client.write_dataframe(df, metadata=agent_data)
+                        # uri = sandbox_tiled_client.values()[-1].uri
+                        uri = entry.uri
+                        agent_data.update({'sandbox_uid': sandbox_uid})
+                        print(f"\nwrote to Tiled sandbox uid: {sandbox_uid}")
+
+                    ## Save agent_data locally
+                    if write_agent_data:
+                        # agent_data.update({'sandbox_uid': sandbox_uid})                               
+                        with open(f"{agent_data_path}/{data_id}.json", "w") as f:
+                            json.dump(agent_data, f)
+
+                        print(f"\nwrote to {agent_data_path}")
 
             print(f'*** Accumulated num of good data: {len(good_data)} ***\n')
             print(f'good_data = {good_data}\n')

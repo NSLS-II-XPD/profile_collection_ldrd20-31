@@ -421,7 +421,7 @@ def _identify_multi_in_kafka(qepro_dic, metadata_dic, key_height=200, distance=1
     t0 = de._readable_time(metadata_dic['time'])
     data_id = f'{t0[0]}_{t0[1]}_{metadata_dic["uid"][:8]}'
     _for_average = pd.DataFrame()
-    for i in range(qepro_dic['QEPro_spectrum_type'].shape[0]):
+    for i in range(1, qepro_dic['QEPro_spectrum_type'].shape[0]):
         x_i = qepro_dic['QEPro_x_axis'][i]
         y_i = qepro_dic['QEPro_output'][i]
         p1, p2 = good_bad_data(x_i, y_i, key_height=key_height, data_id = f'{data_id}_{i:03d}', distance=distance, height=height, dummy_test=dummy_test)
