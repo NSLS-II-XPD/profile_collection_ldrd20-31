@@ -5,9 +5,13 @@ import pandas as pd
 import _data_export as de
 from _plot_helper import plot_uvvis
 import _data_analysis as da
-# import _synthesis_queue_RM as sq
-# import _pdf_calculator as pc
-# import _get_pdf as gp
+import _synthesis_queue_RM as sq
+import _pdf_calculator as pc
+import _get_pdf as gp
+
+import torch
+from prepare_agent_pdf import build_agen
+from diffpy.pdfgetx import PDFConfig
 
 
 
@@ -99,8 +103,21 @@ class kafka():
         
         self.use_good_bad = True
         self.post_dilute = True
+        
         self.write_agent_data = True
         self.agent_data_path = '/home/xf28id2/Documents/ChengHung/202405_halide_data/with_xray'
+
+        self.USE_AGENT_iterate = False
+        self.peak_target = 515
+        self.agent = build_agen(peak_target=self.peak_target, agent_data_path=self.agent_data_path)
+
+        self.iq_to_gr = False
+        self.gr_path = '/home/xf28id2/Documents/ChengHung/pdfstream_test/'
+        self.cfg_fn = '/home/xf28id2/Documents/ChengHung/pdfstream_test/pdfgetx3.cfg'
+        self.iq_fn = glob.glob(os.path.join(gr_path, '**CsPb**.chi'))
+        # self.bkg_fn = glob.glob(os.path.join(gr_path, '**bkg**.chi'))
+        self.bkg_fn = ['/nsls2/data/xpd-new/legacy/processed/xpdUser/tiff_base/Toluene_OleAcid_mask/integration/Toluene_OleAcid_mask_20240602-122852_c49480_primary-1_mean_q.chi']
+
 
 
 '''
