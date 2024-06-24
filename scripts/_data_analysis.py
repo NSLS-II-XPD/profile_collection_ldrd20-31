@@ -802,4 +802,5 @@ def _1peak_fit_PL(x, y, distr='G', plot=False, plot_title=None, maxfev=100000):
     return popt, r_2
 
 
-
+if __name__ == "__main__":
+    pass

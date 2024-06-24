@@ -131,14 +131,14 @@ def synthesis_queue(
 			RM.item_add(restplan, pos=pos)
 		
 
-		## 4-1. Take a fluorescence peak to check reaction
-		scanplan = BPlan('take_a_uvvis_csv_q', sample_type=sample[i], 
-						spectrum_type='Corrected Sample', 
-                        correction_type='Dark', 
-						pump_list=pump_list, 
-						precursor_list=precursor_list, 
-                        mixer=mixer)
-		RM.item_add(scanplan, pos=pos)
+		# ## 4-1. Take a fluorescence peak to check reaction
+		# scanplan = BPlan('take_a_uvvis_csv_q', sample_type=sample[i], 
+		# 				spectrum_type='Corrected Sample', 
+        #                 correction_type='Dark', 
+		# 				pump_list=pump_list, 
+		# 				precursor_list=precursor_list, 
+        #                 mixer=mixer)
+		# RM.item_add(scanplan, pos=pos)
     
 
 		# ## 4-2. Take a Absorption spectra to check reaction
@@ -158,21 +158,21 @@ def synthesis_queue(
 		RM.item_add(restplan, pos=pos)
 		
 		
-		## 6. Start xray_uvvis bundle plan to take real data  ('pe1c' or 'det')
-		scanplan = BPlan('xray_uvvis_plan', 'det', 'qepro', 
-						num_abs=num_abs, 
-						num_flu=num_flu,
-      					det1_time=det1_time, 
-						sample_type=sample[i], 
-						spectrum_type='Absorbtion', 
-						correction_type='Reference', 
-						pump_list=pump_list, 
-						precursor_list=precursor_list, 
-						mixer=mixer)
-		RM.item_add(scanplan, pos=pos)
+		# ## 6. Start xray_uvvis bundle plan to take real data  ('pe1c' or 'det')
+		# scanplan = BPlan('xray_uvvis_plan', 'det', 'qepro', 
+		# 				num_abs=num_abs, 
+		# 				num_flu=num_flu,
+      	# 				det1_time=det1_time, 
+		# 				sample_type=sample[i], 
+		# 				spectrum_type='Absorbtion', 
+		# 				correction_type='Reference', 
+		# 				pump_list=pump_list, 
+		# 				precursor_list=precursor_list, 
+		# 				mixer=mixer)
+		# RM.item_add(scanplan, pos=pos)
         
         ## 6.1 sleep 20 seconds for stopping
-		restplan = BPlan('sleep_sec_q', 3)
+		restplan = BPlan('sleep_sec_q', 20)
 		RM.item_add(restplan, pos=pos)
         
 

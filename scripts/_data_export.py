@@ -26,9 +26,9 @@ def _read_input_xlsx(fn, sheet_name='inputs', skiprows=1, header=None, index_col
 
 ## Creat file name based on date, time, uid, sample_name/type from fluorescence stream
 def _fn_generator(uid, beamline_acronym='xpd'):
-    _, metadata_dic = de.read_qepro_by_stream(uid, stream_name='fluorescence', data_agent='tiled', beamline_acronym=beamline_acronym)
+    _, metadata_dic = read_qepro_by_stream(uid, stream_name='fluorescence', data_agent='tiled', beamline_acronym=beamline_acronym)
     sample_type = metadata_dic['sample_type']
-    date, ttime = de._readable_time(metadata_dic['time'])
+    date, ttime = _readable_time(metadata_dic['time'])
     full_uid = metadata_dic['uid']
     fn = f'{sample_type}_{date}-{ttime}_{full_uid[0:8]}'
     return fn
