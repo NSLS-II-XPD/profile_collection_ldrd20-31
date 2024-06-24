@@ -116,11 +116,19 @@ def rate_unit_converter(r0 = 'ul/min', r1 = 'ul/min'):
 ### Filter out bad absorption data due to PF oil ###
 def percentile_abs(wavelength, absorbance, w_range=[210, 700], percent_range=[15, 85]):
     absorbance = np.nan_to_num(absorbance, nan=0)
-    idx1, _ = find_nearest(wavelength[0], w_range[0])
-    idx2, _ = find_nearest(wavelength[0], w_range[1])
+    try:
+        idx1, _ = find_nearest(wavelength[0], w_range[0])
+        idx2, _ = find_nearest(wavelength[0], w_range[1])
+    except (IndexError):
+        idx1, _ = find_nearest(wavelength, w_range[0])
+        idx2, _ = find_nearest(wavelength, w_range[1]) 
 
     abs_array2 = absorbance[:, idx1:idx2]
-    wavelength2 = wavelength[:, idx1:idx2]
+    
+    try:
+        wavelength2 = wavelength[:, idx1:idx2]
+    except (IndexError):
+        wavelength2 = wavelength[idx1:idx2]
 
     iqr = np.multiply(abs_array2, wavelength2).mean(axis=1)
     q0, q1 = np.percentile(iqr, percent_range)
