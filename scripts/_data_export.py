@@ -13,14 +13,17 @@ def _read_input_xlsx(fn, sheet_name='inputs', skiprows=1, header=None, index_col
     df = pd.read_excel(fn, sheet_name=sheet_name, skiprows=skiprows, header=header, index_col=index_col)
     input_dic = {}
     for i in df.index:
-        try:
-            input_dic[i] = df.loc[i].dropna().tolist()
-        except AttributeError:
-            # temp = df.loc[i].to_dict(orient='split')
-            input_dic[i] = []
-            for j in range(df.loc[i].shape[0]):
-                ll = df.loc[i].iloc[j].dropna().tolist()
-                input_dic[i].append(ll)
+        if str(i) == 'nan':
+            pass
+        else:
+            try:
+                input_dic[i] = df.loc[i].dropna().tolist()
+            except AttributeError:
+                # temp = df.loc[i].to_dict(orient='split')
+                input_dic[i] = []
+                for j in range(df.loc[i].shape[0]):
+                    ll = df.loc[i].iloc[j].dropna().tolist()
+                    input_dic[i].append(ll)
     return input_dic
 
 

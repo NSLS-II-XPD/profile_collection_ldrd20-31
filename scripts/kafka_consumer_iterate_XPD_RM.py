@@ -328,6 +328,9 @@ def print_kafka_messages(beamline_acronym_01, beamline_acronym_02, csv_path=csv_
                     # iq_df['chi_I'] = iq_I
                     iq_df = np.asarray([iq_Q, iq_I])
                     # iq_df = iq_fn[0]
+                    iq_df2 = pd.DataFrame()
+                    iq_df2['q'] = iq_Q
+                    iq_df2['I(q)'] = iq_I
                 else:
                     pass
                     # iq_df = iq_fn[0]
@@ -347,7 +350,7 @@ def print_kafka_messages(beamline_acronym_01, beamline_acronym_02, csv_path=csv_
                     
                     ## Remove headers by reading gr_data into pd.Dataframe and save again
                     ## Otherwise, headers will cause trouble in pdffit2
-                    gr_df = pd.read_csv(gr_data, skiprows=26, names=['Q', 'I'], sep =' ')
+                    gr_df = pd.read_csv(gr_data, skiprows=26, names=['r', 'g(r)'], sep =' ')
                     gr_df.to_csv(gr_data, index=False, header=False, sep =' ')
                     
                 if search_and_match:
@@ -378,9 +381,10 @@ def print_kafka_messages(beamline_acronym_01, beamline_acronym_02, csv_path=csv_
                     print(f'\n\n*** After matching, the most correlated strucuture is\n' 
                           f'*** {cif_fn} ***\n\n')
                 
+                gr_fit_df = pd.DataFrame()
                 if fitting_pdf:
                     # gr_data = '/home/xf28id2/Documents/ChengHung/pdffit2_example/CsPbBr3/CsPbBr3.gr'
-                    gr_df = pd.read_csv(gr_data, names=['Q', 'I'], sep =' ')
+                    gr_df = pd.read_csv(gr_data, names=['r', 'g(r)'], sep =' ')
                     pf = pc._pdffit2_CsPbX3(gr_data, cif_list, rmax=120, qmax=14, qdamp=0.031, qbroad=0.032, 
                                             fix_APD=False, toler=0.001, return_pf=True)
                     phase_fraction = pf.phase_fractions()['mass']
@@ -394,8 +398,13 @@ def print_kafka_messages(beamline_acronym_01, beamline_acronym_02, csv_path=csv_
                     pf.save_pdf(1, f'{fgr_fn}')
                     pdf_property={'Br_ratio': phase_fraction[0], 'Br_size':particel_size[0]}
                     gr_fit = np.asarray([pf.getR(), pf.getpdf_fit()])
+                    # gr_fit_df = pd.DataFrame()
+                    gr_fit_df['r'] = pf.getR()
+                    gr_fit_df['fit_g(g)'] = pf.getpdf_fit()
                 else:
                     gr_fit = None
+                    gr_fit_df['r'] = np.nan
+                    gr_fit_df['fit_g(g)'] = np.nan
                     pdf_property={'Br_ratio': np.nan, 'Br_size': np.nan}
                 
                 u.plot_iq_to_gr(iq_df, gr_df.to_numpy().T, gr_fit=gr_fit)
@@ -646,9 +655,10 @@ def print_kafka_messages(beamline_acronym_01, beamline_acronym_02, csv_path=csv_
                         df['fluorescence_fitting'] = f_fit(x0, *popt)
 
                         ## use pd.concat to add various length data together
-                        # df_new = pd.concat([df, df_iq, df_gr], ignore_index=False, axis=1)
+                        df_new = pd.concat([df, iq_df2, gr_df, gr_fit_df], ignore_index=False, axis=1)
 
-                        entry = sandbox_tiled_client.write_dataframe(df, metadata=agent_data)
+                        # entry = sandbox_tiled_client.write_dataframe(df, metadata=agent_data)
+                        entry = sandbox_tiled_client.write_dataframe(df_new, metadata=agent_data)
                         # uri = sandbox_tiled_client.values()[-1].uri
                         uri = entry.uri
                         agent_data.update({'sandbox_uid': sandbox_uid})

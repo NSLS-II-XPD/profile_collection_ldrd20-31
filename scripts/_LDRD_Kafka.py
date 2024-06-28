@@ -5,13 +5,13 @@ import pandas as pd
 import _data_export as de
 from _plot_helper import plot_uvvis
 import _data_analysis as da
-import _synthesis_queue_RM as sq
-import _pdf_calculator as pc
-import _get_pdf as gp
+# import _synthesis_queue_RM as sq
+# import _pdf_calculator as pc
+# import _get_pdf as gp
 
-import torch
-from prepare_agent_pdf import build_agen
-from diffpy.pdfgetx import PDFConfig
+# import torch
+# from prepare_agent_pdf import build_agen
+# from diffpy.pdfgetx import PDFConfig
 
 
 
@@ -47,28 +47,27 @@ prefix = input_dic['prefix']
 num_uvvis = input_dic['num_uvvis']
 '''
 
-# class input_dic():
-#     pass
+class input_dic():
+    def __init__(self, a_dict):
+        # self.input_dic = input_dic()
+        self.dummy_kafka = bool(a_dict['dummy_test'][0])
+        self.dummy_qserver = bool(a_dict['dummy_test'][1])
+        self.csv_path = a_dict['csv_path'][0]
+
+        for key in _Qparameters():
+            setattr(self, key, a_dict[key])
+
+        if self.prefix:
+            self.sample = de._auto_name_sample(self.infuse_rates, prefix=self.prefix[1:])
 
 
 class xlsx_to_qserver():
-    class input_dic():
-        pass
     def __init__(self, xlsx_fn, sheet_name='inputs'):
         self.from_xlsx = xlsx_fn
         self.sheet_name = sheet_name
         self.print_dic = de._read_input_xlsx(self.from_xlsx, sheet_name=self.sheet_name)
 
-        self.input_dic = input_dic()
-        self.input_dic.dummy_kafka = bool(self.print_dic['dummy_test'][0])
-        self.input_dic.dummy_qserver = bool(self.print_dic['dummy_test'][1])
-        self.input_dic.csv_path = self.print_dic['csv_path'][0]
-
-        for key in _Qparameters():
-            setattr(self.input_dic, key, self.print_dic[key])
-
-        if self.input_dic.prefix:
-            self.input_dic.sample = de._auto_name_sample(self.input_dic.infuse_rates, prefix=self.input_dic.prefix[1:])
+        self.input_dic = input_dic(self.print_dic)
 
     # def add_to_queue(self):
     #     sq.synthesis_queue(
