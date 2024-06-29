@@ -17,6 +17,7 @@ def xray_uvvis_plan(det1, det2, *args, md=None, num_abs=10, num_flu=10, sample_t
                "uvvis" :[qepro.integration_time.get(), qepro.num_spectra.get(), qepro.buff_capacity.get()], 
                "mixer": mixer,
                "sample_type": sample_type,
+               "detectors": [det1.name, det2.name],
                "note" : note if note else "None"}
         _md.update(md or {})    
         
@@ -24,6 +25,7 @@ def xray_uvvis_plan(det1, det2, *args, md=None, num_abs=10, num_flu=10, sample_t
         _md = { "uvvis" :[qepro.integration_time.get(), qepro.num_spectra.get(), qepro.buff_capacity.get()], 
                 "mixer": ['exsitu measurement'],
                 "sample_type": sample_type,
+                "detectors": [det1.name, det2.name],
                 "note" : note if note else "None"}
         _md.update(md or {})
 

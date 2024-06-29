@@ -241,6 +241,7 @@ def take_a_uvvis_csv_q(sample_type='test', plot=False, csv_path=None, data_agent
                 "uvvis" :[spectrum_type, correction_type, qepro.integration_time.get(), qepro.num_spectra.get(), qepro.buff_capacity.get()], 
                 "mixer": mixer,
                 "sample_type": sample_type,
+                "detectors": [qepro.name],
                 "note" : note if note else "None"}
         _md.update(md or {})
     
@@ -248,6 +249,7 @@ def take_a_uvvis_csv_q(sample_type='test', plot=False, csv_path=None, data_agent
         _md = { "uvvis" :[spectrum_type, correction_type, qepro.integration_time.get(), qepro.num_spectra.get(), qepro.buff_capacity.get()], 
                 "mixer": ['exsitu measurement'],
                 "sample_type": sample_type,
+                "detectors": [qepro.name],
                 "note" : note if note else "None"}
         _md.update(md or {})
     
