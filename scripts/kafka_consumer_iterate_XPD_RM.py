@@ -109,7 +109,7 @@ new_points_label = ['infusion_rate_CsPb', 'infusion_rate_Br', 'infusion_rate_I2'
 use_good_bad = True
 post_dilute = True
 write_agent_data = True
-agent_data_path = '/home/xf28id2/Documents/ChengHung/202405_halide_data/with_xray'
+agent_data_path = '/home/xf28id2/Documents/ChengHung/202405_halide_data/test'
 
 USE_AGENT_iterate = False
 peak_target = 515
@@ -124,9 +124,12 @@ if iq_to_gr:
     global gr_path, cfg_fn, iq_fn, bkg_fn
     gr_path = '/home/xf28id2/Documents/ChengHung/pdfstream_test/'
     cfg_fn = '/home/xf28id2/Documents/ChengHung/pdfstream_test/pdfgetx3.cfg'
-    iq_fn = glob.glob(os.path.join(gr_path, '**CsPb**.chi'))
-    # bkg_fn = glob.glob(os.path.join(gr_path, '**bkg**.chi'))
-    bkg_fn = ['/nsls2/data/xpd-new/legacy/processed/xpdUser/tiff_base/Toluene_OleAcid_mask/integration/Toluene_OleAcid_mask_20240602-122852_c49480_primary-1_mean_q.chi']
+    
+    ### CsPbBr2 test
+    iq_fn = glob.glob(os.path.join(gr_path, '**CsPbBr2**.chi'))
+    bkg_fn = glob.glob(os.path.join(gr_path, '**Tol_Olm_bkg**.chi'))
+    
+    # bkg_fn = ['/nsls2/data/xpd-new/legacy/processed/xpdUser/tiff_base/Toluene_OleAcid_mask/integration/Toluene_OleAcid_mask_20240602-122852_c49480_primary-1_mean_q.chi']
     
 search_and_match = True
 if search_and_match:
@@ -135,7 +138,7 @@ if search_and_match:
     # mystery_path = "'/home/xf28id2/Documents/ChengHung/pdfstream_test/gr"
     results_path = "/home/xf28id2/Documents/ChengHung/pdffit2_example/results_CsPbBr_chemsys_search"
 
-fitting_pdf = False
+fitting_pdf = True
 if fitting_pdf:
     global pdf_cif_dir, cif_list, gr_data
     pdf_cif_dir = '/home/xf28id2/Documents/ChengHung/pdffit2_example/CsPbBr3/'
@@ -147,7 +150,7 @@ use_sandbox = True
 if use_sandbox:
     sandbox_tiled_client = from_uri("https://tiled.nsls2.bnl.gov/api/v1/metadata/xpd/sandbox")
 
-write_to_sandbox = False
+write_to_sandbox = True
 if write_to_sandbox:
     sandbox_tiled_client = from_uri("https://tiled.nsls2.bnl.gov/api/v1/metadata/xpd/sandbox")
 
@@ -172,6 +175,11 @@ def print_kafka_messages(beamline_acronym_01, beamline_acronym_02, csv_path=csv_
           f'{USE_AGENT_iterate = }\n'
           f'{peak_target = }\n'
           f'{write_agent_data = }\n'
+          f'{iq_to_gr = }\n'
+          f'{search_and_match = }\n'
+          f'{fitting_pdf = }\n'
+          f'{use_sandbox = }\n'
+          f'{write_to_sandbox = }\n'
           f'{zmq_control_addr = }')
 
 
@@ -323,14 +331,15 @@ def print_kafka_messages(beamline_acronym_01, beamline_acronym_02, csv_path=csv_
                 u = plot_uvvis(qepro_dic, metadata_dic)
                 
                 if use_sandbox:
-                    # iq_df = pd.DataFrame()
-                    # iq_df['chi_Q'] = iq_Q
-                    # iq_df['chi_I'] = iq_I
-                    iq_df = np.asarray([iq_Q, iq_I])
-                    # iq_df = iq_fn[0]
-                    iq_df2 = pd.DataFrame()
-                    iq_df2['q'] = iq_Q
-                    iq_df2['I(q)'] = iq_I
+                    # iq_df = np.asarray([iq_Q, iq_I])
+                    # iq_df2 = pd.DataFrame()
+                    # iq_df2['q'] = iq_Q
+                    # iq_df2['I(q)'] = iq_I
+                    
+                    ### CsPbBr2 test
+                    iq_df = pd.read_csv(iq_fn[-1], skiprows=1, names=['q', 'I(q)'], sep=' ').to_numpy().T
+                    iq_df2 = pd.read_csv(iq_fn[-1], skiprows=1, names=['q', 'I(q)'], sep=' ')
+                
                 else:
                     pass
                     # iq_df = iq_fn[0]
@@ -338,7 +347,11 @@ def print_kafka_messages(beamline_acronym_01, beamline_acronym_02, csv_path=csv_
                 if iq_to_gr:
                     # Grab metadat from stream_name = fluorescence for naming gr file
                     fn_uid = de._fn_generator(uid, beamline_acronym=beamline_acronym_01)
-                    gr_fn = f'{fn_uid}_scattering.gr'
+                    # gr_fn = f'{fn_uid}_scattering.gr'
+                    
+                    ### CsPbBr2 test
+                    gr_fn = f'{iq_fn[:-4]}.gr'
+                    
                     # Build pdf config file from a scratch
                     pdfconfig = PDFConfig()
                     pdfconfig.readConfig(cfg_fn)
@@ -383,10 +396,12 @@ def print_kafka_messages(beamline_acronym_01, beamline_acronym_02, csv_path=csv_
                 
                 gr_fit_df = pd.DataFrame()
                 if fitting_pdf:
-                    # gr_data = '/home/xf28id2/Documents/ChengHung/pdffit2_example/CsPbBr3/CsPbBr3.gr'
+                    ### CsPbBr2 test
+                    gr_data = '/home/xf28id2/Documents/ChengHung/pdffit2_example/CsPbBr3/CsPbBr3.gr'
+                    
                     gr_df = pd.read_csv(gr_data, names=['r', 'g(r)'], sep =' ')
-                    pf = pc._pdffit2_CsPbX3(gr_data, cif_list, rmax=120, qmax=14, qdamp=0.031, qbroad=0.032, 
-                                            fix_APD=False, toler=0.001, return_pf=True)
+                    pf = pc._pdffit2_CsPbX3(gr_data, cif_list, rmax=100, qmax=14, qdamp=0.031, qbroad=0.032, 
+                                            fix_APD=True, toler=0.001, return_pf=True)
                     phase_fraction = pf.phase_fractions()['mass']
                     particel_size = []
                     for i in range(pf.num_phases()):
@@ -399,15 +414,16 @@ def print_kafka_messages(beamline_acronym_01, beamline_acronym_02, csv_path=csv_
                     pdf_property={'Br_ratio': phase_fraction[0], 'Br_size':particel_size[0]}
                     gr_fit = np.asarray([pf.getR(), pf.getpdf_fit()])
                     # gr_fit_df = pd.DataFrame()
-                    gr_fit_df['r'] = pf.getR()
-                    gr_fit_df['fit_g(g)'] = pf.getpdf_fit()
+                    gr_fit_df['fit_r'] = pf.getR()
+                    gr_fit_df['fit_g(r)'] = pf.getpdf_fit()
                 else:
                     gr_fit = None
-                    gr_fit_df['r'] = np.nan
-                    gr_fit_df['fit_g(g)'] = np.nan
+                    gr_fit_df['fit_r'] = np.nan
+                    gr_fit_df['fit_g(r)'] = np.nan
                     pdf_property={'Br_ratio': np.nan, 'Br_size': np.nan}
                 
-                u.plot_iq_to_gr(iq_df, gr_df.to_numpy().T, gr_fit=gr_fit)
+                if iq_to_gr:
+                    u.plot_iq_to_gr(iq_df, gr_df.to_numpy().T, gr_fit=gr_fit)
                 ## remove 'scattering' from stream_list to avoid redundant work in next for loop
                 stream_list.remove('scattering')
             
@@ -434,7 +450,8 @@ def print_kafka_messages(beamline_acronym_01, beamline_acronym_02, csv_path=csv_
                     clear_fig=False
                 u.plot_data(clear_fig=clear_fig)
                 print(f'\n** Plot {stream_name} in uid: {uid[0:8]} complete **\n')
-                    
+                
+                global abs_array, abs_array_offset, x0, y0   
                 ## Idenfify good/bad data if it is a fluorescence scan in 'take_a_uvvis'
                 if qepro_dic['QEPro_spectrum_type'][0]==2 and stream_name=='take_a_uvvis':
                     print(f'\n*** start to identify good/bad data in stream: {stream_name} ***\n')
@@ -479,7 +496,8 @@ def print_kafka_messages(beamline_acronym_01, beamline_acronym_02, csv_path=csv_
                     # u.plot_average_good(x0, y0, color=cmap(color_idx[sub_idx]), label=label_uid)
                     # sub_idx = sample.index(metadata_dic['sample_type'])
                     u.plot_average_good(x0, y0, label=label_uid, clf_limit=9)
-                    
+                
+                global f_fit   
                 ## Skip peak fitting if qepro type is absorbance
                 if qepro_dic['QEPro_spectrum_type'][0] == 3:  
                     print(f"\n*** No need to carry out fitting for {stream_name} in uid: {uid[:8]} ***\n")
@@ -645,8 +663,9 @@ def print_kafka_messages(beamline_acronym_01, beamline_acronym_02, csv_path=csv_
                     except (UnboundLocalError):
                         pass
 
+                    global sandbox_uid
                     ## Save processed data in df and agent_data as metadta in sandbox
-                    if write_to_sandbox:
+                    if write_to_sandbox and (stream_name == 'fluorescence'):
                         df = pd.DataFrame()
                         df['wavelength_nm'] = x0
                         df['absorbance_mean'] = abs_array
@@ -661,11 +680,12 @@ def print_kafka_messages(beamline_acronym_01, beamline_acronym_02, csv_path=csv_
                         entry = sandbox_tiled_client.write_dataframe(df_new, metadata=agent_data)
                         # uri = sandbox_tiled_client.values()[-1].uri
                         uri = entry.uri
+                        sandbox_uid = uri.split('/')[-1]
                         agent_data.update({'sandbox_uid': sandbox_uid})
                         print(f"\nwrote to Tiled sandbox uid: {sandbox_uid}")
 
                     ## Save agent_data locally
-                    if write_agent_data:
+                    if write_agent_data and (stream_name == 'fluorescence'):
                         # agent_data.update({'sandbox_uid': sandbox_uid})                               
                         with open(f"{agent_data_path}/{data_id}.json", "w") as f:
                             json.dump(agent_data, f)
@@ -693,7 +713,7 @@ def print_kafka_messages(beamline_acronym_01, beamline_acronym_02, csv_path=csv_
                 elif len(good_data) <= 2 and use_good_bad:
                     print('*** Add another fluorescence and absorption scan to the fron of qsever ***\n')
                     
-                    restplan = BPlan('sleep_sec_q', 3)
+                    restplan = BPlan('sleep_sec_q', 5)
                     RM.item_add(restplan, pos=0)
                     
                     scanplan = BPlan('take_a_uvvis_csv_q', 
