@@ -109,7 +109,7 @@ new_points_label = ['infusion_rate_CsPb', 'infusion_rate_Br', 'infusion_rate_I2'
 use_good_bad = True
 post_dilute = True
 write_agent_data = True
-agent_data_path = '/home/xf28id2/Documents/ChengHung/202405_halide_data/test'
+agent_data_path = '/home/xf28id2/Documents/ChengHung/202405_halide_data/20240702_Br'
 
 USE_AGENT_iterate = False
 peak_target = 515
@@ -118,27 +118,27 @@ if USE_AGENT_iterate:
     from prepare_agent_pdf import build_agen
     agent = build_agen(peak_target=peak_target, agent_data_path=agent_data_path)
 
-iq_to_gr = True
+iq_to_gr = False
 if iq_to_gr:
     from diffpy.pdfgetx import PDFConfig
     global gr_path, cfg_fn, iq_fn, bkg_fn
     gr_path = '/home/xf28id2/Documents/ChengHung/pdfstream_test/'
     cfg_fn = '/home/xf28id2/Documents/ChengHung/pdfstream_test/pdfgetx3.cfg'
     
-    ### CsPbBr2 test
-    iq_fn = glob.glob(os.path.join(gr_path, '**CsPbBr2**.chi'))
-    bkg_fn = glob.glob(os.path.join(gr_path, '**Tol_Olm_bkg**.chi'))
+    # ### CsPbBr2 test
+    # iq_fn = glob.glob(os.path.join(gr_path, '**CsPbBr2**.chi'))
+    # bkg_fn = glob.glob(os.path.join(gr_path, '**Tol_Olm_bkg**.chi'))
     
-    # bkg_fn = ['/nsls2/data/xpd-new/legacy/processed/xpdUser/tiff_base/Toluene_OleAcid_mask/integration/Toluene_OleAcid_mask_20240602-122852_c49480_primary-1_mean_q.chi']
+    bkg_fn = ['/nsls2/data/xpd-new/legacy/processed/xpdUser/tiff_base/Toluene_OleAcid_mask/integration/Toluene_OleAcid_mask_20240602-122852_c49480_primary-1_mean_q.chi']
     
-search_and_match = True
+search_and_match = False
 if search_and_match:
     from updated_pipeline_pdffit2 import Refinery
     mystery_path = "/home/xf28id2/Documents/ChengHung/pdffit2_example/CsPbBr3"
     # mystery_path = "'/home/xf28id2/Documents/ChengHung/pdfstream_test/gr"
     results_path = "/home/xf28id2/Documents/ChengHung/pdffit2_example/results_CsPbBr_chemsys_search"
 
-fitting_pdf = True
+fitting_pdf = False
 if fitting_pdf:
     global pdf_cif_dir, cif_list, gr_data
     pdf_cif_dir = '/home/xf28id2/Documents/ChengHung/pdffit2_example/CsPbBr3/'
@@ -150,7 +150,7 @@ use_sandbox = True
 if use_sandbox:
     sandbox_tiled_client = from_uri("https://tiled.nsls2.bnl.gov/api/v1/metadata/xpd/sandbox")
 
-write_to_sandbox = True
+write_to_sandbox = False
 if write_to_sandbox:
     sandbox_tiled_client = from_uri("https://tiled.nsls2.bnl.gov/api/v1/metadata/xpd/sandbox")
 
@@ -331,14 +331,14 @@ def print_kafka_messages(beamline_acronym_01, beamline_acronym_02, csv_path=csv_
                 u = plot_uvvis(qepro_dic, metadata_dic)
                 
                 if use_sandbox:
-                    # iq_df = np.asarray([iq_Q, iq_I])
-                    # iq_df2 = pd.DataFrame()
-                    # iq_df2['q'] = iq_Q
-                    # iq_df2['I(q)'] = iq_I
+                    iq_df = np.asarray([iq_Q, iq_I])
+                    iq_df2 = pd.DataFrame()
+                    iq_df2['q'] = iq_Q
+                    iq_df2['I(q)'] = iq_I
                     
-                    ### CsPbBr2 test
-                    iq_df = pd.read_csv(iq_fn[-1], skiprows=1, names=['q', 'I(q)'], sep=' ').to_numpy().T
-                    iq_df2 = pd.read_csv(iq_fn[-1], skiprows=1, names=['q', 'I(q)'], sep=' ')
+                    # ### CsPbBr2 test
+                    # iq_df = pd.read_csv(iq_fn[-1], skiprows=1, names=['q', 'I(q)'], sep=' ').to_numpy().T
+                    # iq_df2 = pd.read_csv(iq_fn[-1], skiprows=1, names=['q', 'I(q)'], sep=' ')
                 
                 else:
                     pass
@@ -347,10 +347,10 @@ def print_kafka_messages(beamline_acronym_01, beamline_acronym_02, csv_path=csv_
                 if iq_to_gr:
                     # Grab metadat from stream_name = fluorescence for naming gr file
                     fn_uid = de._fn_generator(uid, beamline_acronym=beamline_acronym_01)
-                    # gr_fn = f'{fn_uid}_scattering.gr'
+                    gr_fn = f'{fn_uid}_scattering.gr'
                     
-                    ### CsPbBr2 test
-                    gr_fn = f'{iq_fn[:-4]}.gr'
+                    # ### CsPbBr2 test
+                    # gr_fn = f'{iq_fn[:-4]}.gr'
                     
                     # Build pdf config file from a scratch
                     pdfconfig = PDFConfig()
@@ -396,8 +396,8 @@ def print_kafka_messages(beamline_acronym_01, beamline_acronym_02, csv_path=csv_
                 
                 gr_fit_df = pd.DataFrame()
                 if fitting_pdf:
-                    ### CsPbBr2 test
-                    gr_data = '/home/xf28id2/Documents/ChengHung/pdffit2_example/CsPbBr3/CsPbBr3.gr'
+                    # ### CsPbBr2 test
+                    # gr_data = '/home/xf28id2/Documents/ChengHung/pdffit2_example/CsPbBr3/CsPbBr3.gr'
                     
                     gr_df = pd.read_csv(gr_data, names=['r', 'g(r)'], sep =' ')
                     pf = pc._pdffit2_CsPbX3(gr_data, cif_list, rmax=100, qmax=14, qdamp=0.031, qbroad=0.032, 
@@ -634,16 +634,16 @@ def print_kafka_messages(beamline_acronym_01, beamline_acronym_02, csv_path=csv_
                             plqy_dic = None
                             optical_property = None
                         
-                    ## Save fitting data
-                    print(f'\nFitting function: {f_fit}\n')
-                    de.dic_to_csv_for_stream(saving_path, qepro_dic, metadata_dic, stream_name=stream_name, fitting=ff, plqy_dic=plqy_dic)
-                    print(f'\n** export fitting results complete**\n')
-                    
-                    ## Plot fitting data
-                    u.plot_peak_fit(x, y, f_fit, popt, peak=p, fill_between=True)
-                    print(f'\n** plot fitting results complete**\n')
-                    print(f'{peak = }')
-                    print(f'{prop = }')
+                        ## Save fitting data
+                        print(f'\nFitting function: {f_fit}\n')
+                        de.dic_to_csv_for_stream(saving_path, qepro_dic, metadata_dic, stream_name=stream_name, fitting=ff, plqy_dic=plqy_dic)
+                        print(f'\n** export fitting results complete**\n')
+                        
+                        ## Plot fitting data
+                        u.plot_peak_fit(x, y, f_fit, popt, peak=p, fill_between=True)
+                        print(f'\n** plot fitting results complete**\n')
+                        print(f'{peak = }')
+                        print(f'{prop = }')
                     
                     ## Append good/bad idetified results
                     if stream_name == 'take_a_uvvis':

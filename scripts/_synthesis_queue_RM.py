@@ -127,7 +127,7 @@ def synthesis_queue(
 			flowplan = BPlan('start_group_infuse', [pump_list[-1]], [rate_list[i][-1]])
 			RM.item_add(flowplan, pos=pos)
 			
-			restplan = BPlan('sleep_sec_q', 5)
+			restplan = BPlan('sleep_sec_q', 30)
 			RM.item_add(restplan, pos=pos)
 		
 
@@ -157,7 +157,15 @@ def synthesis_queue(
 		restplan = BPlan('sleep_sec_q', 5)
 		RM.item_add(restplan, pos=pos)
 		
-		
+
+		## 6.0 Set global parameters in Qserver
+		scanplan = BPlan('set_glbl_qserver',
+                   		frame_acq_time=0.5, 
+                     	dk_window=1000, 
+                      	auto_load_calib=True)
+		RM.item_add(scanplan, pos=pos)
+
+
 		## 6. Start xray_uvvis bundle plan to take real data  ('pe1c' or 'det')
 		scanplan = BPlan('xray_uvvis_plan', 'pe1c', 'qepro', 
 						num_abs=num_abs, 
@@ -172,7 +180,7 @@ def synthesis_queue(
 		RM.item_add(scanplan, pos=pos)
         
         ## 6.1 sleep 20 seconds for stopping
-		restplan = BPlan('sleep_sec_q', 5)
+		restplan = BPlan('sleep_sec_q', 20)
 		RM.item_add(restplan, pos=pos)
         
 

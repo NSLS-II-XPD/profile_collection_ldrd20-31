@@ -459,3 +459,43 @@ def cal_equilibrium2(mixer_pump_list, ratio=1, tubing_ID_mm=1.016):
     # yield from sleep_sec_q(res_time_sec*ratio)
 
 
+
+def cal_equilibrium3(mixer_pump_list, ratio=1, tubing_ID_mm=1.016):
+    ## example of mixer_pump_list_mixer : ['1st mixer', pump01 in 1st mixer, pump02 in 1st mixer, pump03 in 1st mixer,, ...]
+    ## ex: mixer_pump_list = [['30 cm', dds2_p1, dds2_p2], ['60 cm', dds2_p1, dds2_p2, dds1_p2]]
+
+    res_time_sec=0
+
+    for mixer_pump in mixer_pump_list:
+        
+        ## Calculate total volume (mm3) of mixer
+        mixer = mixer_pump[0]
+        mixer_length = float(mixer.split(' ')[0])
+        mixer_unit = mixer.split(' ')[1]
+        l_unit_const = l_unit_converter(l0=mixer_unit, l1='m')
+        mixer_meter = mixer_length * l_unit_const
+        mixer_vol_mm3 = np.pi*((tubing_ID_mm/2)**2)*mixer_meter*1000
+
+        ## Sum up all rates in each mixer
+        infuse_rates = [pump.read_infuse_rate.get() for pump in mixer_pump[1:]]
+        infuse_rate_unit = [pump.read_infuse_rate_unit.get() for pump in mixer_pump[1:]]
+        pump_status = [pump.status.get() for pump in mixer_pump[1:]]
+        total_rate = 0
+        for i in range(len(infuse_rates)):
+            rate = infuse_rates[i]
+            rate_unit = infuse_rate_unit[i]
+            unit_const = vol_unit_converter(v0=rate_unit[:2], v1='ul')/t_unit_converter(t0=rate_unit[3:], t1='min')
+            # if pump_status[i] == 'Infusing':
+            #     _is_infusing = True
+            # else:
+            #     _is_infusing = False
+            _is_infusing = True
+
+            total_rate += rate*unit_const*_is_infusing
+
+        res_time_sec += 60*mixer_vol_mm3/total_rate
+
+    print(f'Reaction resident time is {res_time_sec:.2f} seconds.')
+    print(f'Wait for {ratio} times of resident time, in total of {res_time_sec*ratio:.2f} seconds.')
+    # yield from sleep_sec_q(res_time_sec*ratio)
+
