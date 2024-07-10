@@ -5,6 +5,7 @@ import numpy as np
 import pandas as pd
 import os
 from _data_analysis import *
+import json
 
 
 
@@ -25,6 +26,31 @@ def _read_input_xlsx(fn, sheet_name='inputs', skiprows=1, header=None, index_col
                     ll = df.loc[i].iloc[j].dropna().tolist()
                     input_dic[i].append(ll)
     return input_dic
+
+
+
+
+## dump or read glbl["_dark_dict_list"] into or from a json file
+def _dark_json(_dark_dict_list, json_fn, dump_or_load='dump'):
+    if dump_or_load == 'dump':
+        with open(json_fn, 'w') as f:
+            # indent=2 is not needed but makes the file human-readable 
+            # if the data is nested
+            json.dump(_dark_dict_list, f, indent=2)
+            
+        print(f'Dump dark_dict_list to {json_fn}')
+
+    elif dump_or_load == 'load':
+        with open(json_fn, 'r') as f:
+            new_dark = json.load(f)
+        for dark in new_dark:
+            _dark_dict_list.append(dark)
+        
+        print(f'Append dark list from {os.path.basename(json_fn)} to _dark_dict_list')
+        # return _dark_dict_list
+        
+    
+
 
 
 ## Creat file name based on date, time, uid, sample_name/type from fluorescence stream

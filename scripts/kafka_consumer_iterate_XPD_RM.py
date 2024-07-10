@@ -90,7 +90,8 @@ sq.synthesis_queue(
                     name_by_prefix=bool(prefix[0]),  
 					num_abs=num_uvvis[0], 
 					num_flu=num_uvvis[1],
-                    det1_time=num_uvvis[2], 
+                    det1_time=num_uvvis[2],
+                    det1_frame_rate=num_uvvis[3],
                     zmq_control_addr=zmq_control_addr, 
 					zmq_info_addr=zmq_info_addr, 
                     )
@@ -111,25 +112,25 @@ post_dilute = True
 write_agent_data = True
 agent_data_path = '/home/xf28id2/Documents/ChengHung/202405_halide_data/20240702_Br'
 
-USE_AGENT_iterate = False
+USE_AGENT_iterate = True
 peak_target = 515
 if USE_AGENT_iterate:
     import torch
     from prepare_agent_pdf import build_agen
     agent = build_agen(peak_target=peak_target, agent_data_path=agent_data_path)
 
-iq_to_gr = False
+iq_to_gr = True
 if iq_to_gr:
     from diffpy.pdfgetx import PDFConfig
     global gr_path, cfg_fn, iq_fn, bkg_fn
     gr_path = '/home/xf28id2/Documents/ChengHung/pdfstream_test/'
     cfg_fn = '/home/xf28id2/Documents/ChengHung/pdfstream_test/pdfgetx3.cfg'
-    
-    # ### CsPbBr2 test
-    # iq_fn = glob.glob(os.path.join(gr_path, '**CsPbBr2**.chi'))
-    # bkg_fn = glob.glob(os.path.join(gr_path, '**Tol_Olm_bkg**.chi'))
-    
     bkg_fn = ['/nsls2/data/xpd-new/legacy/processed/xpdUser/tiff_base/Toluene_OleAcid_mask/integration/Toluene_OleAcid_mask_20240602-122852_c49480_primary-1_mean_q.chi']
+    
+    ### CsPbBr2 test
+    iq_fn = glob.glob(os.path.join(gr_path, '**CsPbBr2**.chi'))[0]
+    cfg_fn = glob.glob(os.path.join(gr_path, '**CsPbBr2**.cfg'))[0]
+    bkg_fn = glob.glob(os.path.join(gr_path, '**Tol_Olm_bkg**.chi'))
     
 search_and_match = False
 if search_and_match:
@@ -150,7 +151,7 @@ use_sandbox = True
 if use_sandbox:
     sandbox_tiled_client = from_uri("https://tiled.nsls2.bnl.gov/api/v1/metadata/xpd/sandbox")
 
-write_to_sandbox = False
+write_to_sandbox = True
 if write_to_sandbox:
     sandbox_tiled_client = from_uri("https://tiled.nsls2.bnl.gov/api/v1/metadata/xpd/sandbox")
 
@@ -336,9 +337,9 @@ def print_kafka_messages(beamline_acronym_01, beamline_acronym_02, csv_path=csv_
                     iq_df2['q'] = iq_Q
                     iq_df2['I(q)'] = iq_I
                     
-                    # ### CsPbBr2 test
-                    # iq_df = pd.read_csv(iq_fn[-1], skiprows=1, names=['q', 'I(q)'], sep=' ').to_numpy().T
-                    # iq_df2 = pd.read_csv(iq_fn[-1], skiprows=1, names=['q', 'I(q)'], sep=' ')
+                    ### CsPbBr2 test
+                    iq_df = pd.read_csv(iq_fn, skiprows=1, names=['q', 'I(q)'], sep=' ').to_numpy().T
+                    iq_df2 = pd.read_csv(iq_fn, skiprows=1, names=['q', 'I(q)'], sep=' ')
                 
                 else:
                     pass
@@ -349,8 +350,8 @@ def print_kafka_messages(beamline_acronym_01, beamline_acronym_02, csv_path=csv_
                     fn_uid = de._fn_generator(uid, beamline_acronym=beamline_acronym_01)
                     gr_fn = f'{fn_uid}_scattering.gr'
                     
-                    # ### CsPbBr2 test
-                    # gr_fn = f'{iq_fn[:-4]}.gr'
+                    ### CsPbBr2 test
+                    gr_fn = f'{iq_fn[:-4]}.gr'
                     
                     # Build pdf config file from a scratch
                     pdfconfig = PDFConfig()
@@ -396,12 +397,12 @@ def print_kafka_messages(beamline_acronym_01, beamline_acronym_02, csv_path=csv_
                 
                 gr_fit_df = pd.DataFrame()
                 if fitting_pdf:
-                    # ### CsPbBr2 test
-                    # gr_data = '/home/xf28id2/Documents/ChengHung/pdffit2_example/CsPbBr3/CsPbBr3.gr'
+                    ### CsPbBr2 test
+                    gr_data = '/home/xf28id2/Documents/ChengHung/pdffit2_example/CsPbBr3/CsPbBr3.gr'
                     
                     gr_df = pd.read_csv(gr_data, names=['r', 'g(r)'], sep =' ')
                     pf = pc._pdffit2_CsPbX3(gr_data, cif_list, rmax=100, qmax=14, qdamp=0.031, qbroad=0.032, 
-                                            fix_APD=True, toler=0.001, return_pf=True)
+                                            fix_APD=True, toler=0.01, return_pf=True)
                     phase_fraction = pf.phase_fractions()['mass']
                     particel_size = []
                     for i in range(pf.num_phases()):
@@ -591,8 +592,8 @@ def print_kafka_messages(beamline_acronym_01, beamline_acronym_02, csv_path=csv_
                                 res_values = []
                                 for i in new_points_label:
                                     if i in new_points['points'].keys():
-                                        res_values.append(new_points['points'][i])
-                                x_tensor = torch.tensor(res_value)
+                                        res_values.append(new_points['points'][i][0])
+                                x_tensor = torch.tensor(res_values)
                                 post = agent.posterior(x_tensor)
                                 post_mean = post.mean.tolist()[0]
                                 post_stddev = post.stddev.tolist()[0]
@@ -748,10 +749,11 @@ def print_kafka_messages(beamline_acronym_01, beamline_acronym_02, csv_path=csv_
                     # rate_list = np.asarray(rate_list)
                     rate_list = []
                     for i in new_points_label:
-                        for key in new_points['points']:
-                            if i == key:
-                                rate_list.append(new_points['points'][key][0])
-                    rate_list.insert(2, sum(rate_list)/10)
+                        if i in new_points['points'].keys():
+                            rate_list.append(new_points['points'][i][0])
+                        else:
+                            rate_list.append(0)
+                    # rate_list.insert(2, sum(rate_list)/10)
                     rate_list.append(sum(rate_list)*5)
                 
                 else:
@@ -776,13 +778,15 @@ def print_kafka_messages(beamline_acronym_01, beamline_acronym_02, csv_path=csv_
                     wash_tube=wash_tube, 
                     name_by_prefix=bool(prefix[0]),  
 					num_abs=num_uvvis[0], 
-					num_flu=num_uvvis[1], 
+					num_flu=num_uvvis[1],
+                    det1_time=num_uvvis[2],
+                    det1_frame_rate=num_uvvis[3],
                     is_iteration=True, 
                     zmq_control_addr=zmq_control_addr, 
 					zmq_info_addr=zmq_info_addr, 
                     )
 
-                RM.queue_start()
+                # RM.queue_start()
     
             # elif use_good_bad:
             else:

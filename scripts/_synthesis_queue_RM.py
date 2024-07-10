@@ -25,6 +25,7 @@ def synthesis_queue(
 					num_abs=5, 
 					num_flu=5, 
 					det1_time=15, 
+		            det1_frame_rate=0.2,
 					pos='back',
                     dummy_qserver=False,
 					is_iteration=False, 
@@ -129,6 +130,15 @@ def synthesis_queue(
 			
 			restplan = BPlan('sleep_sec_q', 30)
 			RM.item_add(restplan, pos=pos)
+   
+		
+  
+  		## 4.0 Configure area detector in Qserver
+		scanplan = BPlan('configure_area_det', 
+                   		det='pe1c', 
+                     	exposure=1, 
+                    	acq_time=det1_frame_rate)
+		RM.item_add(scanplan, pos=pos)
 		
 
 		## 4-1. Take a fluorescence peak to check reaction
@@ -158,25 +168,30 @@ def synthesis_queue(
 		RM.item_add(restplan, pos=pos)
 		
 
-		## 6.0 Set global parameters in Qserver
-		scanplan = BPlan('set_glbl_qserver',
-                   		frame_acq_time=0.5, 
-                     	dk_window=1000, 
-                      	auto_load_calib=True)
+		## 6.0 Print global parameters in Qserver
+		scanplan = BPlan('print_glbl_qserver')
+		RM.item_add(scanplan, pos=pos)
+  
+		
+  		## 6.1 Configure area detector in Qserver
+		scanplan = BPlan('configure_area_det', 
+                   		det='pe1c', 
+                     	exposure=det1_time, 
+                    	acq_time=det1_frame_rate)
 		RM.item_add(scanplan, pos=pos)
 
 
 		## 6. Start xray_uvvis bundle plan to take real data  ('pe1c' or 'det')
-		scanplan = BPlan('xray_uvvis_plan', 'pe1c', 'qepro', 
+		scanplan = BPlan('xray_uvvis_plan2', 'pe1c', 'qepro', 
 						num_abs=num_abs, 
-						num_flu=num_flu,
-      					det1_time=det1_time, 
+						num_flu=num_flu, 
 						sample_type=sample[i], 
 						spectrum_type='Absorbtion', 
 						correction_type='Reference', 
 						pump_list=pump_list, 
 						precursor_list=precursor_list, 
-						mixer=mixer)
+						mixer=mixer, 
+      					dilute_pump=pump_list[-1])
 		RM.item_add(scanplan, pos=pos)
         
         ## 6.1 sleep 20 seconds for stopping
