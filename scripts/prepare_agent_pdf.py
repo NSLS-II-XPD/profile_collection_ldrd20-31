@@ -11,18 +11,28 @@ from tqdm import tqdm
 from blop import Agent, DOF, Objective
 
 
-def build_agen(peak_target=660, peak_tolerance=5, size_target=6, agent_data_path='/'):
+def build_agen(peak_target=660, peak_tolerance=5, size_target=6, agent_data_path='/', use_OAm=False):
     # data_path = '/home/xf28id2/data_ZnCl2'
     #data_path = '/home/xf28id2/data'
     agent_data_path = agent_data_path
 
 
-    dofs = [
-        DOF(description="CsPb(oleate)3", name="infusion_rate_CsPb", units="uL/min", search_domain=(8, 110)),
-        DOF(description="TOABr", name="infusion_rate_Br", units="uL/min", search_domain=(50, 200)),
-        DOF(description="ZnI2", name="infusion_rate_I2", units="uL/min", search_domain=(0, 200)), 
-        DOF(description="ZnCl2", name="infusion_rate_Cl", units="uL/min", search_domain=(0, 200)),
-    ]
+    if use_OAm:
+        dofs = [
+            DOF(description="CsPb(oleate)3", name="infusion_rate_CsPb", units="uL/min", search_domain=(20, 50)),
+            # DOF(description="TOABr", name="infusion_rate_Br", units="uL/min", search_domain=(50, 200)),
+            DOF(description="ZnI2", name="infusion_rate_I2", units="uL/min", search_domain=(0, 200)), 
+            DOF(description="ZnCl2", name="infusion_rate_Cl", units="uL/min", search_domain=(0, 200)),
+            DOF(description="OAm_Tol", name="infusion_rate_OAm", units="uL/min", search_domain=(0, 50)),
+        ]
+
+    else:
+        dofs = [
+            DOF(description="CsPb(oleate)3", name="infusion_rate_CsPb", units="uL/min", search_domain=(8, 110)),
+            DOF(description="TOABr", name="infusion_rate_Br", units="uL/min", search_domain=(50, 200)),
+            DOF(description="ZnI2", name="infusion_rate_I2", units="uL/min", search_domain=(0, 200)), 
+            DOF(description="ZnCl2", name="infusion_rate_Cl", units="uL/min", search_domain=(0, 200)),
+        ]
     
 
     
@@ -101,7 +111,7 @@ def build_agen(peak_target=660, peak_tolerance=5, size_target=6, agent_data_path
         # for key in df.keys():
         #     data[key] = df[key][i]
             
-        r_2_min = 0.05
+        r_2_min = 0.70
         try: 
             if data['r_2'] < r_2_min:
                 print(f'Skip because "r_2" of {df["uid"][i]} is {data["r_2"]:.2f} < {r_2_min}.')

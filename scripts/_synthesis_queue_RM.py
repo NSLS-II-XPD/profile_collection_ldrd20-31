@@ -4,7 +4,7 @@ import pandas as pd
 import _data_export as de
 from bluesky_queueserver_api.zmq import REManagerAPI
 from bluesky_queueserver_api import BPlan, BInst
-# from ophyd.sim import det, noisy_det
+from ophyd.sim import det, noisy_det
 
 ## Arrange tasks of for PQDs synthesis
 def synthesis_queue(
@@ -24,6 +24,7 @@ def synthesis_queue(
 					name_by_prefix=True,  
 					num_abs=5, 
 					num_flu=5, 
+					det1 = det, 
 					det1_time=15, 
 		            det1_frame_rate=0.2,
 					pos='back',
@@ -172,17 +173,17 @@ def synthesis_queue(
 		scanplan = BPlan('print_glbl_qserver')
 		RM.item_add(scanplan, pos=pos)
   
-		
-  		## 6.1 Configure area detector in Qserver
-		scanplan = BPlan('configure_area_det', 
-                   		det='pe1c', 
-                     	exposure=det1_time, 
-                    	acq_time=det1_frame_rate)
-		RM.item_add(scanplan, pos=pos)
+		if det1 == 'pe1c':
+			## 6.1 Configure area detector in Qserver
+			scanplan = BPlan('configure_area_det', 
+							det=det1, 
+							exposure=det1_time, 
+							acq_time=det1_frame_rate)
+			RM.item_add(scanplan, pos=pos)
 
 
 		## 6. Start xray_uvvis bundle plan to take real data  ('pe1c' or 'det')
-		scanplan = BPlan('xray_uvvis_plan2', 'pe1c', 'qepro', 
+		scanplan = BPlan('xray_uvvis_plan2', det1, 'qepro', 
 						num_abs=num_abs, 
 						num_flu=num_flu, 
 						sample_type=sample[i], 

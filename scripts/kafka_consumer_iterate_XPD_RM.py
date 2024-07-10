@@ -90,8 +90,9 @@ sq.synthesis_queue(
                     name_by_prefix=bool(prefix[0]),  
 					num_abs=num_uvvis[0], 
 					num_flu=num_uvvis[1],
-                    det1_time=num_uvvis[2],
-                    det1_frame_rate=num_uvvis[3],
+                    det1=num_uvvis[2],
+                    det1_time=num_uvvis[3],
+                    det1_frame_rate=num_uvvis[4],
                     zmq_control_addr=zmq_control_addr, 
 					zmq_info_addr=zmq_info_addr, 
                     )
@@ -103,21 +104,25 @@ print(f'Sample: {sample}')
 rate_label_dic =   {'CsPb':'infusion_rate_CsPb', 
                     'Br':'infusion_rate_Br', 
                     'ZnI':'infusion_rate_I2', 
-                    'ZnCl':'infusion_rate_Cl'}
+                    'ZnCl':'infusion_rate_Cl', 
+                    'OAm':'infusion_rate_OAm',}
 
-new_points_label = ['infusion_rate_CsPb', 'infusion_rate_Br', 'infusion_rate_I2', 'infusion_rate_Cl']
+new_points_label = ['infusion_rate_CsPb', 'infusion_rate_Br', 'infusion_rate_I2', 
+                    'infusion_rate_Cl', 'infusion_rate_OAm']
 
 use_good_bad = True
 post_dilute = True
+fix_Br_ratio = True
 write_agent_data = True
-agent_data_path = '/home/xf28id2/Documents/ChengHung/202405_halide_data/20240702_Br'
+# agent_data_path = '/home/xf28id2/Documents/ChengHung/202405_halide_data/20240702_Br'
+agent_data_path = '/home/xf28id2/Documents/ChengHung/20240625_oceanview'
 
 USE_AGENT_iterate = True
-peak_target = 515
+peak_target = 455
 if USE_AGENT_iterate:
     import torch
     from prepare_agent_pdf import build_agen
-    agent = build_agen(peak_target=peak_target, agent_data_path=agent_data_path)
+    agent = build_agen(peak_target=peak_target, agent_data_path=agent_data_path, use_OAm=True)
 
 iq_to_gr = True
 if iq_to_gr:
@@ -132,14 +137,14 @@ if iq_to_gr:
     cfg_fn = glob.glob(os.path.join(gr_path, '**CsPbBr2**.cfg'))[0]
     bkg_fn = glob.glob(os.path.join(gr_path, '**Tol_Olm_bkg**.chi'))
     
-search_and_match = False
+search_and_match = True
 if search_and_match:
     from updated_pipeline_pdffit2 import Refinery
     mystery_path = "/home/xf28id2/Documents/ChengHung/pdffit2_example/CsPbBr3"
     # mystery_path = "'/home/xf28id2/Documents/ChengHung/pdfstream_test/gr"
     results_path = "/home/xf28id2/Documents/ChengHung/pdffit2_example/results_CsPbBr_chemsys_search"
 
-fitting_pdf = False
+fitting_pdf = True
 if fitting_pdf:
     global pdf_cif_dir, cif_list, gr_data
     pdf_cif_dir = '/home/xf28id2/Documents/ChengHung/pdffit2_example/CsPbBr3/'
@@ -461,7 +466,7 @@ def print_kafka_messages(beamline_acronym_01, beamline_acronym_02, csv_path=csv_
                 
                 ## Apply an offset to zero baseline of absorption spectra
                 elif stream_name == 'absorbance':
-                    print(f'\n*** start to flter absorbance within 15%-85% due to PF oil phase***\n')
+                    print(f'\n*** start to filter absorbance within 15%-85% due to PF oil phase***\n')
                     ## Apply percnetile filtering for absorption spectra, defaut percent_range = [15, 85]
                     abs_per = da.percentile_abs(qepro_dic['QEPro_x_axis'], qepro_dic['QEPro_output'], percent_range=[15, 85])
                     
@@ -576,7 +581,7 @@ def print_kafka_messages(beamline_acronym_01, beamline_acronym_02, csv_path=csv_
                             if USE_AGENT_iterate:
 
                                 # print(f"\ntelling agent {agent_data}")
-                                agent = build_agen(peak_target=peak_target, agent_data_path=agent_data_path)
+                                agent = build_agen(peak_target=peak_target, agent_data_path=agent_data_path, use_OAm=True)
 
                                 if len(agent.table) < 2:
                                     acq_func = "qr"
@@ -689,9 +694,9 @@ def print_kafka_messages(beamline_acronym_01, beamline_acronym_02, csv_path=csv_
                     if write_agent_data and (stream_name == 'fluorescence'):
                         # agent_data.update({'sandbox_uid': sandbox_uid})                               
                         with open(f"{agent_data_path}/{data_id}.json", "w") as f:
-                            json.dump(agent_data, f)
+                            json.dump(agent_data, f, indent=2)
 
-                        print(f"\nwrote to {agent_data_path}")
+                        print(f"\nwrote to {agent_data_path}\n")
 
             print(f'*** Accumulated num of good data: {len(good_data)} ***\n')
             print(f'good_data = {good_data}\n')
@@ -742,18 +747,28 @@ def print_kafka_messages(beamline_acronym_01, beamline_acronym_02, csv_path=csv_
                 print('*** Add new points from agent to the fron of qsever ***\n')
                 print(f'*** New points from agent: {new_points} ***\n')
                 
-                if post_dilute:
+                if (post_dilute is True) and (fix_Br_ratio is False):
                     set_target_list = [0 for i in range(len(pump_list))]
-                    # rate_list = new_points['points'].tolist()[0][:-1] + [new_points['points'].sum()]
-                    # rate_list = [rr for rr in new_points['points'].tolist()[0] if rr!=0] + [new_points['points'].sum()]
-                    # rate_list = np.asarray(rate_list)
                     rate_list = []
                     for i in new_points_label:
                         if i in new_points['points'].keys():
                             rate_list.append(new_points['points'][i][0])
                         else:
-                            rate_list.append(0)
-                    # rate_list.insert(2, sum(rate_list)/10)
+                            pass
+                            # rate_list.append(0)
+                    # rate_list.insert(1, rate_list[0]*5)
+                    rate_list.append(sum(rate_list)*5)
+
+                elif (post_dilute is True) and (fix_Br_ratio is True):
+                    set_target_list = [0 for i in range(len(pump_list))]
+                    rate_list = []
+                    for i in new_points_label:
+                        if i in new_points['points'].keys():
+                            rate_list.append(new_points['points'][i][0])
+                        else:
+                            pass
+                            # rate_list.append(0)
+                    rate_list.insert(1, rate_list[0]*5)
                     rate_list.append(sum(rate_list)*5)
                 
                 else:
@@ -779,8 +794,9 @@ def print_kafka_messages(beamline_acronym_01, beamline_acronym_02, csv_path=csv_
                     name_by_prefix=bool(prefix[0]),  
 					num_abs=num_uvvis[0], 
 					num_flu=num_uvvis[1],
-                    det1_time=num_uvvis[2],
-                    det1_frame_rate=num_uvvis[3],
+                    det1=num_uvvis[2],
+                    det1_time=num_uvvis[3],
+                    det1_frame_rate=num_uvvis[4],
                     is_iteration=True, 
                     zmq_control_addr=zmq_control_addr, 
 					zmq_info_addr=zmq_info_addr, 
