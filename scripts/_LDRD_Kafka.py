@@ -15,59 +15,53 @@ import _data_analysis as da
 
 
 
-def _Qparameters():
-    # qserver_list=['dummy_kafka', 'dummy_qserver', 'csv_path', 
-    qserver_list=['key_height', 'height', 'distance', 
-                'pump_list', 'precursor_list', 'syringe_mater_list', 'syringe_list', 
-                'target_vol_list', 'set_target_list', 'infuse_rates', 'sample', 'mixer', 
-                'wash_tube', 'resident_t_ratio', 'PLQY', 'prefix', 'num_uvvis']
+def _qserver_inputs():
+    qserver_list=[
+            'dummy_qserver', 'name_by_prefix', 'prefix', 
+            'pump_list', 'precursor_list', 'syringe_mater_list', 'syringe_list', 
+            'target_vol_list', 'sample', 'mixer', 'wash_tube', 'resident_t_ratio', 
+            'rate_unit', 'uvvis_config', 'perkin_config', 
+            'set_target_list', 'infuse_rates', 
+            ]
 
     return qserver_list
 
-'''
-dummy_kafka = bool(input_dic['dummy_test'][0])
-dummy_qserver = bool(input_dic['dummy_test'][1])
-csv_path = input_dic['csv_path'][0]
-key_height = input_dic['key_height']
-height = input_dic['height']
-distance = input_dic['distance']
-pump_list = input_dic['pump_list']
-precursor_list = input_dic['precursor_list']
-syringe_mater_list = input_dic['syringe_mater_list']
-syringe_list = input_dic['syringe_list']
-target_vol_list = input_dic['target_vol_list']
-set_target_list = input_dic['set_target_list']
-infuse_rates = input_dic['infuse_rates']
-sample = input_dic['sample']
-mixer = input_dic['mixer']
-wash_tube = input_dic['wash_tube']
-resident_t_ratio = input_dic['resident_t_ratio']
-PLQY = input_dic['PLQY']
-prefix = input_dic['prefix']
-num_uvvis = input_dic['num_uvvis']
-'''
 
-class input_dic():
-    def __init__(self, a_dict):
-        # self.input_dic = input_dic()
-        self.dummy_kafka = bool(a_dict['dummy_test'][0])
-        self.dummy_qserver = bool(a_dict['dummy_test'][1])
-        self.csv_path = a_dict['csv_path'][0]
+def _kafka_process():
+    kafka_list=[
+            'dummy_kafka', 'csv_path', 'key_height', 'height', 'distance', 'PLQY', 
+            'rate_label_dic_key', 'rate_label_dic_value', 'new_points_label', 
+            'use_good_bad', 'post_dilute', 'write_agent_data', 'agent_data_path', 
+            'USE_AGENT_iterate', 'peak_target', 'agent', 
+            'iq_to_gr', 'gr_path', 'cfg_fn', 'iq_fn', 'bkg_fn', 
+            'search_and_match', 'mystery_path', 'results_path', 
+            'fitting_pdf', 'pdf_cif_dir', 'cif_list', 'gr_data', 
+            'use_sandbox', 'write_to_sandbox', 'sandbox_tiled_client', 
+            ]
 
-        for key in _Qparameters():
-            setattr(self, key, a_dict[key])
-
-        if self.prefix:
-            self.sample = de._auto_name_sample(self.infuse_rates, prefix=self.prefix[1:])
+    return kafka_list
 
 
-class xlsx_to_qserver():
-    def __init__(self, xlsx_fn, sheet_name='inputs'):
+
+class dic_to_inputs():
+    def __init__(self, parameters_dict, parameters_list):
+
+        for key in parameters_list:
+            # print(f'{key = }')
+            try:
+                setattr(self, key, parameters_dict[key])
+            except KeyError:
+                setattr(self, key, [])
+                print(f'{key = } not in parameters_dict so set to empty list.')
+
+
+class xlsx_to_inputs():
+    def __init__(self, parameters_list, xlsx_fn, sheet_name='inputs'):
+        self.parameters_list = parameters_list
         self.from_xlsx = xlsx_fn
         self.sheet_name = sheet_name
         self.print_dic = de._read_input_xlsx(self.from_xlsx, sheet_name=self.sheet_name)
-
-        self.input_dic = input_dic(self.print_dic)
+        self.inputs = dic_to_inputs(self.print_dic, self.parameters_list)
 
     # def add_to_queue(self):
     #     sq.synthesis_queue(
@@ -91,7 +85,7 @@ class xlsx_to_qserver():
 	# 				zmq_info_addr=self.input_dic.zmq_info_addr, 
     #                 )
 
-
+'''
 class kafka():
     def __init__(self):
         self.rate_label_dic = {'CsPb':'infusion_rate_CsPb', 
@@ -119,7 +113,7 @@ class kafka():
 
 
 
-'''
+
 USE_AGENT_iterate = False
 peak_target = 515
 if USE_AGENT_iterate:
