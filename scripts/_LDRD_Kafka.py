@@ -45,11 +45,13 @@ def _kafka_process():
 
 class dic_to_inputs():
     def __init__(self, parameters_dict, parameters_list):
+        self.parameters_dict = parameters_dict
+        self.parameters_list = parameters_list
 
-        for key in parameters_list:
+        for key in self.parameters_list:
             # print(f'{key = }')
             try:
-                setattr(self, key, parameters_dict[key])
+                setattr(self, key, self.parameters_dict[key])
             except KeyError:
                 setattr(self, key, [])
                 print(f'{key = } not in parameters_dict so set to empty list.')
