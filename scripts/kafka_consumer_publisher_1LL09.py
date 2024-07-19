@@ -72,10 +72,10 @@ rate_label_dic =   {'CsPb':'infusion_rate_CsPb',
 
 new_points_label = ['infusion_rate_CsPb', 'infusion_rate_Br', 'infusion_rate_I2', 'infusion_rate_Cl']
 
-# use_good_bad = True
+use_good_bad = True
 # post_dilute = True
-write_agent_data = False
-agent_data_path = '/home/xf28id2/Documents/ChengHung/202405_halide_data/with_xray'
+write_agent_data = True
+agent_data_path = '/home/xf28id2/Documents/ChengHung/20240717_PS_video/agent_json'
 
 # USE_AGENT_iterate = False
 # peak_target = 515
@@ -101,6 +101,7 @@ if search_and_match:
     # mystery_path = "'/home/xf28id2/Documents/ChengHung/pdfstream_test/gr"
     results_path = "/home/xf28id2/Documents/ChengHung/pdffit2_example/results_CsPbBr_chemsys_search"
 
+global fitting_pdf, pdf_cif_dir, cif_list, gr_data
 fitting_pdf = False
 if fitting_pdf:
     import _pdf_calculator as pc
@@ -108,6 +109,17 @@ if fitting_pdf:
     pdf_cif_dir = '/home/xf28id2/Documents/ChengHung/pdffit2_example/CsPbBr3/'
     cif_list = [os.path.join(pdf_cif_dir, 'CsPbBr3_Orthorhombic.cif')]
     gr_data = os.path.join(pdf_cif_dir, 'CsPbBr3.gr')
+
+global using_ddp, iq_path, iq_list, ddp_fn, start_id, prj
+using_ddp = True
+if using_ddp:
+    from diffpy.pdfgui.tui import LoadProject
+    iq_path = '/home/xf28id2/Documents/ChengHung/20240717_PS_video/CsPbCl3_iq'
+    iq_list = glob.glob(iq_path + '/**.chi')
+    ddp_fn = '/home/xf28id2/Documents/ChengHung/20240717_PS_video/VCMFitsTwoPhase(Sol) (Final)_03.ddp3'
+    start_id = 0
+    prj = LoadProject(filename=ddp_fn)
+
 
 global sandbox_tiled_client
 use_sandbox = False
@@ -123,7 +135,10 @@ if write_to_sandbox:
 def print_kafka_messages(beamline_acronym, csv_path=csv_path, 
                          key_height=key_height, height=height, distance=distance,  
                          dummy_test=dummy_kafka, plqy=PLQY, 
-                         agent_data_path=agent_data_path, rate_label_dic=rate_label_dic):
+                         agent_data_path=agent_data_path, rate_label_dic=rate_label_dic,
+                        #  iq_list=iq_list, ddp_fn=ddp_fn, start_id=start_id, prj=prj
+                         ):
+                         
 
     print(f"Listening for Kafka messages for {beamline_acronym}")
     print(f'Defaul parameters:\n'
@@ -133,7 +148,6 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
           f'                  distance: {distance}\n'
           f'{write_agent_data = }\n'
           f'{agent_data_path = }\n')
-
 
     global tiled_client, path_0, path_1
     # tiled_client = from_profile("nsls2")[beamline_acronym]["raw"]
@@ -155,9 +169,12 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
     # def print_message(name, doc):
     def print_message(consumer, doctype, doc, 
                       bad_data = [], good_data = [], check_abs365 = False, finished = [], 
-                      agent_iteration = [], ):
+                      agent_iteration = [], 
+                    #   iq_list=iq_list, ddp_fn=ddp_fn, start_id=start_id, prj=prj
+                      ):
                     #   pump_list=pump_list, sample=sample, precursor_list=precursor_list, 
                     #   mixer=mixer, dummy_test=dummy_test):
+        global using_ddp, iq_path, iq_list, ddp_fn, start_id, prj, u
         name, message = doc
         # print(
         #     f"{datetime.datetime.now().isoformat()} document: {name}\n"
@@ -223,13 +240,77 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
                 hei = height[0]
                 dis = distance[0]
             
+            
+            ## skip dummy events
+            if ('take_a_uvvis3' in stream_list) or ('scattering3' in stream_list):
+                # stream_name = 'none'
+                stream_list.clear()
+            
             ## obtain phase fraction & particle size from g(r)
             if 'scattering' in stream_list:
+                # Get metadat from stream_name fluorescence for plotting
+                qepro_dic, metadata_dic = de.read_qepro_by_stream(
+                    uid, stream_name='fluorescence', data_agent='tiled', 
+                    beamline_acronym=beamline_acronym)
+                u = plot_uvvis(qepro_dic, metadata_dic)
+                # time.sleep(30)
+
+                gr_fit_df = pd.DataFrame()
                 if fitting_pdf:
-                    phase_fraction, particel_size = pc._pdffit2_CsPbX3(gr_data, cif_list, qmax=20, qdamp=0.031, qbroad=0.032, fix_APD=False, toler=0.001)
+                    # ### CsPbBr2 test
+                    # gr_data = '/home/xf28id2/Documents/ChengHung/pdffit2_example/CsPbBr3/CsPbBr3.gr'
+                    
+                    gr_df = pd.read_csv(gr_data, names=['r', 'g(r)'], sep =' ')
+                    pf = pc._pdffit2_CsPbX3(gr_data, cif_list, rmax=100, qmax=12, qdamp=0.031, qbroad=0.032, 
+                                            fix_APD=True, toler=0.01, return_pf=True)
+                    phase_fraction = pf.phase_fractions()['mass']
+                    particel_size = []
+                    for i in range(pf.num_phases()):
+                        pf.setphase(i+1)
+                        particel_size.append(pf.getvar(pf.spdiameter))
+                    # Grab metadat from stream_name = fluorescence for naming gr file
+                    fn_uid = de._fn_generator(uid, beamline_acronym=beamline_acronym)
+                    fgr_fn = os.path.join(gr_path, f'{fn_uid}_scattering.fgr')
+                    pf.save_pdf(1, f'{fgr_fn}')
                     pdf_property={'Br_ratio': phase_fraction[0], 'Br_size':particel_size[0]}
-                else:
+                    gr_fit = np.asarray([pf.getR(), pf.getpdf_fit()])
+                    # gr_fit_df = pd.DataFrame()
+                    gr_fit_df['fit_r'] = pf.getR()
+                    gr_fit_df['fit_g(r)'] = pf.getpdf_fit()
+                
+                elif using_ddp:
+                    iq_df = pd.read_csv(iq_list[start_id], skiprows=1, sep=' ', names=['q', 'I(q)'])
+                    iq_df = iq_df.to_numpy().T
+                    data_pdf = prj.getDataSets()[start_id]
+                    fitting_obj = prj.getFits()[start_id]
+                    data_pdf._fitrmax = 70
+                    data_pdf._updateRcalcRange()
+                    t0 = time.time()
+                    fitting_obj.start()
+                    while fitting_obj.isThreadRunning():
+                        time.sleep(2)
+                    t1 = time.time()
+                    print(f'\nPDF fitting takes {t1-t0:.2f} seconds.\n')
+                    gr_df = pd.DataFrame()
+                    gr_df['r'] = data_pdf.robs
+                    gr_df['g(r)'] = data_pdf.Gobs
+                    gr_fit = np.asarray([data_pdf.rcalc, data_pdf.Gcalc])
+                    gr_fit_df['fit_r'] = data_pdf.rcalc
+                    gr_fit_df['fit_g(r)'] = data_pdf.Gcalc
                     pdf_property={'Br_ratio': np.nan, 'Br_size': np.nan}
+                    start_id += 1
+                
+                else:
+                    gr_fit = None
+                    gr_fit_df['fit_r'] = np.nan
+                    gr_fit_df['fit_g(r)'] = np.nan
+                    pdf_property={'Br_ratio': np.nan, 'Br_size': np.nan}
+
+                if iq_to_gr:
+                    u.plot_iq_to_gr(iq_df, gr_df.to_numpy().T, gr_fit=gr_fit)
+
+                if using_ddp:
+                    u.plot_iq_to_gr(iq_df, gr_df.to_numpy().T, gr_fit=gr_fit)
                 ## remove 'scattering' from stream_list to avoid redundant work in next for loop
                 stream_list.remove('scattering')
 
@@ -241,7 +322,7 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
                 sample_type = metadata_dic['sample_type']
                 ## Save data in dic into .csv file
                 
-                if stream_name == 'take_a_uvvis':
+                if (stream_name == 'take_a_uvvis') or (stream_name == 'primary'):
                     saving_path = path_1
                 else:
                     saving_path = path_0
@@ -250,6 +331,7 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
                 print(f'\n** export {stream_name} in uid: {uid[0:8]} to ../{os.path.basename(csv_path)} **\n')
                 ## Plot data in dic
                 u = plot_uvvis(qepro_dic, metadata_dic)
+                # time.sleep(30)
                 if len(good_data)==0 and len(bad_data)==0:
                     clear_fig=True
                 else:
@@ -258,7 +340,7 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
                 print(f'\n** Plot {stream_name} in uid: {uid[0:8]} complete **\n')
                     
                 ## Idenfify good/bad data if it is a fluorescence sacn in 'take_a_uvvis'
-                if qepro_dic['QEPro_spectrum_type'][0]==2 and stream_name=='take_a_uvvis':
+                if qepro_dic['QEPro_spectrum_type'][0]==2 and (stream_name=='take_a_uvvis' or stream_name=='primary'):
                     print(f'\n*** start to identify good/bad data in stream: {stream_name} ***\n')
                     x0, y0, data_id, peak, prop = da._identify_one_in_kafka(qepro_dic, metadata_dic, key_height=kh, distance=dis, height=hei, dummy_test=dummy_test)
                 
@@ -376,19 +458,26 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
                             agent_data.update({'PL_fitting':{'fit_function':ff['fit_function'].__name__, 'popt':ff['curve_fit'].tolist()}})
 
                         else:
-                            # plqy_dic = None
+                            plqy_dic = None
                             optical_property = None
                         
+                        ## Save fitting data
                         print(f'\nFitting function: {f_fit}\n')
-                        de.dic_to_csv_for_stream(csv_path, qepro_dic, metadata_dic, stream_name=stream_name, fitting=ff, plqy_dic=plqy_dic)
+                        de.dic_to_csv_for_stream(saving_path, qepro_dic, metadata_dic, stream_name=stream_name, fitting=ff, plqy_dic=plqy_dic)
                         print(f'\n** export fitting results complete**\n')
                         
+                        ## Plot fitting data
                         u.plot_peak_fit(x, y, f_fit, popt, peak=p, fill_between=True)
                         print(f'\n** plot fitting results complete**\n')
-                        if stream_name == 'take_a_uvvis':
-                            good_data.append(data_id)
+                        print(f'{peak = }')
+                        print(f'{prop = }')
                     
-                    elif peak==[] and prop==[]:
+                    ## Append good/bad idetified results
+                    if (stream_name == 'take_a_uvvis') or (stream_name == 'primary'):
+                        good_data.append(data_id)
+                        time.sleep(2)
+
+                    elif (type(peak) == list) and (prop == []):
                         bad_data.append(data_id)
                         print(f"\n*** No need to carry out fitting for {stream_name} in uid: {uid[:8]} ***\n")
                         print(f"\n*** since {stream_name} in uid: {uid[:8]} is a bad data.***\n")
@@ -402,8 +491,9 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
                     except (UnboundLocalError):
                         pass
 
+                    global sandbox_uid
                     ## Save processed data in df and agent_data as metadta in sandbox
-                    if write_to_sandbox:
+                    if write_to_sandbox and (stream_name == 'fluorescence'):
                         df = pd.DataFrame()
                         df['wavelength_nm'] = x0
                         df['absorbance_mean'] = abs_array
@@ -422,7 +512,7 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
                         print(f"\nwrote to Tiled sandbox uid: {sandbox_uid}")
 
                     ## Save agent_data locally
-                    if write_agent_data:
+                    if write_agent_data and (stream_name == 'fluorescence'):
                         # agent_data.update({'sandbox_uid': sandbox_uid})                               
                         with open(f"{agent_data_path}/{data_id}.json", "w") as f:
                             json.dump(agent_data, f)
@@ -433,6 +523,22 @@ def print_kafka_messages(beamline_acronym, csv_path=csv_path,
             print(f'good_data = {good_data}\n')
             print(f'*** Accumulated num of bad data: {len(bad_data)} ***\n') 
             print('########### Events printing division ############\n')
+
+            ## Depend on # of good/bad data, add items into queue item or stop 
+            if len(stream_list) == 0:
+                pass
+
+            elif (stream_name == 'take_a_uvvis' or stream_name == 'primary')  and use_good_bad:
+                if len(good_data) <= 2 and use_good_bad:
+                    print('*** Add another fluorescence and absorption scan to the fron of qsever ***\n')
+
+                elif len(good_data) > 2 and use_good_bad:
+                    print('*** # of good data is enough so go to the next: bundle plan ***\n')
+                    bad_data.clear()
+                    good_data.clear()
+                    finished.append(metadata_dic['sample_type'])
+                    print(f'After event: good_data = {good_data}\n')
+                    print(f'After event: finished sample = {finished}\n')
 
 
     kafka_config = _read_bluesky_kafka_config_file(config_file_path="/etc/bluesky/kafka.yml")

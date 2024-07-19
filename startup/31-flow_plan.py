@@ -293,6 +293,71 @@ def take_a_uvvis_csv_q(sample_type='test', plot=False, csv_path=None, data_agent
 
 
 
+
+def take_a_uvvis_csv_q3(sample_type='test', plot=False, csv_path=None, data_agent='tiled', 
+                        spectrum_type='Absorbtion', correction_type='Reference', 
+                        pump_list=None, precursor_list=None, mixer=None, note=None, md=None):
+    
+    if (pump_list != None and precursor_list != None):
+        _md = {"pumps" : [pump.name for pump in pump_list], 
+                "precursors" : precursor_list, 
+                "infuse_rate" : [pump.read_infuse_rate.get() for pump in pump_list], 
+                "infuse_rate_unit" : [pump.read_infuse_rate_unit.get() for pump in pump_list],
+                "pump_status" : [pump.status.get() for pump in pump_list], 
+                "uvvis" :[spectrum_type, correction_type, qepro.integration_time.get(), qepro.num_spectra.get(), qepro.buff_capacity.get()], 
+                "mixer": mixer,
+                "sample_type": sample_type,
+                "detectors": [qepro.name],
+                "note" : note if note else "None"}
+        _md.update(md or {})
+    
+    if (pump_list == None and precursor_list == None):
+        _md = { "uvvis" :[spectrum_type, correction_type, qepro.integration_time.get(), qepro.num_spectra.get(), qepro.buff_capacity.get()], 
+                "mixer": ['exsitu measurement'],
+                "sample_type": sample_type,
+                "detectors": [qepro.name],
+                "note" : note if note else "None"}
+        _md.update(md or {})
+    
+    # For absorbance: spectrum_type='Absorbtion', correction_type='Reference'
+    # For fluorescence: spectrum_type='Corrected Sample', correction_type='Dark'
+    
+    # qepro.correction.put(correction_type)
+    # qepro.spectrum_type.put(spectrum_type)
+    
+    if spectrum_type == 'Absorbtion':
+        if LED.get()=='Low' and UV_shutter.get()=='High' and qepro.correction.get()==correction_type and qepro.spectrum_type.get()==spectrum_type:
+            uid = (yield from count([qepro], md=_md))
+        else:
+            yield from bps.abs_set(qepro.correction, correction_type, wait=True)
+            yield from bps.abs_set(qepro.spectrum_type, spectrum_type, wait=True)
+            # yield from LED_off()
+            # yield from shutter_open()
+            yield from bps.mv(LED, 'Low', UV_shutter, 'High')
+            yield from bps.sleep(2)
+            uid = (yield from count_stream(qepro, stream_name="take_a_uvvis3", md=_md))
+        
+        
+    else:
+        if LED.get()=='High' and UV_shutter.get()=='Low' and qepro.correction.get()==correction_type and qepro.spectrum_type.get()==spectrum_type:
+            uid = (yield from count([qepro], md=_md))
+        else:
+            yield from bps.abs_set(qepro.correction, correction_type, wait=True)
+            yield from bps.abs_set(qepro.spectrum_type, spectrum_type, wait=True)
+            # yield from shutter_close()
+            # yield from LED_on()
+            yield from bps.mv(LED, 'High', UV_shutter, 'Low')
+            yield from bps.sleep(2)
+            uid = (yield from count_stream(qepro, stream_name="take_a_uvvis3", md=_md))
+    
+    yield from bps.mv(LED, 'Low', UV_shutter, 'Low')
+    
+    if csv_path!=None or plot==True:
+        yield from bps.sleep(2)
+        qepro.export_from_scan(uid, csv_path, sample_type, plot=plot, data_agent=data_agent)
+
+
+
 def l_unit_converter(l0 = 'm', l1 = 'm'):
     l_unit = ['mm', 'cm', 'm']
     l_frame = pd.DataFrame(data={'mm': np.array([1, 10, 1000]), 

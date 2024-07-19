@@ -115,10 +115,10 @@ post_dilute = True
 fix_Br_ratio = True
 write_agent_data = True
 # agent_data_path = '/home/xf28id2/Documents/ChengHung/202405_halide_data/20240702_Br'
-agent_data_path = '/home/xf28id2/Documents/ChengHung/20240625_oceanview'
+agent_data_path = '/home/xf28id2/Documents/ChengHung/202405_halide_data/20240625_oceanview'
 
 USE_AGENT_iterate = True
-peak_target = 455
+peak_target = 475
 if USE_AGENT_iterate:
     import torch
     from prepare_agent_pdf import build_agen
@@ -130,25 +130,26 @@ if iq_to_gr:
     global gr_path, cfg_fn, iq_fn, bkg_fn
     gr_path = '/home/xf28id2/Documents/ChengHung/pdfstream_test/'
     cfg_fn = '/home/xf28id2/Documents/ChengHung/pdfstream_test/pdfgetx3.cfg'
-    bkg_fn = ['/nsls2/data/xpd-new/legacy/processed/xpdUser/tiff_base/Toluene_OleAcid_mask/integration/Toluene_OleAcid_mask_20240602-122852_c49480_primary-1_mean_q.chi']
+    bkg_fn = ['/nsls2/data/xpd-new/legacy/processed/xpdUser/tiff_base/Tol_OA_flow_bkg/integration/Tol_OA_flow_bkg_20240715-114409_4d0604_primary-2_mean_q.chi']
     
-    ### CsPbBr2 test
-    iq_fn = glob.glob(os.path.join(gr_path, '**CsPbBr2**.chi'))[0]
-    cfg_fn = glob.glob(os.path.join(gr_path, '**CsPbBr2**.cfg'))[0]
-    bkg_fn = glob.glob(os.path.join(gr_path, '**Tol_Olm_bkg**.chi'))
+    # ### CsPbBr2 test
+    # iq_fn = glob.glob(os.path.join(gr_path, '**CsPbBr2**.chi'))[0]
+    # cfg_fn = glob.glob(os.path.join(gr_path, '**CsPbBr2**.cfg'))[0]
+    # bkg_fn = glob.glob(os.path.join(gr_path, '**Tol_Olm_bkg**.chi'))
     
-search_and_match = True
+search_and_match = False
 if search_and_match:
     from updated_pipeline_pdffit2 import Refinery
     mystery_path = "/home/xf28id2/Documents/ChengHung/pdffit2_example/CsPbBr3"
     # mystery_path = "'/home/xf28id2/Documents/ChengHung/pdfstream_test/gr"
     results_path = "/home/xf28id2/Documents/ChengHung/pdffit2_example/results_CsPbBr_chemsys_search"
 
-fitting_pdf = True
+fitting_pdf = False
 if fitting_pdf:
     global pdf_cif_dir, cif_list, gr_data
-    pdf_cif_dir = '/home/xf28id2/Documents/ChengHung/pdffit2_example/CsPbBr3/'
-    cif_list = [os.path.join(pdf_cif_dir, 'CsPbBr3_Orthorhombic.cif')]
+    pdf_cif_dir = '/home/xf28id2/Documents/ChengHung/pdffit2_example/CsPbCl3/'
+    cif_list = [os.path.join(pdf_cif_dir, 'CsPbBr3_Orthorhombic.cif'), 
+                os.path.join(pdf_cif_dir, 'CsPbCl3_cubic.cif')]
     gr_data = os.path.join(pdf_cif_dir, 'CsPbBr3.gr')
 
 global sandbox_tiled_client
@@ -342,9 +343,9 @@ def print_kafka_messages(beamline_acronym_01, beamline_acronym_02, csv_path=csv_
                     iq_df2['q'] = iq_Q
                     iq_df2['I(q)'] = iq_I
                     
-                    ### CsPbBr2 test
-                    iq_df = pd.read_csv(iq_fn, skiprows=1, names=['q', 'I(q)'], sep=' ').to_numpy().T
-                    iq_df2 = pd.read_csv(iq_fn, skiprows=1, names=['q', 'I(q)'], sep=' ')
+                    # ### CsPbBr2 test
+                    # iq_df = pd.read_csv(iq_fn, skiprows=1, names=['q', 'I(q)'], sep=' ').to_numpy().T
+                    # iq_df2 = pd.read_csv(iq_fn, skiprows=1, names=['q', 'I(q)'], sep=' ')
                 
                 else:
                     pass
@@ -355,8 +356,8 @@ def print_kafka_messages(beamline_acronym_01, beamline_acronym_02, csv_path=csv_
                     fn_uid = de._fn_generator(uid, beamline_acronym=beamline_acronym_01)
                     gr_fn = f'{fn_uid}_scattering.gr'
                     
-                    ### CsPbBr2 test
-                    gr_fn = f'{iq_fn[:-4]}.gr'
+                    # ### CsPbBr2 test
+                    # gr_fn = f'{iq_fn[:-4]}.gr'
                     
                     # Build pdf config file from a scratch
                     pdfconfig = PDFConfig()
@@ -402,11 +403,11 @@ def print_kafka_messages(beamline_acronym_01, beamline_acronym_02, csv_path=csv_
                 
                 gr_fit_df = pd.DataFrame()
                 if fitting_pdf:
-                    ### CsPbBr2 test
-                    gr_data = '/home/xf28id2/Documents/ChengHung/pdffit2_example/CsPbBr3/CsPbBr3.gr'
+                    # ### CsPbBr2 test
+                    # gr_data = '/home/xf28id2/Documents/ChengHung/pdffit2_example/CsPbBr3/CsPbBr3.gr'
                     
                     gr_df = pd.read_csv(gr_data, names=['r', 'g(r)'], sep =' ')
-                    pf = pc._pdffit2_CsPbX3(gr_data, cif_list, rmax=100, qmax=14, qdamp=0.031, qbroad=0.032, 
+                    pf = pc._pdffit2_CsPbX3(gr_data, cif_list, rmax=100, qmax=12, qdamp=0.031, qbroad=0.032, 
                                             fix_APD=True, toler=0.01, return_pf=True)
                     phase_fraction = pf.phase_fractions()['mass']
                     particel_size = []

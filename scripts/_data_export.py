@@ -300,7 +300,7 @@ def dic_to_csv_for_stream(csv_path, qepro_dic, metadata_dic, stream_name='primar
             print('Input fitting info is not correct.\n'
                   'Please fllow as:  {"fit_function": da._1gauss, "curve_fit": popt}')
 
-    if stream_name == 'take_a_uvvis' and fitting == None:
+    if (stream_name == 'take_a_uvvis' or stream_name == 'primary') and fitting == None:
         if spectrum_type == 3:
             spec = 'Abs'
             fout = f'{csv_path}/{sample_type}_{spec}_{date}-{time}_{full_uid[0:8]}.csv'
@@ -337,7 +337,7 @@ def dic_to_csv_for_stream(csv_path, qepro_dic, metadata_dic, stream_name='primar
                 else:
                     fp.write(f'{x_axis_data[0,i]},{dark_data[0,i]},{sample_data[0,i]},{output_data[0,i]}\n')
     
-    elif stream_name != 'take_a_uvvis' and fitting == None:
+    elif (stream_name != 'take_a_uvvis' and stream_name != 'primary') and fitting == None:
         new_dir = f'{csv_path}/{date}{time}_{full_uid[0:8]}_{stream_name}'
         os.makedirs(new_dir, exist_ok=True)
         for j in range(x_axis_data.shape[0]):
@@ -372,7 +372,7 @@ def dic_to_csv_for_stream(csv_path, qepro_dic, metadata_dic, stream_name='primar
                         fp.write(f'{x_axis_data[j,i]},{dark_data[j,i]},{sample_data[j,i]},{output_data[j,i]}\n')
     
     elif type(fitting) is dict:
-        if stream_name == 'take_a_uvvis':
+        if (stream_name == 'take_a_uvvis') or (stream_name == 'primary'):
             fout = f'{csv_path}/{sample_type}_PL_{date}-{time}_{full_uid[0:8]}_fitted.csv'
         
         elif stream_name == 'fluorescence' or stream_name == 'absorbance':

@@ -54,7 +54,7 @@ def _pdffit2_CsPbX3(gr_data, cif_list, qmax=18, rmax=120, qdamp=0.031, qbroad=0.
 
     # set constrain for data scale
     pf.constrain(pf.dscale, '@902')
-    pf.setpar(902, 0.65)
+    pf.setpar(902, 1.0)
 
     # Set value for Qdamp, Qbraod
     pf.setvar(pf.qdamp, qdamp)
@@ -94,7 +94,7 @@ def _set_CsPbBr3_constrain(PDF_calculator_object, phase_idx=1, fix_APD=True):
 
     # Refine phase scale factor.  Right side can have formulas.
     pf.constrain('pscale', '@111')
-    pf.setpar(111, 0.85)
+    pf.setpar(111, 1.0)
     # pf.setpar(20, pf.getvar(pf.pscale) / 2.0)
 
     # Refine sharpening factor for correlated motion of close atoms.

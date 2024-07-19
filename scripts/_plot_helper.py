@@ -7,7 +7,7 @@ import _data_analysis as da
 class open_figures():
     def __init__(self, figure_labels):
         for i in figure_labels:
-            plt.figure(num=i)
+            plt.figure(num=i, figsize=(4,3))
 
 
 class plot_uvvis(open_figures):
@@ -23,7 +23,9 @@ class plot_uvvis(open_figures):
         self.qepro_dic = qepro_dic
         self.metadata_dic = metadata_dic
         self.wavelength = []
-        self.output = []   
+        self.output = []
+        self.fontsize = 9
+        self.legend_properties = {'weight':'regular', 'size':8}
         # self.num = None
         self.date, self.time = _readable_time(metadata_dic['time'])
         super().__init__(figure_labels)
@@ -33,6 +35,7 @@ class plot_uvvis(open_figures):
         self.wavelength = self.qepro_dic['QEPro_x_axis']
         self.output = self.qepro_dic['QEPro_output']
         
+        global ax, y_label
         if self.stream_name == 'absorbance':
             y_label = 'Absorbance'
             try: f = plt.figure(self.fig[2])
@@ -47,7 +50,7 @@ class plot_uvvis(open_figures):
             plt.clf()
             ax = f.gca()
         
-        elif self.stream_name == 'take_a_uvvis':
+        elif (self.stream_name == 'take_a_uvvis') or (self.stream_name == 'primary'):
             if self.qepro_dic['QEPro_spectrum_type'] == 3:
                 y_label = 'Absorbance'
                 try: f = plt.figure(self.fig[0])
@@ -69,12 +72,13 @@ class plot_uvvis(open_figures):
             ax.plot(self.wavelength[i], self.output[i], label=label)
             label = None
         # ax.set_facecolor((0.95, 0.95, 0.95))
-        ax.set_xlabel('Wavelength (nm)', fontdict={'size': 14})
-        ax.set_ylabel(y_label, fontdict={'size': 14})
+        ax.set_xlabel('Wavelength (nm)', fontdict={'size': self.fontsize})
+        ax.set_ylabel(y_label, fontdict={'size': self.fontsize})
         if title == None:
             title = f'{self.date}-{self.time}_{self.uid[0:8]}_{self.stream_name}'
-        ax.set_title(title)
-        ax.legend()
+        ax.set_title(title, fontdict={'size': self.fontsize})
+        ax.tick_params(axis='both', labelsize=self.fontsize)
+        ax.legend(prop=self.legend_properties)
         f.canvas.manager.show()
         f.canvas.flush_events()
 
@@ -117,10 +121,11 @@ class plot_uvvis(open_figures):
                 print(f'\n** Plot fill_between for {fit_function.__name__} is not supported. ** \n')
 
         # ax.set_facecolor((0.95, 0.95, 0.95))
-        ax.set_xlabel('Wavelength (nm)', fontdict={'size': 14})
-        ax.set_ylabel(y_label, fontdict={'size': 14})
-        ax.set_title(f'{self.date}-{self.time}_{self.uid[0:8]}_{self.stream_name}_{fit_function.__name__}')
-        ax.legend()
+        ax.set_xlabel('Wavelength (nm)', fontdict={'size': self.fontsize})
+        ax.set_ylabel(y_label, fontdict={'size': self.fontsize})
+        ax.set_title(f'{self.date}-{self.time}_{self.uid[0:8]}_{self.stream_name}_{fit_function.__name__}', fontdict={'size': self.fontsize})
+        ax.tick_params(axis='both', labelsize=self.fontsize)
+        ax.legend(prop=self.legend_properties)
         f.canvas.manager.show()
         f.canvas.flush_events()
         
@@ -154,10 +159,11 @@ class plot_uvvis(open_figures):
             ax.plot(x, y, label=label, color=color)
 
         # ax.set_facecolor((0.95, 0.95, 0.95))
-        ax.set_xlabel('Wavelength (nm)', fontdict={'size': 14})
-        ax.set_ylabel(y_label, fontdict={'size': 14})
+        ax.set_xlabel('Wavelength (nm)', fontdict={'size': self.fontsize})
+        ax.set_ylabel(y_label, fontdict={'size': self.fontsize})
         # ax.set_title(f'{self.date}-{self.time}_{self.uid[0:8]}_{self.stream_name}_{fit_function.__name__}')
-        ax.legend()
+        ax.legend(prop=self.legend_properties)
+        ax.tick_params(axis='both', labelsize=self.fontsize)
         f.canvas.manager.show()
         f.canvas.flush_events()
 
@@ -199,10 +205,11 @@ class plot_uvvis(open_figures):
         ax.plot(x, y, label=label, color=color_idx_map_halides(wavelength))
 
         # ax.set_facecolor((0.95, 0.95, 0.95))
-        ax.set_xlabel('Wavelength (nm)', fontdict={'size': 14})
-        ax.set_ylabel(y_label, fontdict={'size': 14})
+        ax.set_xlabel('Wavelength (nm)', fontdict={'size': self.fontsize})
+        ax.set_ylabel(y_label, fontdict={'size': self.fontsize})
         # ax.set_title(f'{self.date}-{self.time}_{self.uid[0:8]}_{self.stream_name}_{fit_function.__name__}')
-        ax.legend()
+        ax.tick_params(axis='both', labelsize=self.fontsize)
+        ax.legend(prop=self.legend_properties)
         f.canvas.manager.show()
         f.canvas.flush_events()
 
@@ -227,7 +234,7 @@ class plot_uvvis(open_figures):
         # ax.set_xlabel('Wavelength (nm)', fontdict={'size': 14})
         # ax.set_ylabel(y_label, fontdict={'size': 14})
         # # ax.set_title(f'{self.date}-{self.time}_{self.uid[0:8]}_{self.stream_name}_{fit_function.__name__}')
-        ax.legend()
+        ax.legend(prop=self.legend_properties)
         f.canvas.manager.show()
         f.canvas.flush_events()
         
@@ -241,9 +248,9 @@ class plot_uvvis(open_figures):
         if label == None:
             label = f'{self.time}_{self.uid[0:8]}'
         ax.plot(iq_df[0], iq_df[1], label=label)
-        ax.set_xlabel('Q(A-1)', fontdict={'size': 14})
-        ax.set_ylabel('I(Q)', fontdict={'size': 14})
-        ax.legend()
+        ax.set_xlabel('Q(A-1)', fontdict={'size': self.fontsize})
+        ax.set_ylabel('I(Q)', fontdict={'size': self.fontsize})
+        ax.legend(prop=self.legend_properties)
         
         try: f = plt.figure(self.fig[8])
         except (IndexError): f = plt.figure(self.fig[-1])
@@ -255,9 +262,10 @@ class plot_uvvis(open_figures):
                 markersize=4, markerfacecolor='none', markeredgewidth=0.4)
         if type(gr_fit) is np.ndarray:
             ax.plot(gr_fit[0], gr_fit[1], label='PDF Fit')
-        ax.set_xlabel('r(A)', fontdict={'size': 14})
-        ax.set_ylabel('g(r)', fontdict={'size': 14})
-        ax.legend()
+        ax.set_xlabel('r(A)', fontdict={'size': self.fontsize})
+        ax.set_ylabel('g(r)', fontdict={'size': self.fontsize})
+        ax.tick_params(axis='both', labelsize=self.fontsize)
+        ax.legend(prop=self.legend_properties)
         
         # ax.set_ylabel(y_label, fontdict={'size': 14})
         # if title == None:

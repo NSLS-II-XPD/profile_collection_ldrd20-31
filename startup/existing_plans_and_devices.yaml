@@ -2913,6 +2913,67 @@ existing_plans:
       name: md
     properties:
       is_generator: true
+  take_a_uvvis_csv_q3:
+    module: startup_script
+    name: take_a_uvvis_csv_q3
+    parameters:
+    - default: '''test'''
+      kind:
+        name: POSITIONAL_OR_KEYWORD
+        value: 1
+      name: sample_type
+    - default: 'False'
+      kind:
+        name: POSITIONAL_OR_KEYWORD
+        value: 1
+      name: plot
+    - default: None
+      kind:
+        name: POSITIONAL_OR_KEYWORD
+        value: 1
+      name: csv_path
+    - default: '''tiled'''
+      kind:
+        name: POSITIONAL_OR_KEYWORD
+        value: 1
+      name: data_agent
+    - default: '''Absorbtion'''
+      kind:
+        name: POSITIONAL_OR_KEYWORD
+        value: 1
+      name: spectrum_type
+    - default: '''Reference'''
+      kind:
+        name: POSITIONAL_OR_KEYWORD
+        value: 1
+      name: correction_type
+    - default: None
+      kind:
+        name: POSITIONAL_OR_KEYWORD
+        value: 1
+      name: pump_list
+    - default: None
+      kind:
+        name: POSITIONAL_OR_KEYWORD
+        value: 1
+      name: precursor_list
+    - default: None
+      kind:
+        name: POSITIONAL_OR_KEYWORD
+        value: 1
+      name: mixer
+    - default: None
+      kind:
+        name: POSITIONAL_OR_KEYWORD
+        value: 1
+      name: note
+    - default: None
+      kind:
+        name: POSITIONAL_OR_KEYWORD
+        value: 1
+      name: md
+    properties:
+      is_generator: true
   take_ref_bkg_q:
     module: startup_script
     name: take_ref_bkg_q
@@ -3001,6 +3062,68 @@ existing_plans:
   xray_uvvis_plan:
     module: startup_script
     name: xray_uvvis_plan
+    parameters:
+    - kind:
+        name: POSITIONAL_OR_KEYWORD
+        value: 1
+      name: det1
+    - kind:
+        name: POSITIONAL_OR_KEYWORD
+        value: 1
+      name: det2
+    - kind:
+        name: VAR_POSITIONAL
+        value: 2
+      name: args
+    - default: None
+      kind:
+        name: KEYWORD_ONLY
+        value: 3
+      name: md
+    - default: '10'
+      kind:
+        name: KEYWORD_ONLY
+        value: 3
+      name: num_abs
+    - default: '10'
+      kind:
+        name: KEYWORD_ONLY
+        value: 3
+      name: num_flu
+    - default: '''test'''
+      kind:
+        name: KEYWORD_ONLY
+        value: 3
+      name: sample_type
+    - default: None
+      kind:
+        name: KEYWORD_ONLY
+        value: 3
+      name: pump_list
+    - default: None
+      kind:
+        name: KEYWORD_ONLY
+        value: 3
+      name: precursor_list
+    - default: None
+      kind:
+        name: KEYWORD_ONLY
+        value: 3
+      name: mixer
+    - default: None
+      kind:
+        name: KEYWORD_ONLY
+        value: 3
+      name: note
+    - kind:
+        name: VAR_KEYWORD
+        value: 4
+      name: kwargs
+    properties:
+      is_generator: true
+  xray_uvvis_plan3:
+    module: startup_script
+    name: xray_uvvis_plan3
     parameters:
     - kind:
         name: POSITIONAL_OR_KEYWORD

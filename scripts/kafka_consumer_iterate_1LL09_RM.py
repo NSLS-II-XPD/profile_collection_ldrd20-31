@@ -41,7 +41,7 @@ plt.rcParams["figure.raise_window"] = False
 
 ## Input varaibales: read from inputs_qserver_kafka.xlsx
 xlsx = '/home/xf28id2/Documents/ChengHung/inputs_qserver_kafka_ML.xlsx'
-input_dic = de._read_input_xlsx(xlsx, sheet_name='inputs')
+input_dic = de._read_input_xlsx(xlsx, sheet_name='inputs_video')
 
 ##################################################################
 # Define namespace for tasks in Qserver and Kafa
@@ -75,7 +75,7 @@ zmq_info_addr='tcp://localhost:60625'
 
 RM = REManagerAPI(zmq_control_addr=zmq_control_addr, zmq_info_addr=zmq_info_addr)
 import _synthesis_queue_RM as sq
-sq.synthesis_queue(
+sq.synthesis_queue3(
                     syringe_list=syringe_list, 
                     pump_list=pump_list, 
                     set_target_list=set_target_list, 
@@ -91,6 +91,9 @@ sq.synthesis_queue(
                     name_by_prefix=bool(prefix[0]),  
 					num_abs=num_uvvis[0], 
 					num_flu=num_uvvis[1], 
+                    det1=num_uvvis[2],
+                    det1_time=num_uvvis[3],
+                    det1_frame_rate=num_uvvis[4],
                     zmq_control_addr=zmq_control_addr, 
 					zmq_info_addr=zmq_info_addr, 
                     )

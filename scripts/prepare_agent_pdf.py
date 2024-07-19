@@ -19,11 +19,11 @@ def build_agen(peak_target=660, peak_tolerance=5, size_target=6, agent_data_path
 
     if use_OAm:
         dofs = [
-            DOF(description="CsPb(oleate)3", name="infusion_rate_CsPb", units="uL/min", search_domain=(20, 50)),
+            DOF(description="CsPb(oleate)3", name="infusion_rate_CsPb", units="uL/min", search_domain=(10, 30)),
             # DOF(description="TOABr", name="infusion_rate_Br", units="uL/min", search_domain=(50, 200)),
-            DOF(description="ZnI2", name="infusion_rate_I2", units="uL/min", search_domain=(0, 200)), 
-            DOF(description="ZnCl2", name="infusion_rate_Cl", units="uL/min", search_domain=(0, 200)),
-            DOF(description="OAm_Tol", name="infusion_rate_OAm", units="uL/min", search_domain=(0, 50)),
+            DOF(description="ZnI2", name="infusion_rate_I2", units="uL/min", search_domain=(0, 250)), 
+            DOF(description="ZnCl2", name="infusion_rate_Cl", units="uL/min", search_domain=(0, 250)),
+            DOF(description="OAm_Tol", name="infusion_rate_OAm", units="uL/min", search_domain=(0, 30)),
         ]
 
     else:
