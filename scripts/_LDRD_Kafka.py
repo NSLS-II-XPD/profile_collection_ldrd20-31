@@ -1,3 +1,5 @@
+import os
+import glob
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -32,10 +34,10 @@ def _kafka_process():
             'dummy_kafka', 'csv_path', 'key_height', 'height', 'distance', 'PLQY', 
             'rate_label_dic_key', 'rate_label_dic_value', 'new_points_label', 
             'use_good_bad', 'post_dilute', 'write_agent_data', 'agent_data_path', 
-            'USE_AGENT_iterate', 'peak_target', 'agent', 
-            'iq_to_gr', 'gr_path', 'cfg_fn', 'iq_fn', 'bkg_fn', 
+            'USE_AGENT_iterate', 'peak_target',  
+            'iq_to_gr', 'iq_to_gr_path', 'cfg_fn', 'bkg_fn', 'iq_fn',  
             'search_and_match', 'mystery_path', 'results_path', 
-            'fitting_pdf', 'pdf_cif_dir', 'cif_list', 'gr_data', 
+            'fitting_pdf', 'fitting_pdf_path', 'cif_fn', 'gr_fn', 
             'use_sandbox', 'write_to_sandbox', 'sandbox_tiled_client', 
             ]
 
@@ -63,7 +65,43 @@ class xlsx_to_inputs():
         self.from_xlsx = xlsx_fn
         self.sheet_name = sheet_name
         self.print_dic = de._read_input_xlsx(self.from_xlsx, sheet_name=self.sheet_name)
+        
+        ## Every attribute in self.inputs is a list!!!
         self.inputs = dic_to_inputs(self.print_dic, self.parameters_list)
+
+        ## Append agent in the list of self.inputs.agent
+        if self.inputs.agent==[]:
+            self.inputs.agent.append(
+                build_agen(
+                    peak_target=self.inputs.peak_target, 
+                    agent_data_path=self.inputs.agent_data_path)
+                    )
+
+        ## self.inputs.sandbox_tiled_client[0] is just the uri of sandbox
+        ## so, turn uri into client and append it in self.inputs.sandbox_tiled_client
+        if type(self.inputs.sandbox_tiled_client[0]) is str:
+            self.inputs.sandbox_tiled_client.append(from_uri(self.inputs.sandbox_tiled_client[0]))
+
+
+        ## Use glob.glob to find the complete path of cfg_fn, bkg_fn, iq_fn, cif_fn, gr_fn
+        # fn_TBD = ['cfg_fn', 'bkg_fn', 'iq_fn', 'cif_fn', 'gr_fn']
+        for fn in self.inputs.fn_TBD:
+            
+            path = getattr(self.inputs, fn)[0]
+            if path in self.parameters_list:
+                path = getattr(self.inputs, path)[0]
+            
+            ff = getattr(self.inputs, fn)[1]
+
+            fn_glob = glob.glob(os.path.join(path, ff))
+
+            for i in fn_glob:
+                getattr(self.inputs, fn).append(i)
+
+                
+
+
+
 
     # def add_to_queue(self):
     #     sq.synthesis_queue(
