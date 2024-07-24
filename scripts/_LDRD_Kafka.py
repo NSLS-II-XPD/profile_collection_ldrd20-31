@@ -12,8 +12,9 @@ import _data_analysis as da
 # import _get_pdf as gp
 
 # import torch
-# from prepare_agent_pdf import build_agen
+from prepare_agent_pdf import build_agen
 # from diffpy.pdfgetx import PDFConfig
+from tiled.client import from_uri
 
 
 
@@ -34,11 +35,12 @@ def _kafka_process():
             'dummy_kafka', 'csv_path', 'key_height', 'height', 'distance', 'PLQY', 
             'rate_label_dic_key', 'rate_label_dic_value', 'new_points_label', 
             'use_good_bad', 'post_dilute', 'write_agent_data', 'agent_data_path', 
-            'USE_AGENT_iterate', 'peak_target',  
+            'USE_AGENT_iterate', 'peak_target', 'agent', 
             'iq_to_gr', 'iq_to_gr_path', 'cfg_fn', 'bkg_fn', 'iq_fn',  
             'search_and_match', 'mystery_path', 'results_path', 
             'fitting_pdf', 'fitting_pdf_path', 'cif_fn', 'gr_fn', 
             'use_sandbox', 'write_to_sandbox', 'sandbox_tiled_client', 
+            'fn_TBD', 
             ]
 
     return kafka_list
@@ -73,8 +75,8 @@ class xlsx_to_inputs():
         if self.inputs.agent==[]:
             self.inputs.agent.append(
                 build_agen(
-                    peak_target=self.inputs.peak_target, 
-                    agent_data_path=self.inputs.agent_data_path)
+                    peak_target=self.inputs.peak_target[0], 
+                    agent_data_path=self.inputs.agent_data_path[0])
                     )
 
         ## self.inputs.sandbox_tiled_client[0] is just the uri of sandbox

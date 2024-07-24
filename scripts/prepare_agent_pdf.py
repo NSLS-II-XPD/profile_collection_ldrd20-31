@@ -114,7 +114,7 @@ def build_agen(peak_target=660, peak_tolerance=5, size_target=6, agent_data_path
         r_2_min = 0.70
         try: 
             if data['r_2'] < r_2_min:
-                print(f'Skip because "r_2" of {df["uid"][i]} is {data["r_2"]:.2f} < {r_2_min}.')
+                print(f'Skip because "r_2" of {data["uid"]} is {data["r_2"]:.2f} < {r_2_min}.')
             else: 
                 x = {k:[data[k]] for k in agent.dofs.names}
                 y = {k:[data[k]] for k in agent.objectives.names}
