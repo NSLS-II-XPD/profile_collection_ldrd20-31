@@ -12,17 +12,20 @@ import _data_analysis as da
 # import _get_pdf as gp
 
 # import torch
-from prepare_agent_pdf import build_agen
+# from prepare_agent_pdf import build_agen
 # from diffpy.pdfgetx import PDFConfig
-from tiled.client import from_uri
+# from tiled.client import from_uri
 
 
 
 def _qserver_inputs():
     qserver_list=[
-            'dummy_qserver', 'name_by_prefix', 'prefix', 
-            'pump_list', 'precursor_list', 'syringe_mater_list', 'syringe_list', 
-            'target_vol_list', 'sample', 'mixer', 'wash_tube', 'resident_t_ratio', 
+            'zmq_control_addr', 'zmq_info_addr', 
+            'dummy_qserver', 'is_iteration', 'pos', 
+            'name_by_prefix', 'prefix', 'pump_list', 'precursor_list', 
+            'syringe_mater_list', 'syringe_list', 'target_vol_list', 
+            'sample', 
+            'wait_dilute', 'mixer', 'wash_tube', 'resident_t_ratio', 
             'rate_unit', 'uvvis_config', 'perkin_config', 
             'set_target_list', 'infuse_rates', 
             ]
@@ -71,34 +74,38 @@ class xlsx_to_inputs():
         ## Every attribute in self.inputs is a list!!!
         self.inputs = dic_to_inputs(self.print_dic, self.parameters_list)
 
-        ## Append agent in the list of self.inputs.agent
-        if self.inputs.agent==[]:
-            self.inputs.agent.append(
-                build_agen(
-                    peak_target=self.inputs.peak_target[0], 
-                    agent_data_path=self.inputs.agent_data_path[0])
-                    )
+        try:
+            # ## Append agent in the list of self.inputs.agent
+            # if self.inputs.agent==[]:
+            #     self.inputs.agent.append(
+            #         build_agen(
+            #             peak_target=self.inputs.peak_target[0], 
+            #             agent_data_path=self.inputs.agent_data_path[0])
+            #             )
 
-        ## self.inputs.sandbox_tiled_client[0] is just the uri of sandbox
-        ## so, turn uri into client and append it in self.inputs.sandbox_tiled_client
-        if type(self.inputs.sandbox_tiled_client[0]) is str:
-            self.inputs.sandbox_tiled_client.append(from_uri(self.inputs.sandbox_tiled_client[0]))
+            # ## self.inputs.sandbox_tiled_client[0] is just the uri of sandbox
+            # ## so, turn uri into client and append it in self.inputs.sandbox_tiled_client
+            # if type(self.inputs.sandbox_tiled_client[0]) is str:
+            #     self.inputs.sandbox_tiled_client.append(from_uri(self.inputs.sandbox_tiled_client[0]))
 
 
-        ## Use glob.glob to find the complete path of cfg_fn, bkg_fn, iq_fn, cif_fn, gr_fn
-        # fn_TBD = ['cfg_fn', 'bkg_fn', 'iq_fn', 'cif_fn', 'gr_fn']
-        for fn in self.inputs.fn_TBD:
-            
-            path = getattr(self.inputs, fn)[0]
-            if path in self.parameters_list:
-                path = getattr(self.inputs, path)[0]
-            
-            ff = getattr(self.inputs, fn)[1]
+            ## Use glob.glob to find the complete path of cfg_fn, bkg_fn, iq_fn, cif_fn, gr_fn
+            # fn_TBD = ['cfg_fn', 'bkg_fn', 'iq_fn', 'cif_fn', 'gr_fn']
+            for fn in self.inputs.fn_TBD:
+                
+                path = getattr(self.inputs, fn)[0]
+                if path in self.parameters_list:
+                    path = getattr(self.inputs, path)[0]
+                
+                ff = getattr(self.inputs, fn)[1]
 
-            fn_glob = glob.glob(os.path.join(path, ff))
+                fn_glob = glob.glob(os.path.join(path, ff))
 
-            for i in fn_glob:
-                getattr(self.inputs, fn).append(i)
+                for i in fn_glob:
+                    getattr(self.inputs, fn).append(i)
+        
+        except AttributeError:
+            pass
 
                 
 
