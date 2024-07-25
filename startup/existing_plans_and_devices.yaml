@@ -42,7 +42,7 @@ existing_devices:
     is_flyable: false
     is_movable: false
     is_readable: true
-    module: startup_script
+    module: __main__
   dds1_p1:
     classname: syrng_DDS_ax
     components:
@@ -301,7 +301,7 @@ existing_devices:
     is_flyable: false
     is_movable: false
     is_readable: true
-    module: startup_script
+    module: __main__
   dds1_p2:
     classname: syrng_DDS_ax
     components:
@@ -560,7 +560,7 @@ existing_devices:
     is_flyable: false
     is_movable: false
     is_readable: true
-    module: startup_script
+    module: __main__
   dds2:
     classname: syrng_DDS
     components:
@@ -591,7 +591,7 @@ existing_devices:
     is_flyable: false
     is_movable: false
     is_readable: true
-    module: startup_script
+    module: __main__
   dds2_p1:
     classname: syrng_DDS_ax
     components:
@@ -850,7 +850,7 @@ existing_devices:
     is_flyable: false
     is_movable: false
     is_readable: true
-    module: startup_script
+    module: __main__
   dds2_p2:
     classname: syrng_DDS_ax
     components:
@@ -1109,7 +1109,7 @@ existing_devices:
     is_flyable: false
     is_movable: false
     is_readable: true
-    module: startup_script
+    module: __main__
   dds3:
     classname: syrng_DDS
     components:
@@ -1140,7 +1140,7 @@ existing_devices:
     is_flyable: false
     is_movable: false
     is_readable: true
-    module: startup_script
+    module: __main__
   dds3_p1:
     classname: syrng_DDS_ax
     components:
@@ -1399,7 +1399,7 @@ existing_devices:
     is_flyable: false
     is_movable: false
     is_readable: true
-    module: startup_script
+    module: __main__
   dds3_p2:
     classname: syrng_DDS_ax
     components:
@@ -1658,7 +1658,7 @@ existing_devices:
     is_flyable: false
     is_movable: false
     is_readable: true
-    module: startup_script
+    module: __main__
   det:
     classname: SynGauss
     components:
@@ -2068,7 +2068,7 @@ existing_devices:
         is_flyable: false
         is_movable: true
         is_readable: true
-        module: startup_script
+        module: __main__
       trigger_mode:
         classname: EpicsSignalWithRBV
         is_flyable: false
@@ -2090,7 +2090,7 @@ existing_devices:
     is_flyable: false
     is_movable: false
     is_readable: true
-    module: startup_script
+    module: __main__
   ultra1:
     classname: syrng_ultra
     components:
@@ -2271,7 +2271,7 @@ existing_devices:
     is_flyable: false
     is_movable: false
     is_readable: true
-    module: startup_script
+    module: __main__
   ultra2:
     classname: syrng_ultra
     components:
@@ -2452,16 +2452,16 @@ existing_devices:
     is_flyable: false
     is_movable: false
     is_readable: true
-    module: startup_script
+    module: __main__
 existing_plans:
   LED_off:
-    module: startup_script
+    module: __main__
     name: LED_off
     parameters: []
     properties:
       is_generator: true
   LED_on:
-    module: startup_script
+    module: __main__
     name: LED_on
     parameters: []
     properties:
@@ -2509,7 +2509,7 @@ existing_plans:
       is_generator: true
   count_stream:
     description: Count a detector and emit documents in a specified stream.
-    module: startup_script
+    module: __main__
     name: count_stream
     parameters:
     - kind:
@@ -2529,31 +2529,31 @@ existing_plans:
     properties:
       is_generator: true
   deuterium_off:
-    module: startup_script
+    module: __main__
     name: deuterium_off
     parameters: []
     properties:
       is_generator: true
   deuterium_on:
-    module: startup_script
+    module: __main__
     name: deuterium_on
     parameters: []
     properties:
       is_generator: true
   halogen_off:
-    module: startup_script
+    module: __main__
     name: halogen_off
     parameters: []
     properties:
       is_generator: true
   halogen_on:
-    module: startup_script
+    module: __main__
     name: halogen_on
     parameters: []
     properties:
       is_generator: true
   insitu_test:
-    module: startup_script
+    module: __main__
     name: insitu_test
     parameters:
     - kind:
@@ -2602,7 +2602,7 @@ existing_plans:
     properties:
       is_generator: true
   reset_pumps2:
-    module: startup_script
+    module: __main__
     name: reset_pumps2
     parameters:
     - kind:
@@ -2664,7 +2664,7 @@ existing_plans:
     properties:
       is_generator: true
   set_group_infuse:
-    module: startup_script
+    module: __main__
     name: set_group_infuse
     parameters:
     - kind:
@@ -2693,7 +2693,7 @@ existing_plans:
     properties:
       is_generator: true
   set_group_infuse2:
-    module: startup_script
+    module: __main__
     name: set_group_infuse2
     parameters:
     - kind:
@@ -2732,7 +2732,7 @@ existing_plans:
     properties:
       is_generator: true
   set_group_withdraw:
-    module: startup_script
+    module: __main__
     name: set_group_withdraw
     parameters:
     - kind:
@@ -2761,7 +2761,7 @@ existing_plans:
     properties:
       is_generator: true
   setup_collection_q:
-    module: startup_script
+    module: __main__
     name: setup_collection_q
     parameters:
     - default: '100'
@@ -2797,19 +2797,19 @@ existing_plans:
     properties:
       is_generator: true
   shutter_close:
-    module: startup_script
+    module: __main__
     name: shutter_close
     parameters: []
     properties:
       is_generator: true
   shutter_open:
-    module: startup_script
+    module: __main__
     name: shutter_open
     parameters: []
     properties:
       is_generator: true
   sleep_sec_q:
-    module: startup_script
+    module: __main__
     name: sleep_sec_q
     parameters:
     - kind:
@@ -2819,7 +2819,7 @@ existing_plans:
     properties:
       is_generator: true
   start_group_infuse:
-    module: startup_script
+    module: __main__
     name: start_group_infuse
     parameters:
     - kind:
@@ -2833,7 +2833,7 @@ existing_plans:
     properties:
       is_generator: true
   start_group_withdraw:
-    module: startup_script
+    module: __main__
     name: start_group_withdraw
     parameters:
     - kind:
@@ -2843,7 +2843,7 @@ existing_plans:
     properties:
       is_generator: true
   stop_group:
-    module: startup_script
+    module: __main__
     name: stop_group
     parameters:
     - kind:
@@ -2853,7 +2853,7 @@ existing_plans:
     properties:
       is_generator: true
   take_a_uvvis_csv_q:
-    module: startup_script
+    module: __main__
     name: take_a_uvvis_csv_q
     parameters:
     - default: '''test'''
@@ -2914,7 +2914,7 @@ existing_plans:
     properties:
       is_generator: true
   take_a_uvvis_csv_q3:
-    module: startup_script
+    module: __main__
     name: take_a_uvvis_csv_q3
     parameters:
     - default: '''test'''
@@ -2975,7 +2975,7 @@ existing_plans:
     properties:
       is_generator: true
   take_ref_bkg_q:
-    module: startup_script
+    module: __main__
     name: take_ref_bkg_q
     parameters:
     - default: '15'
@@ -3016,7 +3016,7 @@ existing_plans:
     properties:
       is_generator: true
   wait_equilibrium:
-    module: startup_script
+    module: __main__
     name: wait_equilibrium
     parameters:
     - kind:
@@ -3040,7 +3040,7 @@ existing_plans:
     properties:
       is_generator: true
   wait_equilibrium2:
-    module: startup_script
+    module: __main__
     name: wait_equilibrium2
     parameters:
     - kind:
@@ -3060,7 +3060,7 @@ existing_plans:
     properties:
       is_generator: true
   xray_uvvis_plan:
-    module: startup_script
+    module: __main__
     name: xray_uvvis_plan
     parameters:
     - kind:
@@ -3122,7 +3122,7 @@ existing_plans:
     properties:
       is_generator: true
   xray_uvvis_plan3:
-    module: startup_script
+    module: __main__
     name: xray_uvvis_plan3
     parameters:
     - kind:

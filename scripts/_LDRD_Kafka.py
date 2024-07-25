@@ -75,18 +75,18 @@ class xlsx_to_inputs():
         self.inputs = dic_to_inputs(self.print_dic, self.parameters_list)
 
         try:
-            # ## Append agent in the list of self.inputs.agent
-            # if self.inputs.agent==[]:
-            #     self.inputs.agent.append(
-            #         build_agen(
-            #             peak_target=self.inputs.peak_target[0], 
-            #             agent_data_path=self.inputs.agent_data_path[0])
-            #             )
+            ## Append agent in the list of self.inputs.agent
+            if self.inputs.agent==[]:
+                self.inputs.agent.append(
+                    build_agen(
+                        peak_target=self.inputs.peak_target[0], 
+                        agent_data_path=self.inputs.agent_data_path[0])
+                        )
 
-            # ## self.inputs.sandbox_tiled_client[0] is just the uri of sandbox
-            # ## so, turn uri into client and append it in self.inputs.sandbox_tiled_client
-            # if type(self.inputs.sandbox_tiled_client[0]) is str:
-            #     self.inputs.sandbox_tiled_client.append(from_uri(self.inputs.sandbox_tiled_client[0]))
+            ## self.inputs.sandbox_tiled_client[0] is just the uri of sandbox
+            ## so, turn uri into client and append it in self.inputs.sandbox_tiled_client
+            if type(self.inputs.sandbox_tiled_client[0]) is str:
+                self.inputs.sandbox_tiled_client.append(from_uri(self.inputs.sandbox_tiled_client[0]))
 
 
             ## Use glob.glob to find the complete path of cfg_fn, bkg_fn, iq_fn, cif_fn, gr_fn
