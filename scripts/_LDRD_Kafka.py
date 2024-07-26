@@ -42,7 +42,7 @@ def _kafka_process():
             'iq_to_gr', 'iq_to_gr_path', 'cfg_fn', 'bkg_fn', 'iq_fn',  
             'search_and_match', 'mystery_path', 'results_path', 
             'fitting_pdf', 'fitting_pdf_path', 'cif_fn', 'gr_fn', 
-            'use_sandbox', 'write_to_sandbox', 'sandbox_tiled_client', 
+            'use_sandbox', 'write_to_sandbox', 'sandbox_tiled_client', 'tiled_client', 
             'fn_TBD', 
             ]
 

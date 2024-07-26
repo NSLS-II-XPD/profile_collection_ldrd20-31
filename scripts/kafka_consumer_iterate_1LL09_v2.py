@@ -184,14 +184,22 @@ def print_kafka_messages(beamline_acronym, kin=kin, qin=qin, RM=RM, ):
 
 /////////////////////////////////////////////////////////////////////////
 
-    global tiled_client, path_0, path_1
-    # tiled_client = from_profile("nsls2")[beamline_acronym]["raw"]
-    tiled_client = from_profile(beamline_acronym)
-    path_0  = csv_path
-    path_1 = csv_path + '/good_bad'
+    # global tiled_client, path_0, path_1
+    # # tiled_client = from_profile("nsls2")[beamline_acronym]["raw"]
+    # tiled_client = from_profile(beamline_acronym)
+    # path_0  = csv_path
+    # path_1 = csv_path + '/good_bad'
 
+    ## Append raw data tiled_client
+    kin.tiled_client.append(beamline_acronym)
+    kin.tiled_client.append(from_profile(beamline_acronym))
+
+    ## Append good/bad data folder to csv_path
+    kin.csv_path.append(os.path.join(kin.csv_path[0], 'good_bad'))
+
+    ## Make directory for good/bad data folder
     try:
-        os.mkdir(path_1)
+        os.mkdir(kin.csv_path[1])
     except FileExistsError:
         pass
 
