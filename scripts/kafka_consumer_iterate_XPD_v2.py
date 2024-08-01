@@ -13,7 +13,7 @@ import databroker
 import json
 import glob
 from tqdm import tqdm
-# from diffpy.pdfgetx import PDFConfig
+from diffpy.pdfgetx import PDFConfig
 from tiled.client import from_uri, from_profile
 
 import resource
@@ -22,8 +22,8 @@ resource.setrlimit(resource.RLIMIT_NOFILE, (65536, 65536))
 import _data_export as de
 from _plot_helper import plot_uvvis
 import _data_analysis as da
-# import _pdf_calculator as pc
-import _LDRD_Kafka as LK
+import _pdf_calculator as pc
+import _get_pdf as gp
 
 from bluesky_queueserver_api.zmq import REManagerAPI
 from bluesky_queueserver_api import BPlan, BInst
@@ -42,7 +42,7 @@ plt.rcParams["figure.raise_window"] = False
 xlsx_fn = '/home/xf28id2/Documents/ChengHung/inputs_qserver_kafka_v2.xlsx'
 
 ## Input varaibales for Qserver, reading from xlsx_fn by given sheet name
-qserver_process = LK.xlsx_to_inputs(LK._qserver_inputs(), xlsx_fn=xlsx_fn, sheet_name='qserver_1LL09')
+qserver_process = LK.xlsx_to_inputs(LK._qserver_inputs(), xlsx_fn=xlsx_fn, sheet_name='qserver_XPD')
 qin = qserver_process.inputs
 
 ## Input varaibales for Kafka, reading from xlsx_fn by given sheet name
@@ -62,7 +62,7 @@ if qin.name_by_prefix[0]:
 print(f'Sample: {sample}')
 
 
-def print_kafka_messages(beamline_acronym, kin=kin, qin=qin, RM=RM, ):
+def print_kafka_messages(beamline_acronym_01, beamline_acronym_02, kin=kin, qin=qin, RM=RM, ):
 
     """Print kafka message from beamline_acronym
 
@@ -73,7 +73,9 @@ def print_kafka_messages(beamline_acronym, kin=kin, qin=qin, RM=RM, ):
         RM (REManagerAPI, optional): Run Engine Manager API. Defaults to RM.
     """
 
-    print(f"Listening for Kafka messages for {beamline_acronym}")
+    print(f"Listening for Kafka messages for\n"
+                                            f"     raw data: {beamline_acronym_01}\n"
+                                            f"analysis data: {beamline_acronym_02}")
     print(f'Defaul parameters:\n'
           f'                  csv path: {kin.csv_path[0]}\n'
           f'                  key height: {kin.key_height[0]}\n'
@@ -100,9 +102,11 @@ def print_kafka_messages(beamline_acronym, kin=kin, qin=qin, RM=RM, ):
           f'{bool(kin.write_to_sandbox[0]) = }\n'
           f'{qin.zmq_control_addr[0] = }')
 
-    ## Append raw data tiled_client
-    kin.tiled_client.append(beamline_acronym)
-    kin.tiled_client.append(from_profile(beamline_acronym))
+    ## Append raw data & analysis data tiled clients
+    kin.tiled_client.append(beamline_acronym_01)
+    kin.tiled_client.append(from_profile(beamline_acronym_01))
+    kin.tiled_client.append(beamline_acronym_02)
+    kin.tiled_client.append(from_profile(beamline_acronym_02))
 
     ## Append good/bad data folder to csv_path
     kin.csv_path.append(os.path.join(kin.csv_path[0], 'good_bad'))
@@ -112,25 +116,24 @@ def print_kafka_messages(beamline_acronym, kin=kin, qin=qin, RM=RM, ):
         os.mkdir(kin.csv_path[1])
     except FileExistsError:
         pass
+    
 
-
-    def print_message(consumer, doctype, doc,  
+    def print_message(consumer, doctype, doc, 
                       bad_data = [], good_data = [], check_abs365 = False, finished = [], 
-                      agent_iteration = [], ):
-        
+                      agent_iteration = []):
         name, message = doc
         # print(f"contents: {pprint.pformat(message)}\n")
         
-        ######### While document name == 'start' ##########
-        ##                                               ##
-        ##                Print metadata                 ##
-        ##                                               ##
-        ###################################################
-        if name == 'start':
+        ######### While document (name == 'start') and ('topic' in doc[1]) ##########
+        ##                                                                         ##
+        ##            Only print metadata when the docuemnt is a scan              ##
+        ##                                                                         ##
+        #############################################################################
+        if (name == 'start') and ('topic' in doc[1]):
             print(
-                f"{datetime.datetime.now().isoformat()} documents {name}\n"
+                f"\n\n\n{datetime.datetime.now().isoformat()} documents {name}\n"
                 f"document keys: {list(message.keys())}")
-                
+             
             if 'uid' in message.keys():
                 print(f"uid: {message['uid']}")
             if 'plan_name' in message.keys():
@@ -158,45 +161,192 @@ def print_kafka_messages(beamline_acronym, kin=kin, qin=qin, RM=RM, ):
                 print(f"mixer: {message['mixer']}")
             if 'sample_type' in message.keys():
                 print(f"sample type: {message['sample_type']}")
-        
-        
-        ######### While document name == 'stop' ###########
-        ##        Read data from tiled, process data     ##
-        ##        Plot data, Agent prediction            ##
-        ##        Export data, Save data to tiled        ##
-        ###################################################
-        if name == 'stop':
-            RM.queue_stop()
-            print('\n*** qsever stop for data export, identification, and fitting ***\n')
-            print(f"{datetime.datetime.now().isoformat()} documents {name}\n"
-                  f"contents: {pprint.pformat(message)}"
-                  )
-            # num_events = len(message['num_events'])
-
-            ## wait 2 seconds for databroker to save data
-            time.sleep(2)
             
-            ## Obtain uid from message['run_start']
-            uid = message['run_start']
-            print(f'\n**** start to export uid: {uid} ****\n')
-            # print(list(message['num_events'].keys())[0])
+        
+        global uid    
+        uid = []
+        ######### While document (name == 'event') and ('topic' in doc[1]) ##########
+        ##        key 'topic' is added into the document of xpd-analysis           ##
+        ##        Read uid of analysis data from doc[1]['data']['chi_I']           ##
+        ##        Get I(Q) data from the integral of 2D image by pdfstream         ##
+        #############################################################################
+        if (name == 'event') and ('topic' in doc[1]):
+            # print(f"\n\n\n{datetime.datetime.now().isoformat()} documents {name}\n"
+            #       f"contents: {pprint.pformat(message)}"
+            # )
+            # time.sleep(1)
+            global entry, iq_Q, iq_I
+            
+            # entry, iq_Q, iq_I = [], [], []
+            iq_I_uid  = doc[1]['data']['chi_I']
+            entry = sandbox_tiled_client[iq_I_uid]
+            df = entry.read()
+            # print(f'{entry.metadata = }')
+            iq_Q = df['chi_Q'].to_numpy()
+            iq_I = df['chi_I'].to_numpy()
 
-            ## Put stream name of scans into stream_list
+
+        global stream_list
+        ## Acquisition of xray_uvvis_plan finished but analysis of pdfstream not yet
+        ## So just stop queue but not assign uid, stream_list
+        if (name == 'stop') and ('scattering' in message['num_events']):
+            print('\n*** qsever stop for data export, identification, and fitting ***\n')
+            print(f"\n\n\n{datetime.datetime.now().isoformat()} documents {name}\n"
+                  f"contents: {pprint.pformat(message)}"
+            )
+            # inst1 = BInst("queue_stop")
+            # RM.item_add(inst1, pos='front')
+            ## wait 1 second for databroker to save data
+            time.sleep(1)                
+
+        
+        ## With taking xray_uvvis_pla, analysis of pdfstream finished
+        ## queue should stop before (when acquisition finished)
+        ## Obtain raw data uid by reading metadata in sandbox Tiled
+        elif (name == 'stop') and ('topic' in doc[1]) and (len(message['num_events'])>0):
+            print(f"\n\n\n{datetime.datetime.now().isoformat()} documents {name}\n"
+                  f"contents: {pprint.pformat(message)}"
+            )
+            ## wait 1 second for databroker to save data
+            time.sleep(1)
+            uid = entry.metadata['run_start']
+            stream_list = tiled_client[uid].metadata['summary']['stream_names']
+
+        ## Only take a Uv-Vis, no X-ray data but still do analysis of pdfstream
+        ## Stop queue first
+        ## Obtain raw data uid in bluesky doc, message            
+        elif (name == 'stop') and ('take_a_uvvis' in message['num_events']):
+            print('\n*** qsever stop for data export, identification, and fitting ***\n')
+
+            print(f"\n\n\n{datetime.datetime.now().isoformat()} documents {name}\n"
+                  f"contents: {pprint.pformat(message)}"
+            )
+                        
+            inst1 = BInst("queue_stop")
+            RM.item_add(inst1, pos='front')
+            ## wait 1 second for databroker to save data
+            time.sleep(1)
+            uid = message['run_start']
             stream_list = list(message['num_events'].keys())
+            
+            
+        ## When uid is assigned and type is a string, move to data fitting, calculation
+        if (name == 'stop') and (type(uid) is str):
+            print(f'\n**** start to export uid: {uid} ****\n')
+            print(f'\n**** with stream name in {stream_list} ****\n')
 
             ## Set good/bad data condictions to the corresponding sample
-            kh = kin.key_height[0]
-            hei = kin.height[0]
-            dis = kin.distance[0]
+            try:
+                kh = key_height[len(finished)]
+                hei = height[len(finished)]
+                dis = distance[len(finished)]
+            except IndexError:
+                kh = key_height[0]
+                hei = height[0]
+                dis = distance[0]
             
-//////////////////////////////////////////////////////////////////////////////////////////////////
             ## obtain phase fraction & particle size from g(r)
             if 'scattering' in stream_list:
-                if fitting_pdf:
-                    phase_fraction, particel_size = pc._pdffit2_CsPbX3(gr_data, cif_list, qmax=20, qdamp=0.031, qbroad=0.032, fix_APD=False, toler=0.001)
-                    pdf_property={'Br_ratio': phase_fraction[0], 'Br_size':particel_size[0]}
+                # Get metadat from stream_name fluorescence for plotting
+                qepro_dic, metadata_dic = de.read_qepro_by_stream(
+                    uid, stream_name='fluorescence', data_agent='tiled', 
+                    beamline_acronym=beamline_acronym_01)
+                u = plot_uvvis(qepro_dic, metadata_dic)
+                
+                if use_sandbox:
+                    iq_df = np.asarray([iq_Q, iq_I])
+                    iq_df2 = pd.DataFrame()
+                    iq_df2['q'] = iq_Q
+                    iq_df2['I(q)'] = iq_I
+                    
+                    # ### CsPbBr2 test
+                    # iq_df = pd.read_csv(iq_fn, skiprows=1, names=['q', 'I(q)'], sep=' ').to_numpy().T
+                    # iq_df2 = pd.read_csv(iq_fn, skiprows=1, names=['q', 'I(q)'], sep=' ')
+                
                 else:
+                    pass
+                    # iq_df = iq_fn[0]
+                
+                if iq_to_gr:
+                    # Grab metadat from stream_name = fluorescence for naming gr file
+                    fn_uid = de._fn_generator(uid, beamline_acronym=beamline_acronym_01)
+                    gr_fn = f'{fn_uid}_scattering.gr'
+                    
+                    # ### CsPbBr2 test
+                    # gr_fn = f'{iq_fn[:-4]}.gr'
+                    
+                    # Build pdf config file from a scratch
+                    pdfconfig = PDFConfig()
+                    pdfconfig.readConfig(cfg_fn)
+                    pdfconfig.backgroundfiles = bkg_fn[-1]
+                    sqfqgr_path = gp.transform_bkg(pdfconfig, iq_df, output_dir=gr_path, 
+                                plot_setting={'marker':'.','color':'green'}, test=True, 
+                                gr_fn=gr_fn)    
+                    gr_data = sqfqgr_path['gr']
+                    
+                    ## Remove headers by reading gr_data into pd.Dataframe and save again
+                    ## Otherwise, headers will cause trouble in pdffit2
+                    gr_df = pd.read_csv(gr_data, skiprows=26, names=['r', 'g(r)'], sep =' ')
+                    gr_df.to_csv(gr_data, index=False, header=False, sep =' ')
+                    
+                if search_and_match:
+                    # gr_data = '/home/xf28id2/Documents/ChengHung/pdffit2_example/CsPbBr3/CsPbBr3.gr'
+                    refinery = Refinery(mystery_path=gr_data, results_path=results_path, 
+                                criteria={"elements":
+                                    {#["Pb","Se"], 
+                                    #"$in": ["Cs"], 
+                                    "$all": ["Pb"],
+                                    }},
+                                strict=[],
+                                # strict=["Pb", "S"],
+                                pdf_calculator_kwargs={
+                                    "qmin": 1.0, 
+                                    "qmax": 18.0,
+                                    "rmin": 2.0,
+                                    "rmax": 60.0,
+                                    "qdamp": 0.031,
+                                    "qbroad": 0.032
+                                },)
+                    refinery.populate_structures_()
+                    refinery.populate_pdfs_()
+                    refinery.apply_metrics_()
+                    sorted_structures_original = refinery.get_sorted_structures(metric='pearsonr', status='original')
+                    cif_id = sorted_structures_original[0].material_id
+                    cif_fn = glob.glob(os.path.join(results_path, f'**{cif_id}**.cif'))[0]
+                    
+                    print(f'\n\n*** After matching, the most correlated strucuture is\n' 
+                          f'*** {cif_fn} ***\n\n')
+                
+                gr_fit_df = pd.DataFrame()
+                if fitting_pdf:
+                    # ### CsPbBr2 test
+                    # gr_data = '/home/xf28id2/Documents/ChengHung/pdffit2_example/CsPbBr3/CsPbBr3.gr'
+                    
+                    gr_df = pd.read_csv(gr_data, names=['r', 'g(r)'], sep =' ')
+                    pf = pc._pdffit2_CsPbX3(gr_data, cif_list, rmax=100, qmax=12, qdamp=0.031, qbroad=0.032, 
+                                            fix_APD=True, toler=0.01, return_pf=True)
+                    phase_fraction = pf.phase_fractions()['mass']
+                    particel_size = []
+                    for i in range(pf.num_phases()):
+                        pf.setphase(i+1)
+                        particel_size.append(pf.getvar(pf.spdiameter))
+                    # Grab metadat from stream_name = fluorescence for naming gr file
+                    fn_uid = de._fn_generator(uid, beamline_acronym=beamline_acronym_01)
+                    fgr_fn = os.path.join(gr_path, f'{fn_uid}_scattering.fgr')
+                    pf.save_pdf(1, f'{fgr_fn}')
+                    pdf_property={'Br_ratio': phase_fraction[0], 'Br_size':particel_size[0]}
+                    gr_fit = np.asarray([pf.getR(), pf.getpdf_fit()])
+                    # gr_fit_df = pd.DataFrame()
+                    gr_fit_df['fit_r'] = pf.getR()
+                    gr_fit_df['fit_g(r)'] = pf.getpdf_fit()
+                else:
+                    gr_fit = None
+                    gr_fit_df['fit_r'] = np.nan
+                    gr_fit_df['fit_g(r)'] = np.nan
                     pdf_property={'Br_ratio': np.nan, 'Br_size': np.nan}
+                
+                if iq_to_gr:
+                    u.plot_iq_to_gr(iq_df, gr_df.to_numpy().T, gr_fit=gr_fit)
                 ## remove 'scattering' from stream_list to avoid redundant work in next for loop
                 stream_list.remove('scattering')
             
@@ -204,7 +354,7 @@ def print_kafka_messages(beamline_acronym, kin=kin, qin=qin, RM=RM, ):
             for stream_name in stream_list:
                 ## Read data from databroker and turn into dic
                 qepro_dic, metadata_dic = de.read_qepro_by_stream(
-                    uid, stream_name=stream_name, data_agent='tiled', beamline_acronym=beamline_acronym)
+                    uid, stream_name=stream_name, data_agent='tiled', beamline_acronym=beamline_acronym_01)
                 sample_type = metadata_dic['sample_type']
                 ## Save data in dic into .csv file
 
@@ -223,7 +373,8 @@ def print_kafka_messages(beamline_acronym, kin=kin, qin=qin, RM=RM, ):
                     clear_fig=False
                 u.plot_data(clear_fig=clear_fig)
                 print(f'\n** Plot {stream_name} in uid: {uid[0:8]} complete **\n')
-                    
+                
+                global abs_array, abs_array_offset, x0, y0   
                 ## Idenfify good/bad data if it is a fluorescence scan in 'take_a_uvvis'
                 if qepro_dic['QEPro_spectrum_type'][0]==2 and stream_name=='take_a_uvvis':
                     print(f'\n*** start to identify good/bad data in stream: {stream_name} ***\n')
@@ -232,7 +383,7 @@ def print_kafka_messages(beamline_acronym, kin=kin, qin=qin, RM=RM, ):
                 
                 ## Apply an offset to zero baseline of absorption spectra
                 elif stream_name == 'absorbance':
-                    print(f'\n*** start to flter absorbance within 15%-85% due to PF oil phase***\n')
+                    print(f'\n*** start to filter absorbance within 15%-85% due to PF oil phase***\n')
                     ## Apply percnetile filtering for absorption spectra, defaut percent_range = [15, 85]
                     abs_per = da.percentile_abs(qepro_dic['QEPro_x_axis'], qepro_dic['QEPro_output'], percent_range=[15, 85])
                     
@@ -268,7 +419,8 @@ def print_kafka_messages(beamline_acronym, kin=kin, qin=qin, RM=RM, ):
                     # u.plot_average_good(x0, y0, color=cmap(color_idx[sub_idx]), label=label_uid)
                     # sub_idx = sample.index(metadata_dic['sample_type'])
                     u.plot_average_good(x0, y0, label=label_uid, clf_limit=9)
-                    
+                
+                global f_fit   
                 ## Skip peak fitting if qepro type is absorbance
                 if qepro_dic['QEPro_spectrum_type'][0] == 3:  
                     print(f"\n*** No need to carry out fitting for {stream_name} in uid: {uid[:8]} ***\n")
@@ -307,7 +459,7 @@ def print_kafka_messages(beamline_acronym, kin=kin, qin=qin, RM=RM, ):
 
                         ## Calculate PLQY for fluorescence stream
                         if (stream_name == 'fluorescence') and (PLQY[0]==1):
-                            PL_integral_s = integrate.simpson(y,x)
+                            PL_integral_s = integrate.simpson(y)
                             label_uid = f'{uid[0:8]}_{metadata_dic["sample_type"]}'
                             u.plot_CsPbX3(x, y, peak_emission, label=label_uid, clf_limit=9)
                             
@@ -346,7 +498,7 @@ def print_kafka_messages(beamline_acronym, kin=kin, qin=qin, RM=RM, ):
                             if USE_AGENT_iterate:
 
                                 # print(f"\ntelling agent {agent_data}")
-                                agent = build_agen2(peak_target=peak_target, agent_data_path=agent_data_path)
+                                agent = build_agen(peak_target=peak_target, agent_data_path=agent_data_path, use_OAm=True)
 
                                 if len(agent.table) < 2:
                                     acq_func = "qr"
@@ -362,8 +514,8 @@ def print_kafka_messages(beamline_acronym, kin=kin, qin=qin, RM=RM, ):
                                 res_values = []
                                 for i in new_points_label:
                                     if i in new_points['points'].keys():
-                                        res_values.append(new_points['points'][i])
-                                x_tensor = torch.tensor(res_value)
+                                        res_values.append(new_points['points'][i][0])
+                                x_tensor = torch.tensor(res_values)
                                 post = agent.posterior(x_tensor)
                                 post_mean = post.mean.tolist()[0]
                                 post_stddev = post.stddev.tolist()[0]
@@ -379,7 +531,8 @@ def print_kafka_messages(beamline_acronym, kin=kin, qin=qin, RM=RM, ):
                                 agent_data.update({'agent_target': agent_target})
                                 agent_data.update({'posterior_mean': post_mean})
                                 agent_data.update({'posterior_stddev': post_stddev})
-
+                                
+                                
                                 # peak_diff = peak_emission - peak_target
                                 peak_diff = False
 
@@ -389,7 +542,7 @@ def print_kafka_messages(beamline_acronym, kin=kin, qin=qin, RM=RM, ):
                                     print(f'\nReach the target, stop iteration, stop all pumps, and wash the loop.\n')
 
                                     ### Stop all infusing pumps and wash loop
-                                    wash_tube_queue(pump_list, wash_tube, rate_unit, 
+                                    sq.wash_tube_queue2(pump_list, wash_tube, 'ul/min', 
                                                     zmq_control_addr=zmq_control_addr,
                                                     zmq_info_addr=zmq_info_addr)
                                     
@@ -404,16 +557,16 @@ def print_kafka_messages(beamline_acronym, kin=kin, qin=qin, RM=RM, ):
                             plqy_dic = None
                             optical_property = None
                         
-                    ## Save fitting data
-                    print(f'\nFitting function: {f_fit}\n')
-                    de.dic_to_csv_for_stream(saving_path, qepro_dic, metadata_dic, stream_name=stream_name, fitting=ff, plqy_dic=plqy_dic)
-                    print(f'\n** export fitting results complete**\n')
-                    
-                    ## Plot fitting data
-                    u.plot_peak_fit(x, y, f_fit, popt, peak=p, fill_between=True)
-                    print(f'\n** plot fitting results complete**\n')
-                    print(f'{peak = }')
-                    print(f'{prop = }')
+                        ## Save fitting data
+                        print(f'\nFitting function: {f_fit}\n')
+                        de.dic_to_csv_for_stream(saving_path, qepro_dic, metadata_dic, stream_name=stream_name, fitting=ff, plqy_dic=plqy_dic)
+                        print(f'\n** export fitting results complete**\n')
+                        
+                        ## Plot fitting data
+                        u.plot_peak_fit(x, y, f_fit, popt, peak=p, fill_between=True)
+                        print(f'\n** plot fitting results complete**\n')
+                        print(f'{peak = }')
+                        print(f'{prop = }')
                     
                     ## Append good/bad idetified results
                     if stream_name == 'take_a_uvvis':
@@ -433,6 +586,7 @@ def print_kafka_messages(beamline_acronym, kin=kin, qin=qin, RM=RM, ):
                     except (UnboundLocalError):
                         pass
 
+                    global sandbox_uid
                     ## Save processed data in df and agent_data as metadta in sandbox
                     if write_to_sandbox and (stream_name == 'fluorescence'):
                         df = pd.DataFrame()
@@ -443,9 +597,10 @@ def print_kafka_messages(beamline_acronym, kin=kin, qin=qin, RM=RM, ):
                         df['fluorescence_fitting'] = f_fit(x0, *popt)
 
                         ## use pd.concat to add various length data together
-                        # df_new = pd.concat([df, df_iq, df_gr], ignore_index=False, axis=1)
+                        df_new = pd.concat([df, iq_df2, gr_df, gr_fit_df], ignore_index=False, axis=1)
 
-                        entry = sandbox_tiled_client.write_dataframe(df, metadata=agent_data)
+                        # entry = sandbox_tiled_client.write_dataframe(df, metadata=agent_data)
+                        entry = sandbox_tiled_client.write_dataframe(df_new, metadata=agent_data)
                         # uri = sandbox_tiled_client.values()[-1].uri
                         uri = entry.uri
                         sandbox_uid = uri.split('/')[-1]
@@ -454,11 +609,11 @@ def print_kafka_messages(beamline_acronym, kin=kin, qin=qin, RM=RM, ):
 
                     ## Save agent_data locally
                     if write_agent_data and (stream_name == 'fluorescence'):
-                        # agent_data.update({'sandbox_uid': sandbox_uid})                            
+                        # agent_data.update({'sandbox_uid': sandbox_uid})                               
                         with open(f"{agent_data_path}/{data_id}.json", "w") as f:
-                            json.dump(agent_data, f)
+                            json.dump(agent_data, f, indent=2)
 
-                        print(f"\nwrote to {agent_data_path}")
+                        print(f"\nwrote to {agent_data_path}\n")
 
             print(f'*** Accumulated num of good data: {len(good_data)} ***\n')
             print(f'good_data = {good_data}\n')
@@ -481,9 +636,9 @@ def print_kafka_messages(beamline_acronym, kin=kin, qin=qin, RM=RM, ):
                 elif len(good_data) <= 2 and use_good_bad:
                     print('*** Add another fluorescence and absorption scan to the fron of qsever ***\n')
                     
-                    restplan = BPlan('sleep_sec_q', 3)
+                    restplan = BPlan('sleep_sec_q', 5)
                     RM.item_add(restplan, pos=0)
-
+                    
                     scanplan = BPlan('take_a_uvvis_csv_q', 
                                     sample_type=metadata_dic['sample_type'], 
                                     spectrum_type='Corrected Sample', 
@@ -504,21 +659,33 @@ def print_kafka_messages(beamline_acronym, kin=kin, qin=qin, RM=RM, ):
 
                     RM.queue_start()
             
+            ## Add predicted new points from ML agent into qserver
             elif stream_name == 'fluorescence' and USE_AGENT_iterate and agent_iteration[-1]:
                 print('*** Add new points from agent to the fron of qsever ***\n')
                 print(f'*** New points from agent: {new_points} ***\n')
                 
-                if post_dilute:
+                if (post_dilute is True) and (fix_Br_ratio is False):
                     set_target_list = [0 for i in range(len(pump_list))]
-                    # rate_list = new_points['points'].tolist()[0][:-1] + [new_points['points'].sum()]
-                    # rate_list = [rr for rr in new_points['points'].tolist()[0] if rr!=0] + [new_points['points'].sum()]
-                    # rate_list = np.asarray(rate_list)
                     rate_list = []
                     for i in new_points_label:
-                        for key in new_points['points']:
-                            if i == key:
-                                rate_list.append(new_points['points'][key][0])
-                    rate_list.insert(2, sum(rate_list)/10)
+                        if i in new_points['points'].keys():
+                            rate_list.append(new_points['points'][i][0])
+                        else:
+                            pass
+                            # rate_list.append(0)
+                    # rate_list.insert(1, rate_list[0]*5)
+                    rate_list.append(sum(rate_list)*5)
+
+                elif (post_dilute is True) and (fix_Br_ratio is True):
+                    set_target_list = [0 for i in range(len(pump_list))]
+                    rate_list = []
+                    for i in new_points_label:
+                        if i in new_points['points'].keys():
+                            rate_list.append(new_points['points'][i][0])
+                        else:
+                            pass
+                            # rate_list.append(0)
+                    rate_list.insert(1, rate_list[0]*5)
                     rate_list.append(sum(rate_list)*5)
                 
                 else:
@@ -543,29 +710,33 @@ def print_kafka_messages(beamline_acronym, kin=kin, qin=qin, RM=RM, ):
                     wash_tube=wash_tube, 
                     name_by_prefix=bool(prefix[0]),  
 					num_abs=num_uvvis[0], 
-					num_flu=num_uvvis[1], 
+					num_flu=num_uvvis[1],
+                    det1=num_uvvis[2],
+                    det1_time=num_uvvis[3],
+                    det1_frame_rate=num_uvvis[4],
                     is_iteration=True, 
                     zmq_control_addr=zmq_control_addr, 
 					zmq_info_addr=zmq_info_addr, 
                     )
 
-                RM.queue_start()
+                # RM.queue_start()
     
             # elif use_good_bad:
             else:
                 print('*** Move to next reaction in Queue ***\n')
-                # time.sleep(2)
-                RM.queue_start()
+                time.sleep(2)
+                # RM.queue_start()
 
 
     kafka_config = _read_bluesky_kafka_config_file(config_file_path="/etc/bluesky/kafka.yml")
 
     # this consumer should not be in a group with other consumers
     #   so generate a unique consumer group id for it
-    unique_group_id = f"echo-{beamline_acronym}-{str(uuid.uuid4())[:8]}"
+    unique_group_id = f"echo-{beamline_acronym_01}-{str(uuid.uuid4())[:8]}"
 
     kafka_consumer = BasicConsumer(
-        topics=[f"{beamline_acronym}.bluesky.runengine.documents"],
+        topics=[f"{beamline_acronym_01}.bluesky.runengine.documents", 
+                f"{beamline_acronym_02}.bluesky.runengine.documents"],
         bootstrap_servers=kafka_config["bootstrap_servers"],
         group_id=unique_group_id,
         consumer_config=kafka_config["runengine_producer_config"],
@@ -581,4 +752,4 @@ def print_kafka_messages(beamline_acronym, kin=kin, qin=qin, RM=RM, ):
 
 if __name__ == "__main__":
     import sys
-    print_kafka_messages(sys.argv[1])
+    print_kafka_messages(sys.argv[1], sys.argv[2])
