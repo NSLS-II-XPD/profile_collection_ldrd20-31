@@ -44,6 +44,8 @@ def _kafka_process():
             'fitting_pdf', 'fitting_pdf_path', 'cif_fn', 'gr_fn', 
             'use_sandbox', 'write_to_sandbox', 'sandbox_tiled_client', 'tiled_client', 
             'fn_TBD', 
+            'entry', 'iq_q', 'iq_I', 'stream_list', 'uid', 'uid_catalog', 'uid_pdfstream',  
+            ''
             ]
 
     return kafka_list

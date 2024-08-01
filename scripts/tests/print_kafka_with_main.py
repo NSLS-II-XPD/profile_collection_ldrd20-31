@@ -23,10 +23,11 @@ def print_kafka_messages(beamline_acronym):
         print(
             f"{datetime.datetime.now().isoformat()} document: {name}\n"
             # f"contents: {pprint.pformat(doc)}\n"
+            f"{doc.keys()}\n"
         )
         if name == 'stop':
             time.sleep(2)
-            print(db[doc['run_start']].table())
+            # print(db[doc['run_start']].table())
             # print(doc['run_start'])
 
             # zmq_single_request(method='queue_item_add', params={'item':{"name":"insitu_test", "args": [1 ,1]

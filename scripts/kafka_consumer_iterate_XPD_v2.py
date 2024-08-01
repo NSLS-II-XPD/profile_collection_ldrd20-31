@@ -105,8 +105,9 @@ def print_kafka_messages(beamline_acronym_01, beamline_acronym_02, kin=kin, qin=
     ## Append raw data & analysis data tiled clients
     kin.tiled_client.append(beamline_acronym_01)
     kin.tiled_client.append(from_profile(beamline_acronym_01))
-    kin.tiled_client.append(beamline_acronym_02)
-    kin.tiled_client.append(from_profile(beamline_acronym_02))
+    ## 'xpd-analysis' is not a catalog name so can't be accessed in databroker
+
+    kin.sandbox_tiled_client.append(from_uri(kin.sandbox_tiled_client[0]))
 
     ## Append good/bad data folder to csv_path
     kin.csv_path.append(os.path.join(kin.csv_path[0], 'good_bad'))
@@ -126,7 +127,7 @@ def print_kafka_messages(beamline_acronym_01, beamline_acronym_02, kin=kin, qin=
         
         ######### While document (name == 'start') and ('topic' in doc[1]) ##########
         ##                                                                         ##
-        ##            Only print metadata when the docuemnt is a scan              ##
+        ##         Only print metadata when the docuemnt is from pdfstream         ##
         ##                                                                         ##
         #############################################################################
         if (name == 'start') and ('topic' in doc[1]):
@@ -162,33 +163,36 @@ def print_kafka_messages(beamline_acronym_01, beamline_acronym_02, kin=kin, qin=
             if 'sample_type' in message.keys():
                 print(f"sample type: {message['sample_type']}")
             
+            ## Reset kin.uid to as empty list
+            kin.uid = []
+            
         
-        global uid    
-        uid = []
         ######### While document (name == 'event') and ('topic' in doc[1]) ##########
-        ##        key 'topic' is added into the document of xpd-analysis           ##
+        ##        key 'topic' is added into the doc of xpd-analysis in pdfstream   ##
         ##        Read uid of analysis data from doc[1]['data']['chi_I']           ##
         ##        Get I(Q) data from the integral of 2D image by pdfstream         ##
         #############################################################################
         if (name == 'event') and ('topic' in doc[1]):
             # print(f"\n\n\n{datetime.datetime.now().isoformat()} documents {name}\n"
-            #       f"contents: {pprint.pformat(message)}"
-            # )
-            # time.sleep(1)
-            global entry, iq_Q, iq_I
-            
-            # entry, iq_Q, iq_I = [], [], []
+            #       f"contents: {pprint.pformat(message)}")
+
             iq_I_uid  = doc[1]['data']['chi_I']
-            entry = sandbox_tiled_client[iq_I_uid]
-            df = entry.read()
-            # print(f'{entry.metadata = }')
-            iq_Q = df['chi_Q'].to_numpy()
-            iq_I = df['chi_I'].to_numpy()
+            kin.uid_pdfstream.append(iq_I_uid)
+            kin.entry.append(sandbox_tiled_client[iq_I_uid])
+            df = kin.entry[-1].read()
+            kin.iq_Q.append(df['chi_Q'].to_numpy())
+            kin.iq_I.append(df['chi_I'].to_numpy())
+            
+            ## Reset kin.uid to as empty list
+            kin.uid = []
 
+        
 
-        global stream_list
-        ## Acquisition of xray_uvvis_plan finished but analysis of pdfstream not yet
-        ## So just stop queue but not assign uid, stream_list
+        #### While document (name == 'stop') and ('scattering' in message['num_events']) ####
+        ##   Acquisition of xray_uvvis_plan finished but analysis of pdfstream not yet     ##
+        ##      So just sleep 1 second but not assign uid, stream_list                     ##
+        ##      No need to stop queue since the net queue task is wahsing loop             ##
+        #####################################################################################
         if (name == 'stop') and ('scattering' in message['num_events']):
             print('\n*** qsever stop for data export, identification, and fitting ***\n')
             print(f"\n\n\n{datetime.datetime.now().isoformat()} documents {name}\n"
@@ -197,39 +201,54 @@ def print_kafka_messages(beamline_acronym_01, beamline_acronym_02, kin=kin, qin=
             # inst1 = BInst("queue_stop")
             # RM.item_add(inst1, pos='front')
             ## wait 1 second for databroker to save data
-            time.sleep(1)                
+            time.sleep(1)
+            kin.uid = []
 
-        
-        ## With taking xray_uvvis_pla, analysis of pdfstream finished
-        ## queue should stop before (when acquisition finished)
-        ## Obtain raw data uid by reading metadata in sandbox Tiled
+
+        #### (name == 'stop') and ('topic' in doc[1]) and (len(message['num_events'])>0) ####
+        ##      With taking xray_uvvis_plan and analysis of pdfstream finished             ##
+        ##        Sleep 1 second and assign uid, stream_list from kin.entry[-1]            ##
+        ##        No need to stop queue since the net queue task is wahsing loop           ##
+        #####################################################################################
         elif (name == 'stop') and ('topic' in doc[1]) and (len(message['num_events'])>0):
             print(f"\n\n\n{datetime.datetime.now().isoformat()} documents {name}\n"
                   f"contents: {pprint.pformat(message)}"
             )
             ## wait 1 second for databroker to save data
             time.sleep(1)
-            uid = entry.metadata['run_start']
-            stream_list = tiled_client[uid].metadata['summary']['stream_names']
+            kin.uid = kin.entry[-1].metadata['run_start']
+            kin.uid_catalog.append(kin.uid)
+            stream_list = kin.tiled_client[-1][kin.uid].metadata['summary']['stream_names']
+            kin.stream_list = []
+            for stream_name in syringe_list:
+                kin.stream_list.append(stream_name)
 
-        ## Only take a Uv-Vis, no X-ray data but still do analysis of pdfstream
-        ## Stop queue first
-        ## Obtain raw data uid in bluesky doc, message            
+
+
+        #########  (name == 'stop') and ('take_a_uvvis' in message['num_events'])  ##########
+        ##     Only take a Uv-Vis, no X-ray data but still do analysis of pdfstream        ##
+        ##                   Stop queue first for identify good/bad data                   ##
+        ##                   Obtain raw data uid in bluesky doc, message                   ##
+        #####################################################################################         
         elif (name == 'stop') and ('take_a_uvvis' in message['num_events']):
             print('\n*** qsever stop for data export, identification, and fitting ***\n')
 
             print(f"\n\n\n{datetime.datetime.now().isoformat()} documents {name}\n"
-                  f"contents: {pprint.pformat(message)}"
-            )
+                  f"contents: {pprint.pformat(message)}")
                         
             inst1 = BInst("queue_stop")
             RM.item_add(inst1, pos='front')
             ## wait 1 second for databroker to save data
             time.sleep(1)
-            uid = message['run_start']
+            kin.uid = message['run_start']
+            kin.uid_catalog.append(kin.uid)
             stream_list = list(message['num_events'].keys())
+            kin.stream_list = []
+            for stream_name in syringe_list:
+                kin.stream_list.append(stream_name)
             
-            
+ /////////////////////////////////////////////////////////////////////////////////////////////////
+ 
         ## When uid is assigned and type is a string, move to data fitting, calculation
         if (name == 'stop') and (type(uid) is str):
             print(f'\n**** start to export uid: {uid} ****\n')
