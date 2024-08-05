@@ -42,9 +42,9 @@ def _kafka_process():
             'iq_to_gr', 'iq_to_gr_path', 'cfg_fn', 'bkg_fn', 'iq_fn',  
             'search_and_match', 'mystery_path', 'results_path', 
             'fitting_pdf', 'fitting_pdf_path', 'cif_fn', 'gr_fn', 
-            'use_sandbox', 'write_to_sandbox', 'sandbox_tiled_client', 'tiled_client', 
+            'use_sandbox', 'write_to_sandbox', 'sandbox_uri', 'sandbox_tiled_client', 'tiled_client', 
             'fn_TBD', 
-            'entry', 'iq_q', 'iq_I', 'stream_list', 'uid', 'uid_catalog', 'uid_pdfstream',  
+            'entry', 'iq_data', 'stream_list', 'uid', 'uid_catalog', 'uid_pdfstream',  
             ''
             ]
 
@@ -85,10 +85,10 @@ class xlsx_to_inputs():
                         agent_data_path=self.inputs.agent_data_path[0])
                         )
 
-            ## self.inputs.sandbox_tiled_client[0] is just the uri of sandbox
-            ## so, turn uri into client and append it in self.inputs.sandbox_tiled_client
-            if type(self.inputs.sandbox_tiled_client[0]) is str:
-                self.inputs.sandbox_tiled_client.append(from_uri(self.inputs.sandbox_tiled_client[0]))
+            ## self.inputs.sandbox_uri[0] is just the uri of sandbox
+            ## so, turn uri into client and assign it to self.inputs.sandbox_tiled_client
+            if type(self.inputs.sandbox_uri[0]) is str:
+                self.inputs.sandbox_tiled_client = from_uri(self.inputs.sandbox_uri[0])
 
 
             ## Use glob.glob to find the complete path of cfg_fn, bkg_fn, iq_fn, cif_fn, gr_fn

@@ -100,9 +100,8 @@ def print_kafka_messages(beamline_acronym, kin=kin, qin=qin, RM=RM, ):
           f'{bool(kin.write_to_sandbox[0]) = }\n'
           f'{qin.zmq_control_addr[0] = }')
 
-    ## Append raw data tiled_client
-    kin.tiled_client.append(beamline_acronym)
-    kin.tiled_client.append(from_profile(beamline_acronym))
+    ## Assignt raw data tiled clients
+    kin.tiled_client.append = from_profile(beamline_acronym)
 
     ## Append good/bad data folder to csv_path
     kin.csv_path.append(os.path.join(kin.csv_path[0], 'good_bad'))
@@ -177,19 +176,24 @@ def print_kafka_messages(beamline_acronym, kin=kin, qin=qin, RM=RM, ):
             time.sleep(2)
             
             ## Obtain uid from message['run_start']
-            uid = message['run_start']
-            print(f'\n**** start to export uid: {uid} ****\n')
+            kin.uid = message['run_start']
+            kin.uid_catalog.append(kin.uid)
+            print(f'\n**** start to export uid: {kin.uid} ****\n')
             # print(list(message['num_events'].keys())[0])
 
             ## Put stream name of scans into stream_list
             stream_list = list(message['num_events'].keys())
+            kin.stream_list = []
+            for stream_name in syringe_list:
+                kin.stream_list.append(stream_name)
 
+
+//////////////////////////////////////////////////////////////////////////////////////////////////
             ## Set good/bad data condictions to the corresponding sample
             kh = kin.key_height[0]
             hei = kin.height[0]
             dis = kin.distance[0]
             
-//////////////////////////////////////////////////////////////////////////////////////////////////
             ## obtain phase fraction & particle size from g(r)
             if 'scattering' in stream_list:
                 if fitting_pdf:
