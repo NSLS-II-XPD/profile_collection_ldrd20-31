@@ -96,7 +96,6 @@ def print_kafka_messages(beamline_acronym, kin=kin, qin=qin, RM=RM, ):
           f'{bool(kin.fitting_pdf[0]) = }\n'
           f'{kin.fitting_pdf_path[0] = }\n'
 
-          f'{bool(kin.use_sandbox[0]) = }\n'
           f'{bool(kin.write_to_sandbox[0]) = }\n'
           f'{qin.zmq_control_addr[0] = }')
 

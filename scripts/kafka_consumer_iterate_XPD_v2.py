@@ -24,6 +24,7 @@ from _plot_helper import plot_uvvis
 import _data_analysis as da
 import _pdf_calculator as pc
 import _get_pdf as gp
+import _LDRD_Kafka as LK
 
 from bluesky_queueserver_api.zmq import REManagerAPI
 from bluesky_queueserver_api import BPlan, BInst
@@ -62,16 +63,23 @@ if qin.name_by_prefix[0]:
 print(f'Sample: {sample}')
 
 
-def print_kafka_messages(beamline_acronym_01, beamline_acronym_02, kin=kin, qin=qin, RM=RM, ):
+def print_kafka_messages(beamline_acronym_01, 
+                        beamline_acronym_02, 
+                        kafka_process=kafka_process, 
+                        qserver_process=qserver_process, 
+                        RM=RM, ):
 
     """Print kafka message from beamline_acronym
 
     Args:
         beamline_acronym (str): subscribed topics for data publishing (ex: xpd, xpd-analysis, xpd-ldrd20-31)
-        kin (_LDRD_Kafka.xlsx_to_inputs.inputs, optional): kafka parameters read from xlsx. Defaults to kin.
-        qin (_LDRD_Kafka.xlsx_to_inputs.inputs, optional): qserver parameters read from xlsx. Defaults to qin.
+        kafka_process (_LDRD_Kafka.xlsx_to_inputs, optional): kafka parameters read from xlsx. Defaults to kafka_process.
+        qserver_process (_LDRD_Kafka.xlsx_to_inputs, optional): qserver parameters read from xlsx. Defaults to qserver_process.
         RM (REManagerAPI, optional): Run Engine Manager API. Defaults to RM.
     """
+
+    kin = kafka_process.inputs
+    qin = qserver_process.inputs
 
     print(f"Listening for Kafka messages for\n"
                                             f"     raw data: {beamline_acronym_01}\n"
@@ -98,7 +106,6 @@ def print_kafka_messages(beamline_acronym_01, beamline_acronym_02, kin=kin, qin=
           f'{bool(kin.fitting_pdf[0]) = }\n'
           f'{kin.fitting_pdf_path[0] = }\n'
 
-          f'{bool(kin.use_sandbox[0]) = }\n'
           f'{bool(kin.write_to_sandbox[0]) = }\n'
           f'{qin.zmq_control_addr[0] = }')
 
@@ -162,8 +169,8 @@ def print_kafka_messages(beamline_acronym_01, beamline_acronym_02, kin=kin, qin=
             
             ## Reset kin.uid to an empty list
             kin.uid = []
-            
-        
+
+        ## macro_01
         ######### While document (name == 'event') and ('topic' in doc[1]) ##########
         ##        key 'topic' is added into the doc of xpd-analysis in pdfstream   ##
         ##        Read uid of analysis data from doc[1]['data']['chi_I']           ##
@@ -174,16 +181,7 @@ def print_kafka_messages(beamline_acronym_01, beamline_acronym_02, kin=kin, qin=
             #       f"contents: {pprint.pformat(message)}")
 
             iq_I_uid  = doc[1]['data']['chi_I']
-            kin.uid_pdfstream.append(iq_I_uid)
-            kin.entry = kin.sandbox_tiled_client[iq_I_uid]
-            df = kin.entry.read()
-            # Before appending I(Q) data, reset kin.iq_data as an empty list
-            kin.iq_data = []
-            kin.iq_data.append(df['chi_Q'].to_numpy())
-            kin.iq_data.append(df['chi_I'].to_numpy())
-            
-            ## Reset kin.uid to an empty list
-            kin.uid = []
+            kafka_process.macro_01_get_iq(iq_I_uid)
 
         
 
@@ -197,14 +195,13 @@ def print_kafka_messages(beamline_acronym_01, beamline_acronym_02, kin=kin, qin=
             print(f"\n\n\n{datetime.datetime.now().isoformat()} documents {name}\n"
                   f"contents: {pprint.pformat(message)}"
             )
-            # inst1 = BInst("queue_stop")
-            # RM.item_add(inst1, pos='front')
             ## wait 1 second for databroker to save data
             time.sleep(1)
             ## Reset kin.uid to an empty list
             kin.uid = []
 
 
+        ## macro_02
         #### (name == 'stop') and ('topic' in doc[1]) and (len(message['num_events'])>0) ####
         ##      With taking xray_uvvis_plan and analysis of pdfstream finished             ##
         ##        Sleep 1 second and assign uid, stream_list from kin.entry[-1]            ##
@@ -214,18 +211,10 @@ def print_kafka_messages(beamline_acronym_01, beamline_acronym_02, kin=kin, qin=
             print(f"\n\n\n{datetime.datetime.now().isoformat()} documents {name}\n"
                   f"contents: {pprint.pformat(message)}"
             )
-            ## wait 1 second for databroker to save data
-            time.sleep(1)
-            kin.uid = kin.entry.metadata['run_start']
-            kin.uid_catalog.append(kin.uid)
-            stream_list = kin.tiled_client[kin.uid].metadata['summary']['stream_names']
-            ## Reset kin.stream_list to an empty list
-            kin.stream_list = []
-            for stream_name in syringe_list:
-                kin.stream_list.append(stream_name)
+            kafka_process.macro_02_get_uid()
 
 
-
+        ## macro_03
         #########  (name == 'stop') and ('take_a_uvvis' in message['num_events'])  ##########
         ##     Only take a Uv-Vis, no X-ray data but still do analysis of pdfstream        ##
         ##                   Stop queue first for identify good/bad data                   ##
@@ -236,18 +225,8 @@ def print_kafka_messages(beamline_acronym_01, beamline_acronym_02, kin=kin, qin=
 
             print(f"\n\n\n{datetime.datetime.now().isoformat()} documents {name}\n"
                   f"contents: {pprint.pformat(message)}")
-                        
-            inst1 = BInst("queue_stop")
-            RM.item_add(inst1, pos='front')
-            ## wait 1 second for databroker to save data
-            time.sleep(1)
-            kin.uid = message['run_start']
-            kin.uid_catalog.append(kin.uid)
-            stream_list = list(message['num_events'].keys())
-            ## Reset kin.stream_list to an empty list
-            kin.stream_list = []
-            for stream_name in syringe_list:
-                kin.stream_list.append(stream_name)
+            
+            kafka_process.macro_03_stop_queue_uid(RM)
 
 
         ##################  (name == 'stop') and (type(kin.uid) is str)  ####################
@@ -271,106 +250,39 @@ def print_kafka_messages(beamline_acronym_01, beamline_acronym_02, kin=kin, qin=
                     kin.uid, stream_name='fluorescence', data_agent='tiled', 
                     beamline_acronym=beamline_acronym_01)
                 u = plot_uvvis(qepro_dic, metadata_dic)
-                
-                if kin.use_sandbox[0]:
-                    iq_array = np.asarray([kin.iq_data[0], kin.iq_data[1]])
-                    kin.iq_data.append(iq_array)
 
-                    iq_df = pd.DataFrame()
-                    iq_df['q'] = kin.iq_data[0]
-                    iq_df['I(q)'] = kin.iq_data[1]
-                    kin.iq_data.append(iq_df)
-                    
-                    # ### CsPbBr2 test
-                    # iq_array = pd.read_csv(iq_fn, skiprows=1, names=['q', 'I(q)'], sep=' ').to_numpy().T
-                    # kin.iq_data.append(iq_array)
-                    # iq_df = pd.read_csv(iq_fn, skiprows=1, names=['q', 'I(q)'], sep=' ')
-                    # kin.iq_data.append(iq_df)
+                ## macro_04 (dummy test, e.g., CsPbBr2)
+                if kin.dummy_pdf[0]:
+                    kafka_process.macro_04_dummy_pdf()
 
-                
+                ## macro_05
                 if kin.iq_to_gr[0]:
-                    # Grab metadat from stream_name = fluorescence for naming gr file
-                    fn_uid = de._fn_generator(kin.uid, beamline_acronym=beamline_acronym_01)
-                    gr_fn = f'{fn_uid}_scattering.gr'
-                    
-                    # ### CsPbBr2 test
-                    # gr_fn = f'{iq_fn[:-4]}.gr'
-                    
-                    # Build pdf config file from a scratch
-                    pdfconfig = PDFConfig()
-                    pdfconfig.readConfig(kin.cfg_fn[-1])
-                    pdfconfig.backgroundfiles = kin.bkg_fn[-1]
-                    sqfqgr_path = gp.transform_bkg(pdfconfig, iq_array, output_dir=gr_path, 
-                                plot_setting={'marker':'.','color':'green'}, test=True, 
-                                gr_fn=gr_fn)    
-                    gr_data = sqfqgr_path['gr']
-                    
-                    ## Remove headers by reading gr_data into pd.Dataframe and save again
-                    ## Otherwise, headers will cause trouble in pdffit2
-                    gr_df = pd.read_csv(gr_data, skiprows=26, names=['r', 'g(r)'], sep =' ')
-                    gr_df.to_csv(gr_data, index=False, header=False, sep =' ')
-                    
-                if search_and_match:
-                    # gr_data = '/home/xf28id2/Documents/ChengHung/pdffit2_example/CsPbBr3/CsPbBr3.gr'
-                    refinery = Refinery(mystery_path=gr_data, results_path=results_path, 
-                                criteria={"elements":
-                                    {#["Pb","Se"], 
-                                    #"$in": ["Cs"], 
-                                    "$all": ["Pb"],
-                                    }},
-                                strict=[],
-                                # strict=["Pb", "S"],
-                                pdf_calculator_kwargs={
-                                    "qmin": 1.0, 
-                                    "qmax": 18.0,
-                                    "rmin": 2.0,
-                                    "rmax": 60.0,
-                                    "qdamp": 0.031,
-                                    "qbroad": 0.032
-                                },)
-                    refinery.populate_structures_()
-                    refinery.populate_pdfs_()
-                    refinery.apply_metrics_()
-                    sorted_structures_original = refinery.get_sorted_structures(metric='pearsonr', status='original')
-                    cif_id = sorted_structures_original[0].material_id
-                    cif_fn = glob.glob(os.path.join(results_path, f'**{cif_id}**.cif'))[0]
-                    
+                    kafka_process.macro_05_iq_to_gr(beamline_acronym_01)
+
+                ## macro_06
+                if kin.search_and_match[0]:
+                    # cif_fn = kafka_process.macro_06_search_and_match(kin.gr_fn[0])
+                    cif_fn = kafka_process.macro_06_search_and_match(kin.gr_data[0])                    
                     print(f'\n\n*** After matching, the most correlated strucuture is\n' 
                           f'*** {cif_fn} ***\n\n')
                 
-                gr_fit_df = pd.DataFrame()
-                if fitting_pdf:
-                    # ### CsPbBr2 test
-                    # gr_data = '/home/xf28id2/Documents/ChengHung/pdffit2_example/CsPbBr3/CsPbBr3.gr'
-                    
-                    gr_df = pd.read_csv(gr_data, names=['r', 'g(r)'], sep =' ')
-                    pf = pc._pdffit2_CsPbX3(gr_data, cif_list, rmax=100, qmax=12, qdamp=0.031, qbroad=0.032, 
-                                            fix_APD=True, toler=0.01, return_pf=True)
-                    phase_fraction = pf.phase_fractions()['mass']
-                    particel_size = []
-                    for i in range(pf.num_phases()):
-                        pf.setphase(i+1)
-                        particel_size.append(pf.getvar(pf.spdiameter))
-                    # Grab metadat from stream_name = fluorescence for naming gr file
-                    fn_uid = de._fn_generator(uid, beamline_acronym=beamline_acronym_01)
-                    fgr_fn = os.path.join(gr_path, f'{fn_uid}_scattering.fgr')
-                    pf.save_pdf(1, f'{fgr_fn}')
-                    pdf_property={'Br_ratio': phase_fraction[0], 'Br_size':particel_size[0]}
-                    gr_fit = np.asarray([pf.getR(), pf.getpdf_fit()])
-                    # gr_fit_df = pd.DataFrame()
-                    gr_fit_df['fit_r'] = pf.getR()
-                    gr_fit_df['fit_g(r)'] = pf.getpdf_fit()
+                ## macro_07
+                if kin.fitting_pdf[0]:
+                    kafka_process.macro_07_fitting_pdf(
+                        kin.gr_data[0], beamline_acronym_01, 
+                        rmax=100.0, qmax=12.0, qdamp=0.031, qbroad=0.032, 
+                        fix_APD=True, toler=0.01
+                        )
                 else:
-                    gr_fit = None
-                    gr_fit_df['fit_r'] = np.nan
-                    gr_fit_df['fit_g(r)'] = np.nan
-                    pdf_property={'Br_ratio': np.nan, 'Br_size': np.nan}
+                    kafka_process.macro_08_no_fitting_pdf()
                 
-                if iq_to_gr:
-                    u.plot_iq_to_gr(iq_array, gr_df.to_numpy().T, gr_fit=gr_fit)
+                if kin.iq_to_gr[0]:
+                    u.plot_iq_to_gr(kin.iq_data[2], kin.gr_data[1].to_numpy().T, gr_fit=kin.gr_fitting[2])
+                
                 ## remove 'scattering' from stream_list to avoid redundant work in next for loop
-                stream_list.remove('scattering')
+                kin.stream_list.remove('scattering')
             
+//////////////////////////////////////////////////////////////////////////////////////////
             ## Export, plotting, fitting, calculate # of good/bad data, add queue item
             for stream_name in stream_list:
                 ## Read data from databroker and turn into dic
