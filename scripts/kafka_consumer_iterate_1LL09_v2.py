@@ -62,7 +62,10 @@ if qin.name_by_prefix[0]:
 print(f'Sample: {sample}')
 
 
-def print_kafka_messages(beamline_acronym, kin=kin, qin=qin, RM=RM, ):
+def print_kafka_messages(beamline_acronym, 
+                        kafka_process=kafka_process, 
+                        qserver_process=qserver_process, 
+                        RM=RM, ):
 
     """Print kafka message from beamline_acronym
 
@@ -72,6 +75,9 @@ def print_kafka_messages(beamline_acronym, kin=kin, qin=qin, RM=RM, ):
         qin (_LDRD_Kafka.xlsx_to_inputs.inputs, optional): qserver parameters read from xlsx. Defaults to qin.
         RM (REManagerAPI, optional): Run Engine Manager API. Defaults to RM.
     """
+
+    kin = kafka_process.inputs
+    qin = qserver_process.inputs
 
     print(f"Listening for Kafka messages for {beamline_acronym}")
     print(f'Defaul parameters:\n'
@@ -187,21 +193,28 @@ def print_kafka_messages(beamline_acronym, kin=kin, qin=qin, RM=RM, ):
                 kin.stream_list.append(stream_name)
 
 
-//////////////////////////////////////////////////////////////////////////////////////////////////
             ## Set good/bad data condictions to the corresponding sample
             kh = kin.key_height[0]
             hei = kin.height[0]
             dis = kin.distance[0]
             
             ## obtain phase fraction & particle size from g(r)
-            if 'scattering' in stream_list:
-                if fitting_pdf:
-                    phase_fraction, particel_size = pc._pdffit2_CsPbX3(gr_data, cif_list, qmax=20, qdamp=0.031, qbroad=0.032, fix_APD=False, toler=0.001)
-                    pdf_property={'Br_ratio': phase_fraction[0], 'Br_size':particel_size[0]}
+            if 'scattering' in kin.stream_list:
+                
+                ## macro_07: do pdf fitting and update kin.gr_fitting
+                if kin.fitting_pdf[0]:
+                    kafka_process.macro_07_fitting_pdf(
+                        kin.gr_fn[0], beamline_acronym, 
+                        rmax=100.0, qmax=12.0, qdamp=0.031, qbroad=0.032, 
+                        fix_APD=True, toler=0.01
+                        )
+                
+                ## macro_08: not do pdf fitting but also update kin.gr_fitting
                 else:
-                    pdf_property={'Br_ratio': np.nan, 'Br_size': np.nan}
+                    kafka_process.macro_08_no_fitting_pdf()
+                
                 ## remove 'scattering' from stream_list to avoid redundant work in next for loop
-                stream_list.remove('scattering')
+                kin.stream_list.remove('scattering')
             
             ## Export, plotting, fitting, calculate # of good/bad data, add queue item
             for stream_name in stream_list:
