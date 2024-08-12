@@ -23,6 +23,7 @@ def synthesis_queue_xlsx(parameter_obj):
 
 	syringe_list = qsp.syringe_list
 	pump_list = qsp.pump_list
+	auto_set_target_list = qsp.auto_set_target_list[0]
 	set_target_list = qsp.set_target_list
 	target_vol_list = qsp.target_vol_list
 	rate_list = qsp.infuse_rates
@@ -60,12 +61,16 @@ def synthesis_queue_xlsx(parameter_obj):
 	else:
 		rate_list = rate_list.tolist()
 
-	set_target_list = np.asarray(set_target_list, dtype=np.int8)
-	if len(set_target_list.shape) == 1:
-		set_target_list = set_target_list.reshape(1, set_target_list.shape[0])
-		set_target_list = set_target_list.tolist()
+	if auto_set_target_list:
+		set_target_list = np.zeros([len(rate_list), len(pump_list)]).tolist()
+	
 	else:
-		set_target_list = set_target_list.tolist()
+		set_target_list = np.asarray(set_target_list, dtype=np.int8)
+		if len(set_target_list.shape) == 1:
+			set_target_list = set_target_list.reshape(1, set_target_list.shape[0])
+			set_target_list = set_target_list.tolist()
+		else:
+			set_target_list = set_target_list.tolist()
 		
 
 	# 0. stop infuese for all pumps
@@ -238,7 +243,8 @@ def synthesis_queue_xlsx(parameter_obj):
 ## Arrange tasks of for PQDs synthesis
 def synthesis_queue(
                     syringe_list, 
-                    pump_list, 
+                    pump_list,
+					auto_set_target_list, 
                     set_target_list, 
                     target_vol_list, 
                     rate_list, 
@@ -275,12 +281,17 @@ def synthesis_queue(
 	else:
 		rate_list = rate_list.tolist()
 
-	set_target_list = np.asarray(set_target_list, dtype=np.int8)
-	if len(set_target_list.shape) == 1:
-		set_target_list = set_target_list.reshape(1, set_target_list.shape[0])
-		set_target_list = set_target_list.tolist()
+	
+	if auto_set_target_list[0]:
+		set_target_list = np.zeros([len(rate_list), len(pump_list)]).tolist()	
+	
 	else:
-		set_target_list = set_target_list.tolist()
+		set_target_list = np.asarray(set_target_list, dtype=np.int8)
+		if len(set_target_list.shape) == 1:
+			set_target_list = set_target_list.reshape(1, set_target_list.shape[0])
+			set_target_list = set_target_list.tolist()
+		else:
+			set_target_list = set_target_list.tolist()
 		
 
 	# 0. stop infuese for all pumps

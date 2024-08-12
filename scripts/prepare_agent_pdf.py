@@ -11,7 +11,7 @@ from tqdm import tqdm
 from blop import Agent, DOF, Objective
 
 
-def build_agen(peak_target=660, peak_tolerance=5, size_target=6, agent_data_path='/', use_OAm=False):
+def build_agent(peak_target=660, peak_tolerance=5, size_target=6, agent_data_path='/', use_OAm=False):
     # data_path = '/home/xf28id2/data_ZnCl2'
     #data_path = '/home/xf28id2/data'
     agent_data_path = agent_data_path

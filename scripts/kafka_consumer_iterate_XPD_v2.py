@@ -13,7 +13,7 @@ import databroker
 import json
 import glob
 from tqdm import tqdm
-from diffpy.pdfgetx import PDFConfig
+# from diffpy.pdfgetx import PDFConfig
 from tiled.client import from_uri, from_profile
 
 import resource
@@ -23,8 +23,11 @@ import _data_export as de
 from _plot_helper import plot_uvvis
 import _data_analysis as da
 import _pdf_calculator as pc
-import _get_pdf as gp
-import _LDRD_Kafka as LK
+# import _get_pdf as gp
+
+import importlib
+LK = importlib.import_module("_LDRD_Kafka")
+sq = importlib.import_module("_synthesis_queue_RM")
 
 from bluesky_queueserver_api.zmq import REManagerAPI
 from bluesky_queueserver_api import BPlan, BInst
@@ -40,21 +43,22 @@ except (ImportError, AttributeError):
 plt.ion()
 plt.rcParams["figure.raise_window"] = False
 
-xlsx_fn = '/home/xf28id2/Documents/ChengHung/inputs_qserver_kafka_v2.xlsx'
+# xlsx_fn = '/home/xf28id2/Documents/ChengHung/inputs_qserver_kafka_v2.xlsx'
+xlsx_fn = '/home/xf28id2/.ipython/profile_collection/scripts/inputs_qserver_kafka_v2.xlsx'
 
 ## Input varaibales for Qserver, reading from xlsx_fn by given sheet name
-qserver_process = LK.xlsx_to_inputs(LK._qserver_inputs(), xlsx_fn=xlsx_fn, sheet_name='qserver_XPD')
+qserver_process = LK.xlsx_to_inputs(LK._qserver_inputs(), xlsx_fn=xlsx_fn, sheet_name='qserver_test')
 qin = qserver_process.inputs
 
 ## Input varaibales for Kafka, reading from xlsx_fn by given sheet name
-kafka_process = LK.xlsx_to_inputs(LK._kafka_inputs(), xlsx_fn=xlsx_fn, sheet_name='kafka_process')
+kafka_process = LK.xlsx_to_inputs(LK._kafka_inputs(), xlsx_fn=xlsx_fn, sheet_name='kafka_process', is_kafka=True)
 kin = kafka_process.inputs
 
 ## Define RE Manager API as RM 
 RM = REManagerAPI(zmq_control_addr=qin.zmq_control_addr[0], zmq_info_addr=qin.zmq_info_addr[0])
 
 ## Make the first prediction from kafka_process.agent
-first_points = kafka_process.macro_agent(qserver_process, RM, check_target=True)
+first_points = kafka_process.macro_agent(qserver_process, RM, check_target=False, use_OAm=False, is_1st=True)
 rate_list = kafka_process.auto_rate_list(qin.pump_list, first_points, kin.fix_Br_ratio)
 if kin.post_dilute[0]:
     rate_list.append(sum(rate_list)*kin.post_dilute[1])
@@ -63,7 +67,6 @@ qin.infuse_rates = rate_list
 
 
 ## Import Qserver parameters to RE Manager
-import _synthesis_queue_RM as sq
 sq.synthesis_queue_xlsx(qserver_process)
 
 ## Auto name samples by prefix
@@ -135,7 +138,7 @@ def print_kafka_messages(beamline_acronym_01,
         pass
     
 
-    def print_message(consumer, doctype, doc, check_abs365 = False, agent_iteration = []):
+    def print_message(consumer, doctype, doc):
         name, message = doc
         # print(f"contents: {pprint.pformat(message)}\n")
         
@@ -266,9 +269,9 @@ def print_kafka_messages(beamline_acronym_01,
                 if kin.dummy_pdf[0]:
                     kafka_process.macro_04_dummy_pdf()
 
-                ## macro_05: do i(q) to g(r) through pdfstream
-                if kin.iq_to_gr[0]:
-                    kafka_process.macro_05_iq_to_gr(beamline_acronym_01)
+                # ## macro_05: do i(q) to g(r) through pdfstream
+                # if kin.iq_to_gr[0]:
+                #     kafka_process.macro_05_iq_to_gr(beamline_acronym_01)
 
                 ## macro_06: do search and match
                 if kin.search_and_match[0]:
@@ -313,7 +316,7 @@ def print_kafka_messages(beamline_acronym_01,
                 
                 ## Plot data in dic
                 u = plot_uvvis(kafka_process.qepro_dic, kafka_process.metadata_dic)
-                if len(good_data)==0 and len(bad_data)==0:
+                if len(kafka_process.good_data)==0 and len(kafka_process.bad_data)==0:
                     clear_fig=True
                 else:
                     clear_fig=False
@@ -322,7 +325,7 @@ def print_kafka_messages(beamline_acronym_01,
                 
 
                 ## macro_10_good_bad: Idenfify good/bad data if it is a fluorescence scan in 'take_a_uvvis'
-                if qepro_dic['QEPro_spectrum_type'][0]==2 and stream_name=='take_a_uvvis':
+                if kafka_process.qepro_dic['QEPro_spectrum_type'][0]==2 and stream_name=='take_a_uvvis':
                     print(f'\n*** start to identify good/bad data in stream: {stream_name} ***\n')
                     kafka_process.macro_10_good_bad(stream_name)
                 
@@ -370,19 +373,19 @@ def print_kafka_messages(beamline_acronym_01,
                             
                             ## macro_13_PLQY: calculate integral of PL peak, PLQY and update optical_property
                             kafka_process.macro_13_PLQY()
-                            label_uid = f'{self.uid[0:8]}_{self.metadata_dic["sample_type"]}'
-                            u.plot_CsPbX3(self.PL_fitting['wavelength'], self.PL_fitting['intensity'], 
-                                        self.PL_fitting['peak_emission'], label=label_uid, clf_limit=9)
+                            label_uid = f'{kafka_process.uid[0:8]}_{kafka_process.metadata_dic["sample_type"]}'
+                            u.plot_CsPbX3(kafka_process.PL_fitting['wavelength'], kafka_process.PL_fitting['intensity'], 
+                                        kafka_process.PL_fitting['peak_emission'], label=label_uid, clf_limit=9)
                         else:
-                            self.plqy_dic ={}
-                            self.optical_property = {}
+                            kafka_process.plqy_dic ={}
+                            kafka_process.optical_property = {}
                         
                         ## Plot fitting data
-                        u.plot_peak_fit(self.PL_fitting['wavelength'], 
-                                        self.PL_fitting['intensity'], 
-                                        self.PL_fitting['fit_function'], 
-                                        self.PL_fitting['curve_fit'], 
-                                        peak=self.PL_fitting['shifted_peak_idx'], 
+                        u.plot_peak_fit(kafka_process.PL_fitting['wavelength'], 
+                                        kafka_process.PL_fitting['intensity'], 
+                                        kafka_process.PL_fitting['fit_function'], 
+                                        kafka_process.PL_fitting['curve_fit'], 
+                                        peak=kafka_process.PL_fitting['shifted_peak_idx'], 
                                         fill_between=True)
                         print(f'\n** plot fitting results complete**\n')
 
@@ -396,9 +399,9 @@ def print_kafka_messages(beamline_acronym_01,
                     kafka_process.macro_16_num_good(stream_name)
 
 
-            print(f'*** Accumulated num of good data: {len(self.good_data)} ***\n')
-            print(f'{self.good_data = }\n')
-            print(f'*** Accumulated num of bad data: {len(self.bad_data)} ***\n')
+            print(f'*** Accumulated num of good data: {len(kafka_process.good_data)} ***\n')
+            print(f'{kafka_process.good_data = }\n')
+            print(f'*** Accumulated num of bad data: {len(kafka_process.bad_data)} ***\n')
             print('########### Events printing division ############\n')
             
 
