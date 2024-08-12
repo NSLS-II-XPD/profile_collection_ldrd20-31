@@ -231,7 +231,7 @@ class xlsx_to_inputs():
         meet_target = (peak_diff <= peak_tolerance)
 
         if check_target and meet_target:
-            print(f'\nTarget peak: {self.inputs.peak_target[0]} nm vs. Current peak: {self.PL_fitting['peak_emission']} nm\n')
+            print(f'\nTarget peak: {self.inputs.peak_target[0]} nm vs. Current peak: {self.PL_fitting["peak_emission"]} nm\n')
             print(f'\nReach the target, stop iteration, stop all pumps, and wash the loop.\n')
 
             ### Stop all infusing pumps and wash loop
@@ -822,7 +822,7 @@ class xlsx_to_inputs():
         """
         
         ## Save fitting data
-        print(f'\nFitting function: {self.PL_fitting['fit_function']}\n')
+        print(f'\nFitting function: {self.PL_fitting["fit_function"]}\n')
         de.dic_to_csv_for_stream(self.inputs.csv_path[0], 
                                 self.qepro_dic, 
                                 self.metadata_dic, 

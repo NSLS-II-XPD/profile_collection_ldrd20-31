@@ -403,9 +403,9 @@ def print_kafka_messages(beamline_acronym_01,
             
 
             #################  macro_17_add_queue: Add queus task to qserver  ###################
-            ##                                                                                 ##
             ##        Depend on # of good/bad data, add items into queue item or stop          ##
-            ##                   'take_a_uvvis' or new_points of self.agent                    ##
+            ##                     Add nother 'take_a_uvvis' into queue                        ##
+            ##          Make prediction by self.agent and add new_points to queue              ##
             ##################################################################################### 
             kafka_process.macro_17_add_queue(stream_name, qserver_process, RM)
 
