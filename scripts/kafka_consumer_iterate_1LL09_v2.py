@@ -241,18 +241,19 @@ def print_kafka_messages(beamline_acronym_01,
 
                 ## macro_06: do search and match
                 if kin.search_and_match[0]:
-                    # cif_fn = kafka_process.macro_06_search_and_match(kin.gr_fn[0])
-                    cif_fn = kafka_process.macro_06_search_and_match(kafka_process.gr_data[0])                    
+                    cif_fn = kafka_process.macro_06_search_and_match(kin.gr_fn[-1])
+                    # cif_fn = kafka_process.macro_06_search_and_match(kafka_process.gr_data[0])                 
                     print(f'\n\n*** After matching, the most correlated strucuture is\n' 
                           f'*** {cif_fn} ***\n\n')
                 
                 ## macro_07: do pdf fitting and update kafka_process.gr_fitting
                 if kin.fitting_pdf[0]:
-                    kafka_process.macro_07_fitting_pdf(
-                        kafka_process.gr_data[0], beamline_acronym_01, 
+                    gr_fn = kin.gr_fn[-1]
+                    # gr_fn = kafka_process.gr_data[0]
+                    kafka_process.macro_07_fitting_pdf(gr_fn, beamline_acronym_01, 
                         rmax=100.0, qmax=12.0, qdamp=0.031, qbroad=0.032, 
-                        fix_APD=True, toler=0.01
-                        )
+                        fix_APD=True, toler=0.01)
+                
                 ## macro_08: not do pdf fitting but also update kafka_process.gr_fitting
                 else:
                     kafka_process.macro_08_no_fitting_pdf()

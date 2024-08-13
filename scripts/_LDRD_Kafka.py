@@ -440,13 +440,15 @@ class xlsx_to_inputs():
         Args:
             gr_fn (str): g(r) data path for searching and matching, ex: self.gr_data[0] or self.inputs.gr_fn[0]
                         if using self.gr_data[0], g(r) is generated in workflow
-                        if using self.inputs.gr_fn[0], g(r) is directly read from a file
+                        if using self.inputs.gr_fn[-1], g(r) is directly read from a file
 
         Returns:
             str: the file name of the best fitted cif
         """
-        from updated_pipeline_pdffit2 import Refinery
-        refinery = Refinery(mystery_path=gr_fn, results_path=self.inputs.results_path[0], 
+        # from updated_pipeline_pdffit2 import Refinery
+        Refinery = importlib.import_module("updated_pipeline_pdffit2").Refinery
+        results_path = self.inputs.results_path[0]
+        refinery = Refinery(mystery_path=gr_fn, results_path=results_path, 
                     criteria={"elements":
                         {#["Pb","Se"], 
                         #"$in": ["Cs"], 
@@ -492,7 +494,7 @@ class xlsx_to_inputs():
         Args:
             gr_fn (str): g(r) data path for pdf fitting, ex: self.gr_data[0] or self.inputs.gr_fn[0]
                         if using self.gr_data[0], g(r) is generated in workflow
-                        if using self.inputs.gr_fn[0], g(r) is directly read from a file
+                        if using self.inputs.gr_fn[-1], g(r) is directly read from a file
 
             beamline_acronym (str): catalog name for tiled to access data
             rmax (float, optional): pdffit2 variable. Defaults to 100.
@@ -503,7 +505,8 @@ class xlsx_to_inputs():
             toler (float, optional): pdffit2 variable. Defaults to 0.01.
         """
 
-        pf = pc._pdffit2_CsPbX3(gr_fn, self.inputs.cif_fn, rmax=rmax, qmax=qmax, qdamp=qdamp, qbroad=qbroad, 
+        cif_list = self.inputs.cif_fn[2:]
+        pf = pc._pdffit2_CsPbX3(gr_fn, cif_list, rmax=rmax, qmax=qmax, qdamp=qdamp, qbroad=qbroad, 
                                 fix_APD=fix_APD, toler=toler, return_pf=True)
         
         phase_fraction = pf.phase_fractions()['mass']
@@ -546,6 +549,10 @@ class xlsx_to_inputs():
             self.gr_fitting['pdf_fit']: []
             self.gr_fitting['array']:   None 
             self.gr_fitting['df']:      pd.DataFrame([np.nan, np.nan])
+        2. Update gr data at self.gr_data
+            self.gr_data[0]: self.inputs.gr_fn[-1]
+            self.gr_data[1]: pd.read_csv(gr_fn)
+
         """
         self.gr_fitting = {}
         gr_fit_arrary = None
@@ -568,6 +575,12 @@ class xlsx_to_inputs():
         self.pdf_property = {}
         pdf_property={'Br_ratio': np.nan, 'Br_size': np.nan}
         self.pdf_property.update(pdf_property)
+
+        self.gr_data = []
+        gr_data = self.inputs.gr_fn[-1]
+        gr_df = pd.read_csv(gr_data, skiprows=1, names=['r', 'g(r)'], sep =' ')
+        self.gr_data.append(gr_data)
+        self.gr_data.append(gr_df)
 
 
 
@@ -858,7 +871,7 @@ class xlsx_to_inputs():
             df = pd.DataFrame()
             x0 = self.PL_goodbad['wavelength']
             df['wavelength_nm'] = x0
-            df['absorbance_mean'] = self.abs_data['absorbance']
+            df['absorbance_mean'] = self.abs_data['percentile_mean']
             df['absorbance_offset'] = self.abs_data['offset']
             df['fluorescence_mean'] = self.PL_goodbad['percentile_mean']
             f_fit = self.PL_fitting['fit_function']
