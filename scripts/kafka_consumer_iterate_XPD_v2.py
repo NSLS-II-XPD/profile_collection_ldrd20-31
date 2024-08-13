@@ -58,7 +58,7 @@ kin = kafka_process.inputs
 RM = REManagerAPI(zmq_control_addr=qin.zmq_control_addr[0], zmq_info_addr=qin.zmq_info_addr[0])
 
 ## Make the first prediction from kafka_process.agent
-first_points = kafka_process.macro_agent(qserver_process, RM, check_target=False, use_OAm=False, is_1st=True)
+first_points = kafka_process.macro_agent(qserver_process, RM, check_target=False, is_1st=True)
 rate_list = kafka_process.auto_rate_list(qin.pump_list, first_points, kin.fix_Br_ratio)
 if kin.post_dilute[0]:
     rate_list.append(sum(rate_list)*kin.post_dilute[1])
@@ -345,11 +345,13 @@ def print_kafka_messages(beamline_acronym_01,
                     kafka_process.macro_10_good_bad(stream_name)
                     
                     label_uid = f'{kafka_process.uid[0:8]}_{kafka_process.metadata_dic["sample_type"]}'
-                    u.plot_average_good(kafka_process.PL_goodbad['x0'], kafka_process.PL_goodbad['y0'], label=label_uid, clf_limit=9)
+                    u.plot_average_good(kafka_process.PL_goodbad['wavelength'], 
+                                        kafka_process.PL_goodbad['percentile_mean'], 
+                                        label=label_uid, clf_limit=9)
 
  
                 ## Skip peak fitting if qepro type is absorbance
-                if qepro_dic['QEPro_spectrum_type'][0] == 3:  
+                if kafka_process.qepro_dic['QEPro_spectrum_type'][0] == 3:  
                     print(f"\n*** No need to carry out fitting for {stream_name} in uid: {kafka_process.uid[:8]} ***\n")
 
                 ## macro_12 ~ macro_16
@@ -369,13 +371,17 @@ def print_kafka_messages(beamline_acronym_01,
                         kafka_process.macro_12_PL_fitting()
 
                         ## Calculate PLQY for fluorescence stream
-                        if (stream_name == 'fluorescence') and (PLQY[0]==1):
+                        if (stream_name == 'fluorescence') and (kin.PLQY[0]==1):
                             
                             ## macro_13_PLQY: calculate integral of PL peak, PLQY and update optical_property
                             kafka_process.macro_13_PLQY()
                             label_uid = f'{kafka_process.uid[0:8]}_{kafka_process.metadata_dic["sample_type"]}'
                             u.plot_CsPbX3(kafka_process.PL_fitting['wavelength'], kafka_process.PL_fitting['intensity'], 
                                         kafka_process.PL_fitting['peak_emission'], label=label_uid, clf_limit=9)
+
+                            ## macro_14_agent_data: Creat agent_data in type of dict for exporting
+                            kafka_process.macro_14_upate_agent()
+
                         else:
                             kafka_process.plqy_dic ={}
                             kafka_process.optical_property = {}
@@ -388,9 +394,6 @@ def print_kafka_messages(beamline_acronym_01,
                                         peak=kafka_process.PL_fitting['shifted_peak_idx'], 
                                         fill_between=True)
                         print(f'\n** plot fitting results complete**\n')
-
-                        ## macro_14_agent_data: Creat agent_data in type of dict for exporting as json and wirte to sandbox
-                        kafka_process.macro_14_upate_agent()
                         
                         ## macro_15_save_data: Save processed data and agent data
                         kafka_process.macro_15_save_data(stream_name)

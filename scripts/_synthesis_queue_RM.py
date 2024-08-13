@@ -203,7 +203,7 @@ def synthesis_queue_xlsx(parameter_obj):
 
 
 		## 6. Start xray_uvvis bundle plan to take real data  ('pe1c' or 'det')
-		scanplan = BPlan('xray_uvvis_plan', det1, det2, 
+		scanplan = BPlan('xray_uvvis_plan2', det1, det2, 
 						num_abs=num_abs, 
 						num_flu=num_flu, 
 						sample_type=sample[i], 
@@ -211,8 +211,7 @@ def synthesis_queue_xlsx(parameter_obj):
 						correction_type='Reference', 
 						pump_list=pump_list, 
 						precursor_list=precursor_list, 
-						mixer=mixer, 
-      					dilute_pump=pump_list[-1])
+						mixer=mixer)
 		RM.item_add(scanplan, pos=pos)
         
         ## 6.1 sleep 20 seconds for stopping
@@ -424,7 +423,7 @@ def synthesis_queue(
 
 
 		## 6. Start xray_uvvis bundle plan to take real data  ('pe1c' or 'det')
-		scanplan = BPlan('xray_uvvis_plan', det1, 'qepro', 
+		scanplan = BPlan('xray_uvvis_plan2', det1, 'qepro', 
 						num_abs=num_abs, 
 						num_flu=num_flu, 
 						sample_type=sample[i], 
@@ -432,8 +431,7 @@ def synthesis_queue(
 						correction_type='Reference', 
 						pump_list=pump_list, 
 						precursor_list=precursor_list, 
-						mixer=mixer, 
-      					dilute_pump=pump_list[-1])
+						mixer=mixer)
 		RM.item_add(scanplan, pos=pos)
         
         ## 6.1 sleep 20 seconds for stopping
@@ -647,8 +645,7 @@ def synthesis_queue3(
 						correction_type='Reference', 
 						pump_list=pump_list, 
 						precursor_list=precursor_list, 
-						mixer=mixer, 
-      					dilute_pump=pump_list[-1])
+						mixer=mixer)
 		RM.item_add(scanplan, pos=pos)
         
         ## 6.1 sleep 20 seconds for stopping

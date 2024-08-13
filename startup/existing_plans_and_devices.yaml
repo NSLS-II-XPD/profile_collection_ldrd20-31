@@ -3121,6 +3121,70 @@ existing_plans:
       name: kwargs
     properties:
       is_generator: true
+  xray_uvvis_plan2:
+    description: 'Trigger the two detctors (det1: pe1c, det2: qepro): det2 first and
+      then det1.'
+    module: __main__
+    name: xray_uvvis_plan2
+    parameters:
+    - kind:
+        name: POSITIONAL_OR_KEYWORD
+        value: 1
+      name: det1
+    - kind:
+        name: POSITIONAL_OR_KEYWORD
+        value: 1
+      name: det2
+    - kind:
+        name: VAR_POSITIONAL
+        value: 2
+      name: args
+    - default: None
+      kind:
+        name: KEYWORD_ONLY
+        value: 3
+      name: md
+    - default: '10'
+      kind:
+        name: KEYWORD_ONLY
+        value: 3
+      name: num_abs
+    - default: '10'
+      kind:
+        name: KEYWORD_ONLY
+        value: 3
+      name: num_flu
+    - default: '''test'''
+      kind:
+        name: KEYWORD_ONLY
+        value: 3
+      name: sample_type
+    - default: None
+      kind:
+        name: KEYWORD_ONLY
+        value: 3
+      name: pump_list
+    - default: None
+      kind:
+        name: KEYWORD_ONLY
+        value: 3
+      name: precursor_list
+    - default: None
+      kind:
+        name: KEYWORD_ONLY
+        value: 3
+      name: mixer
+    - default: None
+      kind:
+        name: KEYWORD_ONLY
+        value: 3
+      name: note
+    - kind:
+        name: VAR_KEYWORD
+        value: 4
+      name: kwargs
+    properties:
+      is_generator: true
   xray_uvvis_plan3:
     module: __main__
     name: xray_uvvis_plan3
