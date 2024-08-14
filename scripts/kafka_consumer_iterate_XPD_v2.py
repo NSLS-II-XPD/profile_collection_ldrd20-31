@@ -10,7 +10,6 @@ import pandas as pd
 from scipy import integrate
 import time
 import databroker
-import json
 import glob
 from tqdm import tqdm
 # from diffpy.pdfgetx import PDFConfig

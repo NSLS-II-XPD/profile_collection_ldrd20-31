@@ -10,7 +10,6 @@ import pandas as pd
 from scipy import integrate
 import time
 import databroker
-import json
 import glob
 from tqdm import tqdm
 # from diffpy.pdfgetx import PDFConfig
@@ -382,6 +381,10 @@ def print_kafka_messages(beamline_acronym_01,
             ##          Make prediction by self.agent and add new_points to queue              ##
             ##################################################################################### 
             kafka_process.macro_17_add_queue(stream_name, qserver_process, RM)
+
+        
+        if (name == 'stop') and ('fluorescence' in kafka_process.stream_list):
+            kafka_process.save_kafka_dict('/home/xf28id2/Documents/ChengHung/kafka_dict_log') 
 
 
     kafka_config = _read_bluesky_kafka_config_file(config_file_path="/etc/bluesky/kafka.yml")
