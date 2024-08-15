@@ -154,9 +154,9 @@ def synthesis_queue_xlsx(parameter_obj):
 		
   
   		## 4.0 Configure area detector in Qserver
-		if det1 == 'pe1c':
+		if det1 == 'pe1c' or det1 == 'pe2c':
 			scanplan = BPlan('configure_area_det', 
-							det='pe1c', 
+							det=det1, 
 							exposure=1, 
 							acq_time=det1_frame_rate)
 			RM.item_add(scanplan, pos=pos)
@@ -193,7 +193,7 @@ def synthesis_queue_xlsx(parameter_obj):
 		# scanplan = BPlan('print_glbl_qserver')
 		# RM.item_add(scanplan, pos=pos)
   
-		if det1 == 'pe1c':
+		if det1 == 'pe1c' or det1 == 'pe2c':
 			## 6.1 Configure area detector in Qserver
 			scanplan = BPlan('configure_area_det', 
 							det=det1, 

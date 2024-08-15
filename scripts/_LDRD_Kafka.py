@@ -149,6 +149,13 @@ class xlsx_to_inputs():
 
         date, ttime = de._readable_time(self.metadata_dic['time'])
         json_fn = f'{date}-{ttime}_{self.uid[0:8]}.json'
+
+        ## Make directory for home_path folder
+        try:
+            os.mkdir(home_path)
+        except FileExistsError:
+            pass
+
         json_path = os.path.join(home_path, json_fn)
 
         key_to_save = [ 
@@ -171,7 +178,7 @@ class xlsx_to_inputs():
     
     
     
-    ## Reset attributes of keys in _kafka_process() to empty lists for next event
+    ## Reset attributes of key in keys to empty lists for next event
     def reset_kafka_process(self, keys):
         for key in keys:
             setattr(self, key, [])
@@ -362,7 +369,7 @@ class xlsx_to_inputs():
 
 
 
-    def macro_03_stop_queue_uid(sefl, RM):
+    def macro_03_stop_queue_uid(self, RM, message):
         """macro to stop queue and get raw data uid, used in kafka consumer
         while taking a Uv-Vis, no X-ray data but still do analysis of pdfstream
         
@@ -374,6 +381,7 @@ class xlsx_to_inputs():
 
         Args:
             RM (REManagerAPI): Run Engine Manager API.
+            message (dict): message in RE document
         """
         inst1 = BInst("queue_stop")
         RM.item_add(inst1, pos='front')

@@ -43,7 +43,8 @@ plt.ion()
 plt.rcParams["figure.raise_window"] = False
 
 # xlsx_fn = '/home/xf28id2/Documents/ChengHung/inputs_qserver_kafka_v2.xlsx'
-xlsx_fn = '/home/xf28id2/.ipython/profile_collection/scripts/inputs_qserver_kafka_v2.xlsx'
+# xlsx_fn = '/home/xf28id2/.ipython/profile_collection/scripts/inputs_qserver_kafka_v2.xlsx'
+xlsx_fn = '/home/xf28id2/.ipython/profile_collection_ldrd20-31/scripts/inputs_qserver_kafka_v2.xlsx'
 
 ## Input varaibales for Qserver, reading from xlsx_fn by given sheet name
 qserver_process = LK.xlsx_to_inputs(LK._qserver_inputs(), xlsx_fn=xlsx_fn, sheet_name='qserver_test')
@@ -238,7 +239,7 @@ def print_kafka_messages(beamline_acronym_01,
             print(f"\n\n\n{datetime.datetime.now().isoformat()} documents {name}\n"
                   f"contents: {pprint.pformat(message)}")
             
-            kafka_process.macro_03_stop_queue_uid(RM)
+            kafka_process.macro_03_stop_queue_uid(RM, message)
 
 
         ##############  (name == 'stop') and (type(kafka_process.uid) is str)  ##############
@@ -414,7 +415,11 @@ def print_kafka_messages(beamline_acronym_01,
             ##################################################################################### 
             kafka_process.macro_17_add_queue(stream_name, qserver_process, RM)
 
+        
+        if (name == 'stop') and ('fluorescence' in kafka_process.stream_list):
+            kafka_process.save_kafka_dict('/home/xf28id2/Documents/ChengHung/kafka_dict_log')
 
+    
     kafka_config = _read_bluesky_kafka_config_file(config_file_path="/etc/bluesky/kafka.yml")
 
     # this consumer should not be in a group with other consumers
