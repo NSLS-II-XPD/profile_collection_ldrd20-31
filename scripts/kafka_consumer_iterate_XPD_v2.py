@@ -6,30 +6,20 @@ import uuid
 from bluesky_kafka.consume import BasicConsumer
 import matplotlib.pyplot as plt
 import numpy as np
-import pandas as pd
-from scipy import integrate
-import time
-import databroker
-import glob
-from tqdm import tqdm
-# from diffpy.pdfgetx import PDFConfig
 from tiled.client import from_uri, from_profile
 
 import resource
 resource.setrlimit(resource.RLIMIT_NOFILE, (65536, 65536))
 
-import _data_export as de
-from _plot_helper import plot_uvvis
-import _data_analysis as da
-import _pdf_calculator as pc
-# import _get_pdf as gp
-
 import importlib
 LK = importlib.import_module("_LDRD_Kafka")
 sq = importlib.import_module("_synthesis_queue_RM")
+de = importlib.import_module("_data_export")
+# da = importlib.import_module("_data_analysis")
+plot_uvvis = importlib.import_module("_plot_helper").plot_uvvis
 
 from bluesky_queueserver_api.zmq import REManagerAPI
-from bluesky_queueserver_api import BPlan, BInst
+# from bluesky_queueserver_api import BPlan, BInst
 
 try:
     from nslsii import _read_bluesky_kafka_config_file  # nslsii <0.7.0
@@ -142,92 +132,20 @@ def print_kafka_messages(beamline_acronym_01,
         name, message = doc
         # print(f"contents: {pprint.pformat(message)}\n")
         
-        ######### While document (name == 'start') and ('topic' in doc[1]) ##########
-        ##                                                                         ##
+        ## macro_00: print metadata when doc name is start and reset self.uid to an empty list
+        ######### While document (name == 'start') and ('topic' in message) #########
         ##         Only print metadata when the docuemnt is from pdfstream         ##
-        ##                                                                         ##
+        ##                      reset self.uid to an empty list                    ##
         #############################################################################
-        if (name == 'start') and ('topic' in doc[1]):
+        if (name == 'start') and ('topic' in message):
             print(
-                f"\n\n\n{datetime.datetime.now().isoformat()} documents {name}\n"
+                f"\n\n{datetime.datetime.now().isoformat()} documents {name}\n"
                 f"document keys: {list(message.keys())}")
-             
-            if 'uid' in message.keys():
-                print(f"uid: {message['uid']}")
-            if 'plan_name' in message.keys():
-                print(f"plan name: {message['plan_name']}")
-            if 'detectors' in message.keys(): 
-                print(f"detectors: {message['detectors']}")
-            if 'pumps' in message.keys(): 
-                print(f"pumps: {message['pumps']}")
-            if 'detectors' in message.keys(): 
-                print(f"detectors: {message['detectors']}")
-            if 'uvvis' in message.keys() and message['plan_name']!='count':
-                print(f"uvvis mode:\n"
-                      f"           integration time: {message['uvvis'][0]} ms\n"
-                      f"           num spectra averaged: {message['uvvis'][1]}\n"
-                      f"           buffer capacity: {message['uvvis'][2]}"
-                      )
-            elif 'uvvis' in message.keys() and message['plan_name']=='count':
-                print(f"uvvis mode:\n"
-                      f"           spectrum type: {message['uvvis'][0]}\n"
-                      f"           integration time: {message['uvvis'][2]} ms\n"
-                      f"           num spectra averaged: {message['uvvis'][3]}\n"
-                      f"           buffer capacity: {message['uvvis'][4]}"
-                      )                
-            if 'mixer' in message.keys():
-                print(f"mixer: {message['mixer']}")
-            if 'sample_type' in message.keys():
-                print(f"sample type: {message['sample_type']}")
             
-            ## Reset kafka_process.uid to an empty list
-            kafka_process.uid = []
-
-        ## macro_01: get iq from sandbox
-        ######### While document (name == 'event') and ('topic' in doc[1]) ##########
-        ##        key 'topic' is added into the doc of xpd-analysis in pdfstream   ##
-        ##        Read uid of analysis data from doc[1]['data']['chi_I']           ##
-        ##        Get I(Q) data from the integral of 2D image by pdfstream         ##
-        #############################################################################
-        if (name == 'event') and ('topic' in doc[1]):
-            # print(f"\n\n\n{datetime.datetime.now().isoformat()} documents {name}\n"
-            #       f"contents: {pprint.pformat(message)}")
-
-            iq_I_uid  = doc[1]['data']['chi_I']
-            kafka_process.macro_01_get_iq(iq_I_uid)
-
-        
-
-        #### While document (name == 'stop') and ('scattering' in message['num_events']) ####
-        ##   Acquisition of xray_uvvis_plan finished but analysis of pdfstream not yet     ##
-        ##      So just sleep 1 second but not assign uid, stream_list                     ##
-        ##      No need to stop queue since the net queue task is wahsing loop             ##
-        #####################################################################################
-        if (name == 'stop') and ('scattering' in message['num_events']):
-            print('\n*** qsever stop for data export, identification, and fitting ***\n')
-            print(f"\n\n\n{datetime.datetime.now().isoformat()} documents {name}\n"
-                  f"contents: {pprint.pformat(message)}"
-            )
-            ## wait 1 second for databroker to save data
-            time.sleep(1)
-            ## Reset kafka_process.uid to an empty list
-            kafka_process.uid = []
+            kafka_process.macro_00_print_start(message)
 
 
-        ## macro_02: get raw data uid from metadata of sandbox doc
-        #### (name == 'stop') and ('topic' in doc[1]) and (len(message['num_events'])>0) ####
-        ##      With taking xray_uvvis_plan and analysis of pdfstream finished             ##
-        ##      Sleep 1 second and assign uid, stream_list from kafka_process.entry[-1]    ##
-        ##        No need to stop queue since the net queue task is wahsing loop           ##
-        #####################################################################################
-        elif (name == 'stop') and ('topic' in doc[1]) and (len(message['num_events'])>0):
-            print(f"\n\n\n{datetime.datetime.now().isoformat()} documents {name}\n"
-                  f"contents: {pprint.pformat(message)}"
-            )
-            kafka_process.macro_02_get_uid()
-
-
-        ## macro_03: stop queue and get uid for take_a_uvvis scan
+        ## macro_01: stop queue and get uid for take_a_uvvis scan
         #########  (name == 'stop') and ('take_a_uvvis' in message['num_events'])  ##########
         ##     Only take a Uv-Vis, no X-ray data but still do analysis of pdfstream        ##
         ##                   Stop queue first for identify good/bad data                   ##
@@ -236,25 +154,59 @@ def print_kafka_messages(beamline_acronym_01,
         elif (name == 'stop') and ('take_a_uvvis' in message['num_events']):
             print('\n*** qsever stop for data export, identification, and fitting ***\n')
 
-            print(f"\n\n\n{datetime.datetime.now().isoformat()} documents {name}\n"
+            print(f"\n\n{datetime.datetime.now().isoformat()} documents {name}\n"
                   f"contents: {pprint.pformat(message)}")
             
-            kafka_process.macro_03_stop_queue_uid(RM, message)
+            kafka_process.macro_01_stop_queue_uid(RM, message)
+
+            
+            
+        ## macro_02: get iq from sandbox
+        ######### While document (name == 'event') and ('topic' in message) ##########
+        ##        key 'topic' is added into the doc of xpd-analysis in pdfstream    ##
+        ##        Read uid of analysis data from message['data']['chi_I']           ##
+        ##        Get I(Q) data from the integral of 2D image by pdfstream          ##
+        ##############################################################################
+        elif (name == 'event') and ('topic' in message):
+            # print(f"\n\n\n{datetime.datetime.now().isoformat()} documents {name}\n"
+            #       f"contents: {pprint.pformat(message)}")
+
+            iq_I_uid  = message['data']['chi_I']
+            kafka_process.macro_02_get_iq(iq_I_uid)
+
+        
+
+        ## macro_03: get raw data uid from metadata of sandbox doc
+        #### (name == 'stop') and ('topic' in message) and ('primary' in message['num_events']) ####
+        ##         With taking xray_uvvis_plan and analysis of pdfstream finished                 ##
+        ##       Sleep 1 second and assign uid, stream_list from kafka_process.entry[-1]          ##
+        ##          No need to stop queue since the net queue task is wahsing loop                ##
+        ############################################################################################
+        elif (name == 'stop') and ('topic' in message) and ('primary' in message['num_events']):
+            print(f"\n\n\n{datetime.datetime.now().isoformat()} documents {name}\n"
+                  f"contents: {pprint.pformat(message)}"
+            )
+            kafka_process.macro_03_get_uid()
 
 
-        ##############  (name == 'stop') and (type(kafka_process.uid) is str)  ##############
-        ##                                                                                 ##
-        ##  When uid is assigned and type is a string, move to data fitting, calculation   ##
-        ##                                                                                 ##
+        ##############  (name == 'stop') and uid_is_str and check_event_name   ##############
+        ##  Move to data fitting, calculation when uid is assigned, its type is a string,  ##
+        ##   and stream name is 'primary':      for xray_uvvis_plan2 after pdfstream       ##
+        ##    or stream name is 'take_a_uvvis': for take_a_uvvis (raw data)                ##
         ##################################################################################### 
-        if (name == 'stop') and (type(kafka_process.uid) is str):
+        uid_is_str = (type(kafka_process.uid) is str)
+        try:
+            check_event_name = ('primary' in message['num_events'] or 'take_a_uvvis' in message['num_events'])
+        except KeyError:
+            check_event_name = False
+        
+        if (name == 'stop') and uid_is_str and check_event_name:
             print(f'\n**** start to export uid: {kafka_process.uid} ****\n')
             print(f'\n**** with stream name in {kafka_process.stream_list} ****\n')
 
 
             ## macro_04 ~ macro_07 or 08
             ####################  'scattering' in kafka_process.stream_list   ###################
-            ##                                                                                 ##
             ##    Process X-ray scattering data (PDF): iq to gr, search & match, pdf fitting   ##
             ##              obtain phase fraction & particle size from g(r)                    ##
             ##################################################################################### 
@@ -265,13 +217,13 @@ def print_kafka_messages(beamline_acronym_01,
                     beamline_acronym=beamline_acronym_01)
                 u = plot_uvvis(kafka_process.qepro_dic, kafka_process.metadata_dic)
 
-                ## macro_04: setting dummy pdf data for test, e.g., CsPbBr2)
+                ## macro_04: setting dummy pdf data for test, e.g., CsPbBr2
                 if kin.dummy_pdf[0]:
                     kafka_process.macro_04_dummy_pdf()
 
-                # ## macro_05: do i(q) to g(r) through pdfstream
-                # if kin.iq_to_gr[0]:
-                #     kafka_process.macro_05_iq_to_gr(beamline_acronym_01)
+                ## macro_05: do i(q) to g(r) through pdfstream
+                if kin.iq_to_gr[0]:
+                    kafka_process.macro_05_iq_to_gr(beamline_acronym_01)
 
                 ## macro_06: do search and match
                 if kin.search_and_match[0]:
@@ -418,6 +370,11 @@ def print_kafka_messages(beamline_acronym_01,
         
         if (name == 'stop') and ('fluorescence' in kafka_process.stream_list):
             kafka_process.save_kafka_dict('/home/xf28id2/Documents/ChengHung/kafka_dict_log')
+            
+        
+        ## Reset kafka_process.uid to an empty list for event doc identification 
+        kafka_process.uid = []
+        kafka_process.stream_list = []
 
     
     kafka_config = _read_bluesky_kafka_config_file(config_file_path="/etc/bluesky/kafka.yml")

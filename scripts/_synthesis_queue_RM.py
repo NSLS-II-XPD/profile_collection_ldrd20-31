@@ -1,11 +1,11 @@
 import numpy as np
-import pandas as pd
+# import pandas as pd
 # from bluesky_queueserver.manager.comms import zmq_single_request
 import _data_export as de
 from bluesky_queueserver_api.zmq import REManagerAPI
 from bluesky_queueserver_api import BPlan, BInst
 from ophyd.sim import det, noisy_det
-from _LDRD_Kafka import xlsx_to_inputs
+# from _LDRD_Kafka import xlsx_to_inputs
 
 ## Pass qsever parameters by xlsx_to_inputs
 ## Arrange tasks of for PQDs synthesis
