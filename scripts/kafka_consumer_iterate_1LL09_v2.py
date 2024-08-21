@@ -30,6 +30,7 @@ sq = importlib.import_module("_synthesis_queue_RM")
 
 from bluesky_queueserver_api.zmq import REManagerAPI
 from bluesky_queueserver_api import BPlan, BInst
+# from bluesky_queueserver_api.comm_base import RequestFailedError
 
 try:
     from nslsii import _read_bluesky_kafka_config_file  # nslsii <0.7.0
@@ -46,7 +47,7 @@ plt.rcParams["figure.raise_window"] = False
 xlsx_fn = '/home/xf28id2/.ipython/profile_collection/scripts/inputs_qserver_kafka_v2.xlsx'
 
 ## Input varaibales for Qserver, reading from xlsx_fn by given sheet name
-qserver_process = LK.xlsx_to_inputs(LK._qserver_inputs(), xlsx_fn=xlsx_fn, sheet_name='qserver_test')
+qserver_process = LK.xlsx_to_inputs(LK._qserver_inputs(), xlsx_fn=xlsx_fn, sheet_name='qserver_1LL09')
 qin = qserver_process.inputs
 
 ## Input varaibales for Kafka, reading from xlsx_fn by given sheet name
@@ -56,13 +57,12 @@ kin = kafka_process.inputs
 ## Define RE Manager API as RM 
 RM = REManagerAPI(zmq_control_addr=qin.zmq_control_addr[0], zmq_info_addr=qin.zmq_info_addr[0])
 
-## Make the first prediction from kafka_process.agent
-first_points = kafka_process.macro_agent(qserver_process, RM, check_target=False, is_1st=True)
-rate_list = kafka_process.auto_rate_list(qin.pump_list, first_points, kin.fix_Br_ratio)
-if kin.post_dilute[0]:
-    rate_list.append(sum(rate_list)*kin.post_dilute[1])
-
-qin.infuse_rates = rate_list
+# ## Make the first prediction from kafka_process.agent
+# first_points = kafka_process.macro_agent(qserver_process, RM, check_target=False, is_1st=True)
+# rate_list = kafka_process.auto_rate_list(qin.pump_list, first_points, kin.fix_Br_ratio)
+# if kin.post_dilute[0]:
+#     rate_list.append(sum(rate_list)*kin.post_dilute[1])
+# qin.infuse_rates = rate_list
 
 
 ## Import Qserver parameters to RE Manager
@@ -184,9 +184,14 @@ def print_kafka_messages(beamline_acronym_01,
         ##        Plot data, Agent prediction            ##
         ##        Export data, Save data to tiled        ##
         ###################################################
-        if name == 'stop':            
-            RM.queue_stop()
-            print('\n*** qsever stop for data export, identification, and fitting ***\n')
+        if name == 'stop':
+
+            ## if 'take_a_uvvis' in stream_list, stop to wait for data process
+            ## if not, since next task in queue is washing loop, no need to stop queue
+            if 'take_a_uvvis' in message['num_events']:
+                RM.queue_stop()
+                print('\n*** qsever stop for data export, identification, and fitting ***\n')
+            
             print(f"{datetime.datetime.now().isoformat()} documents {name}\n"
                   f"contents: {pprint.pformat(message)}"
                   )
@@ -206,11 +211,6 @@ def print_kafka_messages(beamline_acronym_01,
             kafka_process.stream_list = []
             for stream_name in stream_list:
                 kafka_process.stream_list.append(stream_name)
-
-            ## When 'take_a_uvvis' not in stream_list, no need to wait for data process
-            ## since next task in queue is washing loop. So start queue
-            if 'take_a_uvvis' not in kafka_process.stream_list:
-                RM.queue_start()
 
             ## Set good/bad data condictions to the corresponding sample
             kh = kin.key_height[0]

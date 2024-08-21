@@ -14,8 +14,8 @@ de = importlib.import_module("_data_export")
 da = importlib.import_module("_data_analysis")
 pc = importlib.import_module("_pdf_calculator")
 
-from diffpy.pdfgetx import PDFConfig
-gp = importlib.import_module("_get_pdf")
+# from diffpy.pdfgetx import PDFConfig
+# gp = importlib.import_module("_get_pdf")
 
 build_agent = importlib.import_module("prepare_agent_pdf").build_agent
 import torch
@@ -45,7 +45,8 @@ def _kafka_inputs():
     inputs_list=[
             'dummy_kafka', 'csv_path', 'key_height', 'height', 'distance', 'PLQY', 
             'rate_label_dic_key', 'rate_label_dic_value', 'new_points_label', 
-            'use_good_bad', 'post_dilute', 'fix_Br_ratio', 'write_agent_data', 'agent_data_path', 
+            'use_good_bad', 'post_dilute', 'fix_Br_ratio', 
+            'write_agent_data', 'agent_data_path', 'build_agent', 
             'USE_AGENT_iterate', 'peak_target',  
             'iq_to_gr', 'iq_to_gr_path', 'cfg_fn', 'bkg_fn', 'iq_fn',  
             'search_and_match', 'mystery_path', 'results_path', 
@@ -67,7 +68,7 @@ def _kafka_process():
             'qepro_dic', 'metadata_dic', 'sample_type', 
             'PL_goodbad', 'PL_fitting', 'abs_data', 'abs_fitting', 
             'plqy_dic', 'optical_property', 'agent_data', 'rate_label_dic', 
-            'good_data', 'bad_data', 'agent_iteration', 'finished', 
+            'good_data', 'bad_data', 'continue_iteration', 'finished', 
             
             ]
 
@@ -108,13 +109,14 @@ class xlsx_to_inputs():
                 setattr(self, key, [])
             
             try:
-                ## Assign Agent to self.agent
-                self.agent
-                print('\n***** Start to initialize blop agent ***** \n')
-                self.agent = build_agent(
-                        peak_target=self.inputs.peak_target[0], 
-                        agent_data_path=self.inputs.agent_data_path[0])
-                print(f'\n***** Initialized blop agent at {self.agent} ***** \n')
+                if self.inputs.build_agent[0]: 
+                    ## Assign Agent to self.agent
+                    self.agent
+                    print('\n***** Start to initialize blop agent ***** \n')
+                    self.agent = build_agent(
+                            peak_target=self.inputs.peak_target[0], 
+                            agent_data_path=self.inputs.agent_data_path[0])
+                    print(f'\n***** Initialized blop agent at {self.agent} ***** \n')
 
                 ## self.inputs.sandbox_uri[0] is just the uri of sandbox
                 ## so, turn uri into client and assign it to self.sandbox_tiled_client
@@ -162,7 +164,7 @@ class xlsx_to_inputs():
         key_to_save = [ 
                 'uid', 'uid_catalog', 'uid_bundle', 'uid_pdfstream', 'uid_sandbox', 
                 'metadata_dic', 'pdf_property', 'optical_property', 
-                'agent_data', 'agent_iteration', 'finished', ]
+                'agent_data', 'continue_iteration', 'finished', ]
         
         kafka_process_dict = {}
         for key in key_to_save:
@@ -223,7 +225,7 @@ class xlsx_to_inputs():
             self.agent_data['posterior_mean']:     post_mean
             self.agent_data['posterior_stddev']:   post_stddev
         3. Check if meet target. If meet, wash loop; if not, keep iteration.
-        4. Update self.agent_iteration
+        4. Update self.continue_iteration
 
         Args:
             qserver_process (_LDRD_Kafka.xlsx_to_inputs, optional): qserver parameters read from xlsx.
@@ -254,11 +256,12 @@ class xlsx_to_inputs():
                 
                 inst1 = BInst("queue_stop")
                 RM.item_add(inst1, pos='front')
-                self.agent_iteration.append(False)
+                self.continue_iteration.append(False)
         
         else:
-            self.agent_iteration.append(True)       
+            self.continue_iteration.append(True)       
 
+        # if self.inputs.build_agent[0]: 
         if is_1st:
             pass
         else:
@@ -469,46 +472,46 @@ class xlsx_to_inputs():
 
 
 
-    def macro_05_iq_to_gr(self, beamline_acronym):
-        """macro to condcut data reduction from I(Q) to g(r), used in kafka consumer
+    # def macro_05_iq_to_gr(self, beamline_acronym):
+    #     """macro to condcut data reduction from I(Q) to g(r), used in kafka consumer
         
-        This macro will
-        1. Generate a filename for g(r) data by using metadata of stream_name == fluorescence
-        2. Read pdf config file from self.inputs.cfg_fn[-1]
-        3. Read pdf background file from self.inputs.bkg_fn[-1]
-        4. Generate s(q), f(q), g(r) data by gp.transform_bkg() and save in self.inputs.iq_to_gr_path[0]
-        5. Read saved g(r) into pd.DataFrame and save again to remove the headers
-        6. Update g(r) data path and data frame to self.gr_data
-            self.gr_data[0]: gr_data (path)
-            self.gr_data[1]: gr_df
+    #     This macro will
+    #     1. Generate a filename for g(r) data by using metadata of stream_name == fluorescence
+    #     2. Read pdf config file from self.inputs.cfg_fn[-1]
+    #     3. Read pdf background file from self.inputs.bkg_fn[-1]
+    #     4. Generate s(q), f(q), g(r) data by gp.transform_bkg() and save in self.inputs.iq_to_gr_path[0]
+    #     5. Read saved g(r) into pd.DataFrame and save again to remove the headers
+    #     6. Update g(r) data path and data frame to self.gr_data
+    #         self.gr_data[0]: gr_data (path)
+    #         self.gr_data[1]: gr_df
 
-        Args:
-            beamline_acronym (str): catalog name for tiled to access data
-        """
-        # Grab metadat from stream_name = fluorescence for naming gr file
-        fn_uid = de._fn_generator(self.uid, beamline_acronym=beamline_acronym)
-        gr_fn = f'{fn_uid}_scattering.gr'
+    #     Args:
+    #         beamline_acronym (str): catalog name for tiled to access data
+    #     """
+    #     # Grab metadat from stream_name = fluorescence for naming gr file
+    #     fn_uid = de._fn_generator(self.uid, beamline_acronym=beamline_acronym)
+    #     gr_fn = f'{fn_uid}_scattering.gr'
 
-        ### dummy test, e.g., CsPbBr2
-        if self.inputs.dummy_pdf[0]:
-            gr_fn = f'{self.inputs.iq_fn[-1][:-4]}.gr'
+    #     ### dummy test, e.g., CsPbBr2
+    #     if self.inputs.dummy_pdf[0]:
+    #         gr_fn = f'{self.inputs.iq_fn[-1][:-4]}.gr'
 
-        # Build pdf config file from a scratch
-        pdfconfig = PDFConfig()
-        pdfconfig.readConfig(self.inputs.cfg_fn[-1])
-        pdfconfig.backgroundfiles = self.inputs.bkg_fn[-1]
-        sqfqgr_path = gp.transform_bkg(pdfconfig, self.iq_data['array'], output_dir=self.inputs.iq_to_gr_path[0], 
-                    plot_setting={'marker':'.','color':'green'}, test=True, 
-                    gr_fn=gr_fn)    
-        gr_data = sqfqgr_path['gr']
+    #     # Build pdf config file from a scratch
+    #     pdfconfig = PDFConfig()
+    #     pdfconfig.readConfig(self.inputs.cfg_fn[-1])
+    #     pdfconfig.backgroundfiles = self.inputs.bkg_fn[-1]
+    #     sqfqgr_path = gp.transform_bkg(pdfconfig, self.iq_data['array'], output_dir=self.inputs.iq_to_gr_path[0], 
+    #                 plot_setting={'marker':'.','color':'green'}, test=True, 
+    #                 gr_fn=gr_fn)    
+    #     gr_data = sqfqgr_path['gr']
 
-        ## Remove headers by reading gr_data into pd.Dataframe and save again
-        gr_df = pd.read_csv(gr_data, skiprows=26, names=['r', 'g(r)'], sep =' ')
-        gr_df.to_csv(gr_data, index=False, header=False, sep =' ')
+    #     ## Remove headers by reading gr_data into pd.Dataframe and save again
+    #     gr_df = pd.read_csv(gr_data, skiprows=26, names=['r', 'g(r)'], sep =' ')
+    #     gr_df.to_csv(gr_data, index=False, header=False, sep =' ')
 
-        self.gr_data = []
-        self.gr_data.append(gr_data)
-        self.gr_data.append(gr_df)
+    #     self.gr_data = []
+    #     self.gr_data.append(gr_data)
+    #     self.gr_data.append(gr_df)
 
 
 
@@ -906,8 +909,12 @@ class xlsx_to_inputs():
         """
 
         ## Creat agent_data in type of dict for exporting
-        if 'agent_target' in self.agent_data.keys():
-            pass
+        
+        if self.inputs.build_agent[0]:
+            if 'agent_target' in self.agent_data.keys():
+                pass
+            else:
+                self.agent_data = {}
         else:
             self.agent_data = {}
         self.agent_data.update(self.optical_property)
@@ -961,7 +968,10 @@ class xlsx_to_inputs():
             df['fluorescence_fitting'] = f_fit(x0, *popt)
 
             ## use pd.concat to add various length data together
-            df_new = pd.concat([df, self.iq_data['df'], self.gr_data[1], self.gr_fitting['df']], ignore_index=False, axis=1)
+            try:
+                df_new = pd.concat([df, self.iq_data['df'], self.gr_data[1], self.gr_fitting['df']], ignore_index=False, axis=1)
+            except (TypeError, KeyError):
+                df_new = df
 
             # entry = sandbox_tiled_client.write_dataframe(df, metadata=agent_data)
             entry = self.sandbox_tiled_client.write_dataframe(df_new, metadata=self.agent_data)
@@ -1049,7 +1059,7 @@ class xlsx_to_inputs():
                 
                 restplan = BPlan('sleep_sec_q', 5)
                 RM.item_add(restplan, pos=2)
-                
+
                 RM.queue_start()
 
             elif (len(self.good_data) > 2) and (self.inputs.use_good_bad[0]):
@@ -1063,7 +1073,7 @@ class xlsx_to_inputs():
                 RM.queue_start()
         
         ## Add predicted new points from ML agent into qserver
-        elif (stream_name == 'fluorescence') and (self.inputs.USE_AGENT_iterate[0]) and (self.agent_iteration[-1]):
+        elif (stream_name == 'fluorescence') and (self.inputs.USE_AGENT_iterate[0]) and (self.continue_iteration[-1]):
             print('*** Add new points from agent to the front of qsever ***\n')
             
             new_points = self.macro_agent(qserver_process, RM, check_target=True)
