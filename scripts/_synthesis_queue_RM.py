@@ -33,7 +33,10 @@ def synthesis_queue_xlsx(parameter_obj):
 	resident_t_ratio = qsp.resident_t_ratio 
 	prefix = qsp.prefix
 	sample = qsp.sample
-	wash_tube = qsp.wash_tube
+	wait_dilute = qsp.wait_dilute
+	if_wash = qsp.if_wash
+	wash_loop = qsp.wash_loop
+	wash_sapphire = qsp.wash_sapphire
 	rate_unit = qsp.rate_unit[0]
 	name_by_prefix = qsp.name_by_prefix[0]
 	det2 = qsp.uvvis_config[0]
@@ -72,19 +75,20 @@ def synthesis_queue_xlsx(parameter_obj):
 		else:
 			set_target_list = set_target_list.tolist()
 		
-
+	num_pumps = int(len(wash_loop)/3)
 	# 0. stop infuese for all pumps
-	flowplan = BPlan('stop_group', pump_list + [wash_tube[2], wash_tube[5]])
+	flowplan = BPlan('stop_group', pump_list + [wash_loop[1+i*3] for i in range(num_pumps)])
 	RM.item_add(flowplan, pos=pos)
 	
-	
+
 	for i in range(len(rate_list)):
 		# for i in range(2): 
 		## 1. Set i infuese rates
+		rate_list2 = rate_list[i][:-1] + [60]
 		for sl, pl, ir, tvl, stl, sml in zip(
 											syringe_list, 
 											pump_list, 
-											rate_list[i], 
+											rate_list2, 
 											target_vol_list, 
 											set_target_list[i], 
 											syringe_mater_list
@@ -92,7 +96,6 @@ def synthesis_queue_xlsx(parameter_obj):
 			
 			# ir = float(ir)
 			# stl = int(stl)
-
 			flowplan = BPlan('set_group_infuse2', [sl], [pl],
 							rate_list = [ir], 
 							target_vol_list = [tvl], 
@@ -102,13 +105,14 @@ def synthesis_queue_xlsx(parameter_obj):
 			RM.item_add(flowplan, pos=pos)
 
 
-		## 2. Start infuese
-		if precursor_list[-1] == 'Toluene':
-			flowplan = BPlan('start_group_infuse', pump_list[:-1], rate_list[i][:-1])
+		# ## 2. Start infuese
+		# if precursor_list[-1] == 'Toluene':
+		# 	flowplan = BPlan('start_group_infuse', pump_list[:-1], rate_list[i][:-1])
 		
-		else:
-			flowplan = BPlan('start_group_infuse', pump_list, rate_list[i])
+		# else:
+		# 	flowplan = BPlan('start_group_infuse', pump_list, rate_list[i])
 		
+		flowplan = BPlan('start_group_infuse', pump_list, rate_list[i])
 		RM.item_add(flowplan, pos=pos)
 
 
@@ -145,7 +149,13 @@ def synthesis_queue_xlsx(parameter_obj):
 
 		## 3.1 Wait for 30 secpnds for post dilute
 		if precursor_list[-1] == 'Toluene':
-			flowplan = BPlan('start_group_infuse', [pump_list[-1]], [rate_list[i][-1]])
+			# flowplan = BPlan('start_group_infuse', [pump_list[-1]], [rate_list[i][-1]])
+			flowplan = BPlan('set_group_infuse2', [syringe_list[-1]], [pump_list[-1]],
+							rate_list = [rate_list[i][-1]], 
+							target_vol_list = [target_vol_list[-1]], 
+							set_target_list = [set_target_list[i][-1]], 
+							syringe_mater_list = [syringe_mater_list[-1]], 
+							rate_unit = rate_unit)
 			RM.item_add(flowplan, pos=pos)
 			
 			restplan = BPlan('sleep_sec_q', qsp.wait_dilute[0])
@@ -222,12 +232,12 @@ def synthesis_queue_xlsx(parameter_obj):
 		######  Kafka analyze data here. #######
 
 		## 7. Wash the loop and mixer
-		if wash_tube[0] == 0:
-			wash_tube_queue2(pump_list, wash_tube, rate_unit, 
+		if if_wash[0] == 1:
+			wash_tube_queue2(pump_list, if_wash, wash_loop, rate_unit, 
 							pos=[pos,pos,pos,pos,pos], 
 							zmq_control_addr=zmq_control_addr,
 							zmq_info_addr=zmq_info_addr)
-		elif wash_tube[0] == 1:
+		elif wash_tube[0] == 0:
 			inst1 = BInst("queue_stop")
 			RM.item_add(inst1, pos='front')
 
@@ -716,7 +726,7 @@ def wash_tube_queue(pump_list, wash_tube, rate_unit,
 
 
 ## wash loop with two solvents
-def wash_tube_queue2(pump_list, wash_tube, rate_unit, 
+def wash_tube_queue2(pump_list, if_wash, wash_loop, rate_unit, 
 					pos=[0,1,2,3,4], 
 					zmq_control_addr='tcp://localhost:60615', 
 					zmq_info_addr='tcp://localhost:60625'):
@@ -727,10 +737,10 @@ def wash_tube_queue2(pump_list, wash_tube, rate_unit,
 	flowplan = BPlan('stop_group', pump_list)
 	RM.item_add(flowplan, pos=pos[0])
 
-
+	num_pumps = int(len(wash_loop)/3)
 	### Set up washing tube/loop
-	flowplan = BPlan('set_group_infuse2', [wash_tube[1], wash_tube[4]], [wash_tube[2], wash_tube[5]], 
-					rate_list=[wash_tube[3], wash_tube[6]], 
+	flowplan = BPlan('set_group_infuse2', [wash_loop[0+i*3] for i in range(num_pumps)], [wash_loop[1+i*3] for i in range(num_pumps)], 
+					rate_list=[wash_loop[2+i*3] for i in range(num_pumps)], 
 					target_vol_list=['30 ml', '15 ml'], 
 					set_target_list=[False, False], 
 					syringe_mater_list = ['steel', 'plastic_BD'], 
@@ -739,18 +749,18 @@ def wash_tube_queue2(pump_list, wash_tube, rate_unit,
 	
 	
 	### Start washing tube/loop
-	flowplan = BPlan('start_group_infuse', [wash_tube[2], wash_tube[5]], [wash_tube[3], wash_tube[6]])
+	flowplan = BPlan('start_group_infuse', [wash_loop[1+i*3] for i in range(num_pumps)], [wash_loop[2+i*3] for i in range(num_pumps)])
 	RM.item_add(flowplan, pos=pos[2])	
 
 
 	### Wash loop/tube for xxx seconds
-	restplan = BPlan('sleep_sec_q', wash_tube[7])
+	restplan = BPlan('sleep_sec_q', if_wash[1])
 	RM.item_add(restplan, pos=pos[3])	
 	
 
 
 	### Stop washing
-	flowplan = BPlan('stop_group', [wash_tube[2], wash_tube[5]])
+	flowplan = BPlan('stop_group', [wash_loop[1+i*3] for i in range(num_pumps)])
 	RM.item_add(flowplan, pos=pos[4])
 
 

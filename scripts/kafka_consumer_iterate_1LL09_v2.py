@@ -144,39 +144,10 @@ def print_kafka_messages(beamline_acronym_01,
         ###################################################
         if name == 'start':
             print(
-                f"{datetime.datetime.now().isoformat()} documents {name}\n"
+                f"\n\n{datetime.datetime.now().isoformat()} documents {name}\n"
                 f"document keys: {list(message.keys())}")
-                
-            if 'uid' in message.keys():
-                print(f"uid: {message['uid']}")
-            if 'plan_name' in message.keys():
-                print(f"plan name: {message['plan_name']}")
-            if 'detectors' in message.keys(): 
-                print(f"detectors: {message['detectors']}")
-            if 'pumps' in message.keys(): 
-                print(f"pumps: {message['pumps']}")
-            if 'detectors' in message.keys(): 
-                print(f"detectors: {message['detectors']}")
-            if 'uvvis' in message.keys() and message['plan_name']!='count':
-                print(f"uvvis mode:\n"
-                      f"           integration time: {message['uvvis'][0]} ms\n"
-                      f"           num spectra averaged: {message['uvvis'][1]}\n"
-                      f"           buffer capacity: {message['uvvis'][2]}"
-                      )
-            elif 'uvvis' in message.keys() and message['plan_name']=='count':
-                print(f"uvvis mode:\n"
-                      f"           spectrum type: {message['uvvis'][0]}\n"
-                      f"           integration time: {message['uvvis'][2]} ms\n"
-                      f"           num spectra averaged: {message['uvvis'][3]}\n"
-                      f"           buffer capacity: {message['uvvis'][4]}"
-                      )                
-            if 'mixer' in message.keys():
-                print(f"mixer: {message['mixer']}")
-            if 'sample_type' in message.keys():
-                print(f"sample type: {message['sample_type']}")
-        
-            ## Reset kafka_process.uid to an empty list
-            kafka_process.uid = []
+            
+            kafka_process.macro_00_print_start(message)
         
         
         ######### While document name == 'stop' ###########
@@ -195,7 +166,6 @@ def print_kafka_messages(beamline_acronym_01,
             print(f"{datetime.datetime.now().isoformat()} documents {name}\n"
                   f"contents: {pprint.pformat(message)}"
                   )
-            # num_events = len(message['num_events'])
 
             ## wait 2 seconds for databroker to save data
             time.sleep(2)

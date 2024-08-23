@@ -12,7 +12,7 @@ from scipy import integrate
 sq = importlib.import_module("_synthesis_queue_RM")
 de = importlib.import_module("_data_export")
 da = importlib.import_module("_data_analysis")
-pc = importlib.import_module("_pdf_calculator")
+# pc = importlib.import_module("_pdf_calculator")
 
 # from diffpy.pdfgetx import PDFConfig
 # gp = importlib.import_module("_get_pdf")
@@ -33,7 +33,8 @@ def _qserver_inputs():
             'name_by_prefix', 'prefix', 'pump_list', 'precursor_list', 
             'syringe_mater_list', 'syringe_list', 'target_vol_list', 
             'sample', 
-            'wait_dilute', 'mixer', 'wash_tube', 'resident_t_ratio', 
+            'wait_dilute', 'if_wash', 'wash_loop', 'wash_sapphire', 
+            'mixer', 'wash_tube', 'resident_t_ratio', 
             'rate_unit', 'uvvis_config', 'perkin_config', 
             'auto_set_target_list', 'set_target_list', 'infuse_rates', 
             ]
@@ -736,7 +737,7 @@ class xlsx_to_inputs():
                                             distance=self.inputs.distance[0], 
                                             height=self.inputs.height[0], 
                                             dummy_test=self.inputs.dummy_kafka[0], 
-                                            percent_range=[30, 100])
+                                            percent_range=[40, 100])
             
         self.PL_goodbad = {}
         PL_goodbad = {  'wavelength':np.asarray(x0), 'percentile_mean':np.asarray(y0), 
@@ -765,7 +766,7 @@ class xlsx_to_inputs():
         ## Apply percnetile filtering for absorption spectra, defaut percent_range = [15, 85]
         abs_per = da.percentile_abs(self.qepro_dic['QEPro_x_axis'], 
                                     self.qepro_dic['QEPro_output'], 
-                                    percent_range=[15, 85])
+                                    percent_range=[5, 65])
         
         print(f'\n*** start to check absorbance at 365b nm in stream: {stream_name} is positive or not***\n')
         # abs_array = qepro_dic['QEPro_output'][1:].mean(axis=0)
