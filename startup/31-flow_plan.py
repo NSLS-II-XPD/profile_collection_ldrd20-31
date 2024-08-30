@@ -219,7 +219,7 @@ def count_stream(det, stream_name="primary", md=None):
     @bpp.stage_decorator([det])
     @bpp.run_decorator(md=md)
     def _inner_count():
-        yield from bps.trigger(det)
+        yield from bps.trigger(det, wait=True)
         yield from bps.create(name=stream_name)
         reading = (yield from bps.read(det))
         yield from bps.save()
@@ -261,28 +261,26 @@ def take_a_uvvis_csv_q(sample_type='test', plot=False, csv_path=None, data_agent
     
     if spectrum_type == 'Absorbtion':
         if LED.get()=='Low' and UV_shutter.get()=='High' and qepro.correction.get()==correction_type and qepro.spectrum_type.get()==spectrum_type:
-            uid = (yield from count([qepro], md=_md))
+            pass
         else:
             yield from bps.abs_set(qepro.correction, correction_type, wait=True)
             yield from bps.abs_set(qepro.spectrum_type, spectrum_type, wait=True)
-            # yield from LED_off()
-            # yield from shutter_open()
             yield from bps.mv(LED, 'Low', UV_shutter, 'High')
-            yield from bps.sleep(2)
-            uid = (yield from count_stream(qepro, stream_name="take_a_uvvis", md=_md))
+
+        yield from bps.sleep(2)
+        uid = (yield from count_stream(qepro, stream_name="take_a_uvvis", md=_md))
         
         
     else:
         if LED.get()=='High' and UV_shutter.get()=='Low' and qepro.correction.get()==correction_type and qepro.spectrum_type.get()==spectrum_type:
-            uid = (yield from count([qepro], md=_md))
+            pass
         else:
             yield from bps.abs_set(qepro.correction, correction_type, wait=True)
             yield from bps.abs_set(qepro.spectrum_type, spectrum_type, wait=True)
-            # yield from shutter_close()
-            # yield from LED_on()
             yield from bps.mv(LED, 'High', UV_shutter, 'Low')
-            yield from bps.sleep(2)
-            uid = (yield from count_stream(qepro, stream_name="take_a_uvvis", md=_md))
+
+        yield from bps.sleep(2)
+        uid = (yield from count_stream(qepro, stream_name="take_a_uvvis", md=_md))
     
     yield from bps.mv(LED, 'Low', UV_shutter, 'Low')
     

@@ -195,7 +195,7 @@ def synthesis_queue_xlsx(parameter_obj):
 		#### Kafka check data here.
 
 		## 5. Sleep for 5 seconds for Kafak to check good/bad data
-		restplan = BPlan('sleep_sec_q', 5)
+		restplan = BPlan('sleep_sec_q', 2)
 		RM.item_add(restplan, pos=pos)
 		
 

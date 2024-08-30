@@ -766,7 +766,7 @@ class xlsx_to_inputs():
         ## Apply percnetile filtering for absorption spectra, defaut percent_range = [15, 85]
         abs_per = da.percentile_abs(self.qepro_dic['QEPro_x_axis'], 
                                     self.qepro_dic['QEPro_output'], 
-                                    percent_range=[5, 65])
+                                    percent_range=[10, 70])
         
         print(f'\n*** start to check absorbance at 365b nm in stream: {stream_name} is positive or not***\n')
         # abs_array = qepro_dic['QEPro_output'][1:].mean(axis=0)
@@ -1056,10 +1056,10 @@ class xlsx_to_inputs():
                                 pump_list=qin.pump_list, 
                                 precursor_list=qin.precursor_list, 
                                 mixer=qin.mixer)
-                RM.item_add(scanplan, pos=1)
+                RM.item_add(scanplan, pos=0)
                 
-                restplan = BPlan('sleep_sec_q', 5)
-                RM.item_add(restplan, pos=2)
+                restplan = BPlan('sleep_sec_q', 2)
+                RM.item_add(restplan, pos=0)
 
                 RM.queue_start()
 
