@@ -36,7 +36,7 @@ def synthesis_queue_xlsx(parameter_obj):
 	wait_dilute = qsp.wait_dilute
 	if_wash = qsp.if_wash
 	wash_loop = qsp.wash_loop
-	wash_sapphire = qsp.wash_sapphire
+	# wash_sapphire = qsp.wash_sapphire
 	rate_unit = qsp.rate_unit[0]
 	name_by_prefix = qsp.name_by_prefix[0]
 	det2 = qsp.uvvis_config[0]

@@ -12,10 +12,10 @@ from scipy import integrate
 sq = importlib.import_module("_synthesis_queue_RM")
 de = importlib.import_module("_data_export")
 da = importlib.import_module("_data_analysis")
-# pc = importlib.import_module("_pdf_calculator")
+pc = importlib.import_module("_pdf_calculator")
 
-# from diffpy.pdfgetx import PDFConfig
-# gp = importlib.import_module("_get_pdf")
+from diffpy.pdfgetx import PDFConfig
+gp = importlib.import_module("_get_pdf")
 
 build_agent = importlib.import_module("prepare_agent_pdf").build_agent
 import torch
@@ -48,7 +48,7 @@ def _kafka_inputs():
             'rate_label_dic_key', 'rate_label_dic_value', 'new_points_label', 
             'use_good_bad', 'post_dilute', 'fix_Br_ratio', 
             'write_agent_data', 'agent_data_path', 'build_agent', 
-            'USE_AGENT_iterate', 'peak_target',  
+            'use_1st_prediction', 'USE_AGENT_iterate', 'peak_target',  
             'iq_to_gr', 'iq_to_gr_path', 'cfg_fn', 'bkg_fn', 'iq_fn',  
             'search_and_match', 'mystery_path', 'results_path', 
             'fitting_pdf', 'fitting_pdf_path', 'cif_fn', 'gr_fn', 
@@ -473,46 +473,46 @@ class xlsx_to_inputs():
 
 
 
-    # def macro_05_iq_to_gr(self, beamline_acronym):
-    #     """macro to condcut data reduction from I(Q) to g(r), used in kafka consumer
+    def macro_05_iq_to_gr(self, beamline_acronym):
+        """macro to condcut data reduction from I(Q) to g(r), used in kafka consumer
         
-    #     This macro will
-    #     1. Generate a filename for g(r) data by using metadata of stream_name == fluorescence
-    #     2. Read pdf config file from self.inputs.cfg_fn[-1]
-    #     3. Read pdf background file from self.inputs.bkg_fn[-1]
-    #     4. Generate s(q), f(q), g(r) data by gp.transform_bkg() and save in self.inputs.iq_to_gr_path[0]
-    #     5. Read saved g(r) into pd.DataFrame and save again to remove the headers
-    #     6. Update g(r) data path and data frame to self.gr_data
-    #         self.gr_data[0]: gr_data (path)
-    #         self.gr_data[1]: gr_df
+        This macro will
+        1. Generate a filename for g(r) data by using metadata of stream_name == fluorescence
+        2. Read pdf config file from self.inputs.cfg_fn[-1]
+        3. Read pdf background file from self.inputs.bkg_fn[-1]
+        4. Generate s(q), f(q), g(r) data by gp.transform_bkg() and save in self.inputs.iq_to_gr_path[0]
+        5. Read saved g(r) into pd.DataFrame and save again to remove the headers
+        6. Update g(r) data path and data frame to self.gr_data
+            self.gr_data[0]: gr_data (path)
+            self.gr_data[1]: gr_df
 
-    #     Args:
-    #         beamline_acronym (str): catalog name for tiled to access data
-    #     """
-    #     # Grab metadat from stream_name = fluorescence for naming gr file
-    #     fn_uid = de._fn_generator(self.uid, beamline_acronym=beamline_acronym)
-    #     gr_fn = f'{fn_uid}_scattering.gr'
+        Args:
+            beamline_acronym (str): catalog name for tiled to access data
+        """
+        # Grab metadat from stream_name = fluorescence for naming gr file
+        fn_uid = de._fn_generator(self.uid, beamline_acronym=beamline_acronym)
+        gr_fn = f'{fn_uid}_scattering.gr'
 
-    #     ### dummy test, e.g., CsPbBr2
-    #     if self.inputs.dummy_pdf[0]:
-    #         gr_fn = f'{self.inputs.iq_fn[-1][:-4]}.gr'
+        ### dummy test, e.g., CsPbBr2
+        if self.inputs.dummy_pdf[0]:
+            gr_fn = f'{self.inputs.iq_fn[-1][:-4]}.gr'
 
-    #     # Build pdf config file from a scratch
-    #     pdfconfig = PDFConfig()
-    #     pdfconfig.readConfig(self.inputs.cfg_fn[-1])
-    #     pdfconfig.backgroundfiles = self.inputs.bkg_fn[-1]
-    #     sqfqgr_path = gp.transform_bkg(pdfconfig, self.iq_data['array'], output_dir=self.inputs.iq_to_gr_path[0], 
-    #                 plot_setting={'marker':'.','color':'green'}, test=True, 
-    #                 gr_fn=gr_fn)    
-    #     gr_data = sqfqgr_path['gr']
+        # Build pdf config file from a scratch
+        pdfconfig = PDFConfig()
+        pdfconfig.readConfig(self.inputs.cfg_fn[-1])
+        pdfconfig.backgroundfiles = self.inputs.bkg_fn[-1]
+        sqfqgr_path = gp.transform_bkg(pdfconfig, self.iq_data['array'], output_dir=self.inputs.iq_to_gr_path[0], 
+                    plot_setting={'marker':'.','color':'green'}, test=True, 
+                    gr_fn=gr_fn)    
+        gr_data = sqfqgr_path['gr']
 
-    #     ## Remove headers by reading gr_data into pd.Dataframe and save again
-    #     gr_df = pd.read_csv(gr_data, skiprows=26, names=['r', 'g(r)'], sep =' ')
-    #     gr_df.to_csv(gr_data, index=False, header=False, sep =' ')
+        ## Remove headers by reading gr_data into pd.Dataframe and save again
+        gr_df = pd.read_csv(gr_data, skiprows=26, names=['r', 'g(r)'], sep =' ')
+        gr_df.to_csv(gr_data, index=False, header=False, sep =' ')
 
-    #     self.gr_data = []
-    #     self.gr_data.append(gr_data)
-    #     self.gr_data.append(gr_df)
+        self.gr_data = []
+        self.gr_data.append(gr_data)
+        self.gr_data.append(gr_df)
 
 
 

@@ -8,10 +8,12 @@ import matplotlib.pyplot as plt
 import numpy as np
 from tiled.client import from_uri, from_profile
 
+# Set limit of numbers of open files
 import resource
 resource.setrlimit(resource.RLIMIT_NOFILE, (65536, 65536))
 
 import importlib
+## Add comments for all the modules
 LK = importlib.import_module("_LDRD_Kafka")
 sq = importlib.import_module("_synthesis_queue_RM")
 de = importlib.import_module("_data_export")
@@ -41,19 +43,19 @@ qserver_process = LK.xlsx_to_inputs(LK._qserver_inputs(), xlsx_fn=xlsx_fn, sheet
 qin = qserver_process.inputs
 
 ## Input varaibales for Kafka, reading from xlsx_fn by given sheet name
-kafka_process = LK.xlsx_to_inputs(LK._kafka_inputs(), xlsx_fn=xlsx_fn, sheet_name='kafka_process', is_kafka=True)
+kafka_process = LK.xlsx_to_inputs(LK._kafka_inputs(), xlsx_fn=xlsx_fn, sheet_name='kafka_test', is_kafka=True)
 kin = kafka_process.inputs
 
 ## Define RE Manager API as RM 
 RM = REManagerAPI(zmq_control_addr=qin.zmq_control_addr[0], zmq_info_addr=qin.zmq_info_addr[0])
 
 ## Make the first prediction from kafka_process.agent
-first_points = kafka_process.macro_agent(qserver_process, RM, check_target=False, is_1st=True)
-rate_list = kafka_process.auto_rate_list(qin.pump_list, first_points, kin.fix_Br_ratio)
-if kin.post_dilute[0]:
-    rate_list.append(sum(rate_list)*kin.post_dilute[1])
-
-qin.infuse_rates = rate_list
+if kin.use_1st_prediction[0]:
+    first_points = kafka_process.macro_agent(qserver_process, RM, check_target=False, is_1st=True)
+    rate_list = kafka_process.auto_rate_list(qin.pump_list, first_points, kin.fix_Br_ratio)
+    if kin.post_dilute[0]:
+        rate_list.append(sum(rate_list)*kin.post_dilute[1])
+    qin.infuse_rates = rate_list
 
 
 ## Import Qserver parameters to RE Manager
