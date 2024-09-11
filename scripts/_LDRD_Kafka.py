@@ -25,8 +25,17 @@ from bluesky_queueserver_api.zmq import REManagerAPI
 from bluesky_queueserver_api import BPlan, BInst
 
 
+""" This module provides class for Qsever and Kafka.
+    Usually imported as LK.
+"""
 
 def _qserver_inputs():
+    """Define namespace for Qserver inputs
+
+    Returns:
+        list: list for Qserver inputs
+    All the namesapce in this list should be found in the excel spreadsheet.
+    """
     qserver_list=[
             'zmq_control_addr', 'zmq_info_addr', 
             'dummy_qserver', 'is_iteration', 'pos', 'use_OAm', 
@@ -43,6 +52,12 @@ def _qserver_inputs():
 
 
 def _kafka_inputs():
+    """Define namespace for Kafka inputs
+
+    Returns:
+        list: list for Kafka inputs
+    All the namesapce in this list should be found in the excel spreadsheet.
+    """
     inputs_list=[
             'dummy_kafka', 'csv_path', 'key_height', 'height', 'distance', 'PLQY', 
             'rate_label_dic_key', 'rate_label_dic_value', 'new_points_label', 
@@ -61,6 +76,12 @@ def _kafka_inputs():
 
 
 def _kafka_process():
+    """ Define namespace for variables processed in Kafka
+
+    Returns:
+        list: list for variables processed in Kafka
+    All the namesapce in this list should not be found in the excel spreadsheet.
+    """
     process_list=[ 
             'agent', 'sandbox_tiled_client', 'tiled_client', 
             'entry', 'iq_data', 'stream_list', 
@@ -80,6 +101,12 @@ def _kafka_process():
 
 class dic_to_inputs():
     def __init__(self, parameters_dict, parameters_list):
+        """ Turn the input dict into class methods
+
+        Args:
+            parameters_dict (dict): dict read from excel spreadsheet
+            parameters_list (list): list for namespace deined above
+        """
         self.parameters_dict = parameters_dict
         self.parameters_list = parameters_list
 
@@ -94,6 +121,16 @@ class dic_to_inputs():
 
 class xlsx_to_inputs():
     def __init__(self, parameters_list, xlsx_fn, sheet_name='inputs', is_kafka=False):
+        """ Read the excel spreadsheet according to the sheet name into a dict
+        Turn the dict read from excel into class methods
+
+        Args:
+            parameters_list (list): list for namespace deined above
+            xlsx_fn (str): full path if excel file
+            sheet_name (str, optional): sheet name of the excel file. Defaults to 'inputs'.
+            is_kafka (bool, optional): if True, the namespace for the variables processed 
+                                        in Kafka will be turn into class methods. Defaults to False.
+        """
         self.parameters_list = parameters_list
         self.from_xlsx = xlsx_fn
         self.sheet_name = sheet_name
@@ -150,6 +187,12 @@ class xlsx_to_inputs():
 
 
     def save_kafka_dict(self, home_path, reset_uid_catalog=True):
+        """ Save the selected variables processed in Kafka into a jason
+
+        Args:
+            home_path (str): directory to save json for Kafka dict
+            reset_uid_catalog (bool, optional): if True, the selected varaibles will be reset to empty lists. Defaults to True.
+        """
 
         date, ttime = de._readable_time(self.metadata_dic['time'])
         json_fn = f'{date}-{ttime}_{self.uid[0:8]}.json'

@@ -4,10 +4,13 @@ import time
 import numpy as np
 import pandas as pd
 import os
-from _data_analysis import *
 import json
+import importlib
+importlib.import_module("_data_export")
 
-
+""" This module provides functions for data export.
+    Usually imported as de.
+"""
 
 ## Read input excel spreadsheet
 def _read_input_xlsx(fn, sheet_name='inputs', skiprows=1, header=None, index_col=0):

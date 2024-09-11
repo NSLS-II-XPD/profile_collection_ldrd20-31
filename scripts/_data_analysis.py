@@ -5,12 +5,25 @@ from scipy import integrate
 #import scipy.signal as scipy
 from scipy.optimize import curve_fit
 from scipy.signal import find_peaks
-import _data_export as de
+import importlib
+de = importlib.import_module("_data_export")
+
+""" This module provides functions for data analysis.
+    Usually imported as da.
+"""
 
 
 
-## Read meta data (fitting result) in csv
 def _read_meta_csv(fn, header=14):
+    """Read meta data (fitting result) in csv
+
+    Args:
+        fn (str): full file name with path
+        header (int, optional): numbers of line for metadata in header. Defaults to 14.
+
+    Returns:
+        dict: metadata
+    """
     meta = {}
     with open (fn, 'r') as f:
         temp = f.readlines()[:header]
@@ -24,13 +37,33 @@ def _read_meta_csv(fn, header=14):
 ## Fit a peak by 1 Gaussian or Lorentz distribution
 ## http://hyperphysics.phy-astr.gsu.edu/hbase/Math/gaufcn2.html
 ## https://en.wikipedia.org/wiki/Cauchy_distribution
-
-
 def _1gauss(x, A, x0, sigma):
+    """One-peak gaussian distribution
+
+    Args:
+        x (array_like): input value
+        A (float): amplitude of distribution
+        x0 (float): mean value of distribution
+        sigma (float): variance of distribution (sigma**2)
+
+    Returns:
+        array_like: distribution
+    """
     return A * np.exp(-(x - x0) ** 2 / (2 * sigma ** 2))
 
 
 def _1Lorentz(x, A, x0, sigma):
+    """One peak Lorentz distribution
+
+    Args:
+        x (array_like): input value
+        A (float): amplitude of distribution
+        x0 (float): mean value of distribution
+        sigma (float): variance of distribution (sigma**2)
+
+    Returns:
+        array_like: distribution
+    """
     return A*sigma**2/((x-x0)**2+sigma**2)
 
 
@@ -38,22 +71,84 @@ def _1Lorentz(x, A, x0, sigma):
 ## http://hyperphysics.phy-astr.gsu.edu/hbase/Math/gaufcn2.html
 
 def _2gauss(x, A1, x1, s1, A2, x2, s2):
+    """Two-peak gaussian distribution
+
+    Args:
+        x (array_like): input value
+        A1 (float): amplitude of 1st distribution
+        x1 (float): mean value of 1st distribution
+        s1 (float): variance of 1st distribution (sigma**2)
+        A2 (float): amplitude of 2nd distribution
+        x2 (float): mean value of 2nd distribution
+        s2 (float): variance of 2nd distribution (sigma**2)
+
+    Returns:
+        array_like: distribution
+    """
     return (_1gauss(x, A1, x1, s1) +
             _1gauss(x, A2, x2, s2))
 
 
 def _3gauss(x, A1, x1, s1, A2, x2, s2, A3, x3, s3):
+    """Three-peak gaussian distribution
+
+    Args:
+        x (array_like): input value
+        A1 (float): amplitude of 1st distribution
+        x1 (float): mean value of 1st distribution
+        s1 (float): variance of 1st distribution (sigma**2)
+        A2 (float): amplitude of 2nd distribution
+        x2 (float): mean value of 2nd distribution
+        s2 (float): variance of 2nd distribution (sigma**2)
+        A3 (float): amplitude of 3rd distribution
+        x3 (float): mean value of 3rd distribution
+        s3 (float): variance of 3rd distribution (sigma**2)
+
+    Returns:
+        array_like: distribution
+    """
     return (_1gauss(x, A1, x1, s1) +
             _1gauss(x, A2, x2, s2) + 
             _1gauss(x, A3, x3, s3))
 
 
 def _2Lorentz(x, A1, x1, s1, A2, x2, s2):
+    """Two-peak Lorentz distribution
+
+    Args:
+        x (array_like): input value
+        A1 (float): amplitude of 1st distribution
+        x1 (float): mean value of 1st distribution
+        s1 (float): variance of 1st distribution (sigma**2)
+        A2 (float): amplitude of 2nd distribution
+        x2 (float): mean value of 2nd distribution
+        s2 (float): variance of 2nd distribution (sigma**2)
+
+    Returns:
+        array_like: distribution
+    """
     return (_1Lorentz(x, A1, x1, s1) +
             _1Lorentz(x, A2, x2, s2))
 
 
 def _3Lorentz(x, A1, x1, s1, A2, x2, s2, A3, x3, s3):
+    """Three-peak Lorentz distribution
+
+    Args:
+        x (array_like): input value
+        A1 (float): amplitude of 1st distribution
+        x1 (float): mean value of 1st distribution
+        s1 (float): variance of 1st distribution (sigma**2)
+        A2 (float): amplitude of 2nd distribution
+        x2 (float): mean value of 2nd distribution
+        s2 (float): variance of 2nd distribution (sigma**2)
+        A3 (float): amplitude of 3rd distribution
+        x3 (float): mean value of 3rd distribution
+        s3 (float): variance of 3rd distribution (sigma**2)
+
+    Returns:
+        array_like: distribution
+    """
     return (_1Lorentz(x, A1, x1, s1) +
             _1Lorentz(x, A2, x2, s2) +
             _1Lorentz(x, A3, x3, s3))
@@ -61,6 +156,16 @@ def _3Lorentz(x, A1, x1, s1, A2, x2, s2, A3, x3, s3):
 
 
 def find_nearest(array, value):
+    """find the nearest value in a given array
+
+    Args:
+        array (array_like): input array
+        value (float): target value
+
+    Returns:
+        int: index of the nearest value in the array
+        float: the nearest value in the array
+    """
     array = np.asarray(array)
     idx = (np.abs(array - value)).argmin()
     return idx, array[idx]
@@ -68,6 +173,18 @@ def find_nearest(array, value):
 
 
 def r_square(x, y, fitted_y, y_low_limit=200):
+    """R square value for a 
+
+    Args:
+        x (array_like): input values of x-axis
+        y (array_like): input values of y-axis
+        fitted_y (array_like): fitting data or values of input y-axis
+        y_low_limit (float, optional): y smaller than this value will be excluded. Defaults to 200.
+
+    Returns:
+        float: R square, which corresponds to the coefficient of determination
+    https://en.wikipedia.org/wiki/Coefficient_of_determination
+    """
     
     x = np.asarray(x)
     y = np.asarray(y)
@@ -86,6 +203,15 @@ def r_square(x, y, fitted_y, y_low_limit=200):
 
 
 def vol_unit_converter(v0 = 'ul', v1 = 'ml'):
+    """Convert volume between 'pl', 'nl', 'ul', 'ml'
+
+    Args:
+        v0 (str, optional): initial volume unit. Defaults to 'ul'.
+        v1 (str, optional): targeted volume unit. Defaults to 'ml'.
+
+    Returns:
+        float: conversion constant (ex: vol_unit_converter(v0 = 'ul', v1 = 'ml')=0.001)
+    """
     vol_unit = ['pl', 'nl', 'ul', 'ml']
     vol_frame = pd.DataFrame(data={'pl': np.geomspace(1, 1E9, num=4), 'nl': np.geomspace(1E-3, 1E6, num=4),
                                    'ul': np.geomspace(1E-6, 1E3, num=4), 'ml': np.geomspace(1E-9, 1, num=4)}, index=vol_unit)
@@ -93,6 +219,15 @@ def vol_unit_converter(v0 = 'ul', v1 = 'ml'):
 
 
 def t_unit_converter(t0 = 'min', t1 = 'min'):
+    """Convert time between 'sec', 'min', 'hr'
+
+    Args:
+        t0 (str, optional): initial time unit. Defaults to 'min'.
+        t1 (str, optional): targeted time unit. Defaults to 'min'.
+
+    Returns:
+        float: conversion constant (ex: t_unit_converter(v0 = 'min', v1 = 'sec')=60)
+    """
     t_unit = ['sec', 'min', 'hr']
     t_frame = pd.DataFrame(data={'sec': np.geomspace(1, 3600, num=3), 
                                  'min': np.geomspace(1/60, 60, num=3), 
@@ -101,6 +236,15 @@ def t_unit_converter(t0 = 'min', t1 = 'min'):
 
 
 def rate_unit_converter(r0 = 'ul/min', r1 = 'ul/min'):
+    """Conver rate unit 
+
+    Args:
+        r0 (str, optional): initial rate unit. Defaults to 'ul/min'.
+        r1 (str, optional): targeted rate unit. Defaults to 'ul/min'.
+
+    Returns:
+        float: conversion constant
+    """
     
     v0 = r0.split('/')[0]
     t0 = r0.split('/')[1]
