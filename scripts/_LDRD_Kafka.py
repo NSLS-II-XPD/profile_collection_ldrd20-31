@@ -101,7 +101,7 @@ def _kafka_process():
 
 class dic_to_inputs():
     def __init__(self, parameters_dict, parameters_list):
-        """ Turn the input dict into class methods
+        """ Turn the input dict into class attributes
 
         Args:
             parameters_dict (dict): dict read from excel spreadsheet
@@ -122,14 +122,14 @@ class dic_to_inputs():
 class xlsx_to_inputs():
     def __init__(self, parameters_list, xlsx_fn, sheet_name='inputs', is_kafka=False):
         """ Read the excel spreadsheet according to the sheet name into a dict
-        Turn the dict read from excel into class methods
+        Turn the dict read from excel into class attributes
 
         Args:
             parameters_list (list): list for namespace deined above
             xlsx_fn (str): full path if excel file
             sheet_name (str, optional): sheet name of the excel file. Defaults to 'inputs'.
             is_kafka (bool, optional): if True, the namespace for the variables processed 
-                                        in Kafka will be turn into class methods. Defaults to False.
+                                        in Kafka will be turn into class attributes. Defaults to False.
         """
         self.parameters_list = parameters_list
         self.from_xlsx = xlsx_fn
@@ -294,7 +294,7 @@ class xlsx_to_inputs():
                 print(f'\nReach the target, stop iteration, stop all pumps, and wash the loop.\n')
 
                 ### Stop all infusing pumps and wash loop
-                sq.wash_tube_queue2(qin.pump_list, qin.wash_tube, 'ul/min', 
+                sq.wash_tube_queue2(qin.pump_list, qin.if_wash, qin.wash_loop, 'ul/min', 
                                 zmq_control_addr=qin.zmq_control_addr[0],
                                 zmq_info_addr=qin.zmq_info_addr[0])
                 
@@ -317,7 +317,7 @@ class xlsx_to_inputs():
         if len(self.agent.table) < 2:
             acq_func = "qr"
         else:
-            acq_func = "qei"
+            acq_func = "qem"
         
         new_points = self.agent.ask(acq_func, n=1)
 
@@ -1083,10 +1083,10 @@ class xlsx_to_inputs():
                 print('*** qsever aborted due to too many bad scans, please check setup ***\n')
 
                 ### Stop all infusing pumps and wash loop
-                sq.wash_tube_queue2(qin.pump_list, qin.wash_tube, 'ul/min', 
+                sq.wash_tube_queue2(qin.pump_list, qin.if_wash, qin.wash_loop, 'ul/min', 
                                 zmq_control_addr=qin.zmq_control_addr[0],
                                 zmq_info_addr=qin.zmq_info_addr[0])
-                
+
                 RM.queue_stop()
                 
             elif (len(self.good_data) <= 2) and (self.inputs.use_good_bad[0]):

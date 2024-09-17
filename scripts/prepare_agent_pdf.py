@@ -13,17 +13,17 @@ from blop import Agent, DOF, Objective
 
 def build_agent(peak_target=660, peak_tolerance=5, size_target=6, agent_data_path='/', use_OAm=False):
     # data_path = '/home/xf28id2/data_ZnCl2'
-    #data_path = '/home/xf28id2/data'
-    agent_data_path = agent_data_path
+    agent_data_path = '/home/xf28id2/Documents/ChengHung/agent_data/Cl_02'
+    # agent_data_path = agent_data_path
 
 
     if use_OAm:
         dofs = [
-            DOF(description="CsPb(oleate)3", name="infusion_rate_CsPb", units="uL/min", search_domain=(10, 30)),
+            DOF(description="CsPb(oleate)3", name="infusion_rate_CsPb", units="uL/min", search_domain=(20, 80)),
             # DOF(description="TOABr", name="infusion_rate_Br", units="uL/min", search_domain=(50, 200)),
-            DOF(description="ZnI2", name="infusion_rate_I2", units="uL/min", search_domain=(0, 250)), 
-            DOF(description="ZnCl2", name="infusion_rate_Cl", units="uL/min", search_domain=(0, 250)),
-            DOF(description="OAm_Tol", name="infusion_rate_OAm", units="uL/min", search_domain=(0, 30)),
+            DOF(description="ZnI2", name="infusion_rate_I2", units="uL/min", search_domain=(10, 190)), 
+            DOF(description="ZnCl2", name="infusion_rate_Cl", units="uL/min", search_domain=(10, 190)),
+            DOF(description="OAm_Tol", name="infusion_rate_OAm", units="uL/min", search_domain=(0, 70)),
         ]
 
     else:
@@ -43,7 +43,7 @@ def build_agent(peak_target=660, peak_tolerance=5, size_target=6, agent_data_pat
     ratio_down = 1-(510-peak_down)*0.99/110
     
     objectives = [
-        Objective(description="Peak emission", name="Peak", target=(peak_down, peak_up), weight=100, max_noise=0.25),
+        Objective(description="Peak emission", name="Peak", target=(peak_down, peak_up), weight=100., max_noise=0.25),
         Objective(description="Peak width", name="FWHM", target="min", transform="log", weight=5., max_noise=0.25),
         Objective(description="Quantum yield", name="PLQY", target="max", transform="log", weight=1., max_noise=0.25),
         # Objective(description="Particle size", name="Br_size", target=(size_target-1.5, size_target+1.5), transform="log", weight=0.1, max_noise=0.25),
@@ -72,7 +72,7 @@ def build_agent(peak_target=660, peak_tolerance=5, size_target=6, agent_data_pat
         agent.dofs.infusion_rate_Cl.deactivate()
         agent.dofs.infusion_rate_Cl.device.put(0)
 
-    elif peak_target < 500:        
+    elif peak_target < 510:        
         agent.dofs.infusion_rate_I2.deactivate()
         agent.dofs.infusion_rate_I2.device.put(0)
     

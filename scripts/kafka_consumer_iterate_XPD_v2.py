@@ -39,11 +39,11 @@ plt.rcParams["figure.raise_window"] = False
 xlsx_fn = '/home/xf28id2/.ipython/profile_collection_ldrd20-31/scripts/inputs_qserver_kafka_v2.xlsx'
 
 ## Input varaibales for Qserver, reading from xlsx_fn by given sheet name
-qserver_process = LK.xlsx_to_inputs(LK._qserver_inputs(), xlsx_fn=xlsx_fn, sheet_name='qserver_test')
+qserver_process = LK.xlsx_to_inputs(LK._qserver_inputs(), xlsx_fn=xlsx_fn, sheet_name='qserver_XPD')
 qin = qserver_process.inputs
 
 ## Input varaibales for Kafka, reading from xlsx_fn by given sheet name
-kafka_process = LK.xlsx_to_inputs(LK._kafka_inputs(), xlsx_fn=xlsx_fn, sheet_name='kafka_test', is_kafka=True)
+kafka_process = LK.xlsx_to_inputs(LK._kafka_inputs(), xlsx_fn=xlsx_fn, sheet_name='kafka_process', is_kafka=True)
 kin = kafka_process.inputs
 
 ## Define RE Manager API as RM 
@@ -54,9 +54,11 @@ if kin.use_1st_prediction[0]:
     first_points = kafka_process.macro_agent(qserver_process, RM, check_target=False, is_1st=True)
     rate_list = kafka_process.auto_rate_list(qin.pump_list, first_points, kin.fix_Br_ratio)
     if kin.post_dilute[0]:
-        rate_list.append(sum(rate_list)*kin.post_dilute[1])
+        sum_active = sum(rate_list)
+        rate_list.append(sum_active/9)   ## append PF rate
+        rate_list.append(sum_active*kin.post_dilute[1])  ## append toluene rate
     qin.infuse_rates = rate_list
-
+    print(f'\n{rate_list = }\n')
 
 ## Import Qserver parameters to RE Manager
 sq.synthesis_queue_xlsx(qserver_process)

@@ -6,7 +6,8 @@ import pandas as pd
 import os
 import json
 import importlib
-importlib.import_module("_data_export")
+# importlib.import_module("_data_analysis")
+from _data_analysis import *
 
 """ This module provides functions for data export.
     Usually imported as de.
@@ -63,7 +64,7 @@ def _fn_generator(uid, beamline_acronym='xpd'):
     date, ttime = _readable_time(metadata_dic['time'])
     full_uid = metadata_dic['uid']
     fn = f'{sample_type}_{date}-{ttime}_{full_uid[0:8]}'
-    return fn
+    return fnkafka_test
 
 
 ## Auto generate sample name with given prefix and infuse_rate
